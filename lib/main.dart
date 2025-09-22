@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return Sizer(
       builder: (context, orientation, deviceType) => MaterialApp(
         title: 'Flutter Demo',
-        initialRoute: Routes.root,
+        initialRoute: Routes.onboardingScreen,
         onGenerateRoute: RoutesGenerator.generateRoute,
         debugShowCheckedModeBanner: false,
       ),
