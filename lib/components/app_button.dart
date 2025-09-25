@@ -6,89 +6,151 @@ enum AppButtonVariant { solid, stroke }
 
 enum AppButtonIconPosition { left, right }
 
-class AppButton extends StatelessWidget {
+enum AppButtonSize { small, medium, large }
+
+class AppButton extends StatefulWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final AppButtonVariant variant;
+  final AppButtonSize size;
   final Color? color;
   final Color? textColor;
-  final Color? borderColor; // for stroke variant border customization
-  final EdgeInsetsGeometry? padding; // 👈 customizable padding
-  final double borderRadius; // 👈 customizable corner radius
-  final double fontSize;
+  final Color? borderColor;
+  final EdgeInsetsGeometry? padding;
+  final double? borderRadius;
+  final double? fontSize;
   final IconData? icon;
   final AppButtonIconPosition iconPosition;
-  final double? width; // 👈 NEW (null = auto, number = fixed, infinity = full)
+  final double? width;
+  final Duration debounceDuration; // 👈 new
 
   const AppButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.variant = AppButtonVariant.solid,
+    this.size = AppButtonSize.medium,
     this.color,
     this.textColor,
     this.borderColor,
     this.padding,
-    this.borderRadius = 12,
-    this.fontSize = 16,
+    this.borderRadius,
+    this.fontSize,
     this.icon,
     this.iconPosition = AppButtonIconPosition.left,
     this.width,
+    this.debounceDuration = const Duration(milliseconds: 800), // default
   });
 
   @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _isPressed = false;
+
+  // Default font sizes
+  double _getFontSize() {
+    if (widget.fontSize != null) return widget.fontSize!;
+    switch (widget.size) {
+      case AppButtonSize.small:
+        return 10.sp;
+      case AppButtonSize.medium:
+        return 12.sp;
+      case AppButtonSize.large:
+        return 16.sp;
+    }
+  }
+
+  // Default padding
+  EdgeInsetsGeometry _getPadding() {
+    if (widget.padding != null) return widget.padding!;
+    switch (widget.size) {
+      case AppButtonSize.small:
+        return EdgeInsets.symmetric(vertical: 1.2.h, horizontal: 4.w);
+      case AppButtonSize.medium:
+        return EdgeInsets.symmetric(vertical: 1.5.h, horizontal: 5.w);
+      case AppButtonSize.large:
+        return EdgeInsets.symmetric(vertical: 2.h, horizontal: 6.w);
+    }
+  }
+
+  double _getRadius() => widget.borderRadius ?? 12;
+
+  void _handlePress() {
+    if (_isPressed || widget.onPressed == null) return;
+
+    setState(() => _isPressed = true);
+
+    widget.onPressed!();
+
+    Future.delayed(widget.debounceDuration, () {
+      if (mounted) {
+        setState(() => _isPressed = false);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final buttonColor = variant == AppButtonVariant.solid
-        ? (color ?? AppColors.primary)
+    final buttonColor = widget.variant == AppButtonVariant.solid
+        ? (widget.color ?? AppColors.primary)
         : Colors.transparent;
 
-    final effectiveBorderColor = borderColor ?? AppColors.primary;
+    final effectiveBorderColor = widget.borderColor ?? AppColors.primary;
 
     final labelColor =
-        textColor ??
-        (variant == AppButtonVariant.solid
+        widget.textColor ??
+        (widget.variant == AppButtonVariant.solid
             ? AppColors.secondary
             : effectiveBorderColor);
 
+    final isDisabled = widget.onPressed == null;
+
     return SizedBox(
-      width:
-          width, // 👈 if null → auto, if set → fixed, if double.infinity → full width
+      width: widget.width,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isDisabled ? null : _handlePress,
         style: ElevatedButton.styleFrom(
-          backgroundColor: buttonColor, // solid or transparent
+          backgroundColor: isDisabled
+              ? Colors.grey.shade400
+              : buttonColor, // 👈 disabled color
           foregroundColor: labelColor,
-          padding:
-              padding ??
-              const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          padding: _getPadding(),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+            borderRadius: BorderRadius.circular(_getRadius()),
           ),
-          side: variant == AppButtonVariant.stroke
-              ? BorderSide(color: effectiveBorderColor, width: 1.5)
+          side: widget.variant == AppButtonVariant.stroke
+              ? BorderSide(
+                  color: isDisabled
+                      ? Colors.grey.shade500
+                      : effectiveBorderColor,
+                  width: 1.5,
+                )
               : BorderSide.none,
-          elevation: 0, // flat for stroke
+          elevation: 0,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null && iconPosition == AppButtonIconPosition.left) ...[
-              Icon(icon, size: fontSize.sp, color: labelColor),
+            if (widget.icon != null &&
+                widget.iconPosition == AppButtonIconPosition.left) ...[
+              Icon(widget.icon, size: _getFontSize(), color: labelColor),
               SizedBox(width: 2.w),
             ],
             Text(
-              label,
+              widget.label,
               style: TextStyle(
-                fontSize: fontSize.sp,
+                fontSize: _getFontSize(),
                 fontWeight: FontWeight.w600,
                 color: labelColor,
               ),
             ),
-            if (icon != null &&
-                iconPosition == AppButtonIconPosition.right) ...[
+            if (widget.icon != null &&
+                widget.iconPosition == AppButtonIconPosition.right) ...[
               SizedBox(width: 2.w),
-              Icon(icon, size: fontSize.sp, color: labelColor),
+              Icon(widget.icon, size: _getFontSize(), color: labelColor),
             ],
           ],
         ),

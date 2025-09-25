@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:recoverylab_front/views/user_view/login/login_page.dart';
+import 'package:recoverylab_front/views/user_view/login/otp_verified_page.dart';
+import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
 import 'package:recoverylab_front/views/user_view/login/welcome_page.dart';
@@ -10,6 +12,8 @@ class Routes {
   static const String welcomePage = '/welcome';
   static const String onboardingScreen = '/onboarding';
   static const String loginPage = '/login';
+  static const String otp = '/otp';
+  static const String otpVerified = '/otpVerified';
 }
 
 class RoutesGenerator {
@@ -27,6 +31,10 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => WelcomePage());
       case Routes.loginPage:
         return MaterialPageRoute(builder: (_) => LoginPage());
+      case Routes.otp:
+        return MaterialPageRoute(builder: (_) => Otp());
+      case Routes.otpVerified:
+        return MaterialPageRoute(builder: (_) => OtpVerifiedPage());
 
       default:
         return _errorRoute();
