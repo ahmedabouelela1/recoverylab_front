@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/components/app_textfield.dart';
@@ -50,21 +51,24 @@ class _LoginPageState extends State<LoginPage> {
             ),
             SizedBox(height: 5.h),
 
-            // Email Field
             AppTextField(
               label: "Email",
               hintText: "Enter your email",
-              fillColor: AppColors.textFieldBackground,
+              size: AppTextFieldSize.large,
               borderColor: AppColors.textFieldBorder,
+              textColor: AppColors.textPrimary,
+              fillColor: AppColors.textFieldBackground,
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
             ),
+
             SizedBox(height: 3.h),
 
             // Phone Number Field
             AppTextField(
               label: "Phone Number",
               hintText: "(454) 726-0592",
+              size: AppTextFieldSize.large,
               controller: phoneController,
               keyboardType: TextInputType.phone,
               prefixIcon: Padding(
@@ -72,14 +76,19 @@ class _LoginPageState extends State<LoginPage> {
                 child: Text("🇮🇩", style: TextStyle(fontSize: 16.sp)),
               ),
             ),
+
             SizedBox(height: 3.h),
 
             // Password Field
             AppTextField(
               label: "Password",
               hintText: "Enter your password",
+              size: AppTextFieldSize.large,
               controller: passwordController,
               obscureText: obscurePassword,
+              textColor: AppColors.textPrimary,
+              borderColor: AppColors.textFieldBorder,
+              fillColor: AppColors.textFieldBackground,
               suffixIcon: Icon(
                 obscurePassword ? Icons.visibility_off : Icons.visibility,
                 color: AppColors.textSecondary,
@@ -89,6 +98,9 @@ class _LoginPageState extends State<LoginPage> {
                   obscurePassword = !obscurePassword;
                 });
               },
+              debounceDuration: Duration(
+                milliseconds: 500,
+              ), // 👈 prevents spam-tapping
             ),
 
             // Forgot Password
@@ -116,7 +128,9 @@ class _LoginPageState extends State<LoginPage> {
               borderRadius: 30,
               padding: EdgeInsets.symmetric(vertical: 2.h),
               fontSize: 16.sp,
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushNamed(context, Routes.otp);
+              },
             ),
             SizedBox(height: 1.5.h),
 

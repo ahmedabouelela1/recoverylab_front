@@ -111,48 +111,45 @@ class WelcomePage extends StatelessWidget {
                 AppButton(
                   label: "Continue with Apple",
                   variant: AppButtonVariant.stroke,
-                  color: AppColors.primary,
-                  textColor: AppColors.secondary,
-                  borderRadius: 19,
-                  fontSize:
-                      16, // keep in "normal double", inside the button it’s converted to sp
+                  size: AppButtonSize.large,
                   borderColor: AppColors.secondary,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  icon: FontAwesomeIcons.apple, // 👈 from package
-                  width: double.infinity, // full width, same as 100.w
-                  onPressed: () {},
+                  textColor: AppColors.secondary,
+                  debounceDuration: Duration(milliseconds: 500),
+                  icon: FontAwesomeIcons.apple,
+                  width: double.infinity,
+                  onPressed: () {
+                    print("Pressed with custom debounce");
+                  },
                 ),
 
                 SizedBox(height: 1.5.h),
-
                 AppButton(
                   label: "Continue with Google",
                   variant: AppButtonVariant.stroke,
-                  color: AppColors.primary,
-                  textColor: AppColors.secondary,
-                  borderRadius: 19,
-                  icon: FontAwesomeIcons.google, // 👈 from package
-                  fontSize:
-                      16, // keep in "normal double", inside the button it’s converted to sp
+                  size: AppButtonSize.large,
                   borderColor: AppColors.secondary,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  width: double.infinity, // full width, same as 100.w
-                  onPressed: () {},
+                  textColor: AppColors.secondary,
+                  debounceDuration: Duration(milliseconds: 500),
+                  icon: FontAwesomeIcons.google,
+                  width: double.infinity,
+                  onPressed: () {
+                    print("Pressed Google with custom debounce");
+                  },
                 ),
+
                 SizedBox(height: 1.5.h),
                 AppButton(
                   label: "Continue with Facebook",
                   variant: AppButtonVariant.stroke,
-                  color: AppColors.primary,
-                  textColor: AppColors.secondary,
-                  borderRadius: 19,
-                  fontSize:
-                      16, // keep in "normal double", inside the button it’s converted to sp
+                  size: AppButtonSize.large,
                   borderColor: AppColors.secondary,
-                  icon: FontAwesomeIcons.facebook, // 👈 from package
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  width: double.infinity, // full width, same as 100.w
-                  onPressed: () {},
+                  textColor: AppColors.secondary,
+                  debounceDuration: Duration(milliseconds: 500),
+                  icon: FontAwesomeIcons.facebook,
+                  width: double.infinity,
+                  onPressed: () {
+                    print("Pressed Facebook with custom debounce");
+                  },
                 ),
 
                 const Spacer(),
