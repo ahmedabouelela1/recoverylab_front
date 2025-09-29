@@ -149,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                 GestureDetector(
                   onTap: () {
                     print("Create account tapped");
+                    Navigator.pushNamed(context, Routes.createAccount);
                   },
                   child: Text(
                     "Create account",

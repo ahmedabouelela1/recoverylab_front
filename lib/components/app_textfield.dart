@@ -12,6 +12,7 @@ class AppTextField extends StatefulWidget {
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final VoidCallback? onSuffixTap;
+  final VoidCallback? onTap; // 👈 NEW
   final TextInputType keyboardType;
   final AppTextFieldSize size;
   final double? borderRadius;
@@ -20,7 +21,7 @@ class AppTextField extends StatefulWidget {
   final Color? borderColor;
   final Color? textColor;
   final double? fontSize;
-  final Duration debounceDuration; // 👈 debounce suffix taps
+  final Duration debounceDuration;
 
   const AppTextField({
     super.key,
@@ -31,6 +32,7 @@ class AppTextField extends StatefulWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.onSuffixTap,
+    this.onTap, // 👈 NEW
     this.keyboardType = TextInputType.text,
     this.size = AppTextFieldSize.medium,
     this.borderRadius,
@@ -112,6 +114,7 @@ class _AppTextFieldState extends State<AppTextField> {
           controller: widget.controller,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
+          onTap: widget.onTap, // 👈 this enables onTap
           style: TextStyle(color: effectiveTextColor, fontSize: _getFontSize()),
           decoration: InputDecoration(
             contentPadding: _getPadding(),

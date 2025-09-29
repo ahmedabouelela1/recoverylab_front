@@ -18,7 +18,7 @@ class _OtpVerifiedPageState extends State<OtpVerifiedPage> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 50), () {
+    _timer = Timer(const Duration(seconds: 10), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(Routes.onboardingScreen);
     });
