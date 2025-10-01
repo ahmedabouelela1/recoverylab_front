@@ -156,10 +156,10 @@ class _ServicesSelectionPageState extends State<ServicesSelectionPage> {
               padding: EdgeInsets.symmetric(vertical: 2.h),
               fontSize: 16.sp,
               onPressed: () {
-                // if (selectedOptions.isNotEmpty) {
-                //   // ✅ Move forward, e.g., to dashboard
-                //   Navigator.pushReplacementNamed(context, Routes.dashboard);
-                // }
+                if (selectedOptions.isNotEmpty) {
+                  // ✅ Move forward, e.g., to main screen
+                  Navigator.pushReplacementNamed(context, Routes.mainScreen);
+                }
               },
             ),
           ],

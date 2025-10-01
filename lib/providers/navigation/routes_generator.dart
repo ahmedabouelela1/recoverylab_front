@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:recoverylab_front/views/user_view/home/categories.dart';
+import 'package:recoverylab_front/views/user_view/home/category_details.dart';
+import 'package:recoverylab_front/views/user_view/home/main_screen.dart';
 import 'package:recoverylab_front/views/user_view/login/login_page.dart';
 import 'package:recoverylab_front/views/user_view/login/otp_verified_page.dart';
 import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
 import 'package:recoverylab_front/views/user_view/login/welcome_page.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step1.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
@@ -30,6 +34,10 @@ class Routes {
   static const String questionnaireStepOne = '/questionnaireStepOne';
   static const String questionnaireStepTwo = '/questionnaireStepTwo';
   static const String style = '/style';
+  static const String mainScreen = '/mainScreen';
+  static const String categories = '/categories';
+  static const String serviceDetails = '/serviceDetails';
+  static const String packagesPage = '/packagesPage';
 }
 
 class RoutesGenerator {
@@ -65,11 +73,39 @@ class RoutesGenerator {
         );
       case Routes.otpSignup:
         return MaterialPageRoute(builder: (_) => SignupOtp());
+      case Routes.packagesPage:
+        return MaterialPageRoute(builder: (_) => const PackagesPage());
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
       case Routes.style:
         return MaterialPageRoute(builder: (_) => const ServicesSelectionPage());
-
+      case Routes.mainScreen:
+        return MaterialPageRoute(builder: (_) => const MainScreen());
+      case Routes.categories:
+        if (args is String) {
+          return MaterialPageRoute(
+            builder: (_) => CategoryDetailsPage(category: args),
+          );
+        }
+        return _errorRoute();
+      case Routes.serviceDetails:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => ServiceDetailsPage(
+              title: args['title']!,
+              location: args['location']!,
+              rating: args['rating']!,
+              image: args['image']!,
+              price: args['price']!,
+              duration: args['duration']!,
+              availableFeatures: List<String>.from(
+                args['availableFeatures'] ?? [],
+              ),
+              reviews: List<Map<String, String>>.from(args['reviews'] ?? []),
+            ),
+          );
+        }
+        return _errorRoute();
       default:
         return _errorRoute();
     }

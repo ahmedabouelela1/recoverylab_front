@@ -129,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
               padding: EdgeInsets.symmetric(vertical: 2.h),
               fontSize: 16.sp,
               onPressed: () {
-                Navigator.pushNamed(context, Routes.otp);
+                Navigator.pushNamed(context, Routes.mainScreen);
               },
             ),
             SizedBox(height: 1.5.h),
