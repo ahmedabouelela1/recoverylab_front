@@ -1,3 +1,5 @@
+// routes generator
+
 import 'package:flutter/material.dart';
 import 'package:recoverylab_front/views/user_view/home/categories.dart';
 import 'package:recoverylab_front/views/user_view/home/category_details.dart';
@@ -8,7 +10,16 @@ import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
 import 'package:recoverylab_front/views/user_view/login/welcome_page.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
+import 'package:recoverylab_front/views/user_view/profile/coupon_redeemed.dart';
+import 'package:recoverylab_front/views/user_view/profile/coupons.dart';
+import 'package:recoverylab_front/views/user_view/profile/edit_health_survey.dart';
+import 'package:recoverylab_front/views/user_view/profile/help.dart';
+import 'package:recoverylab_front/views/user_view/profile/reset_password.dart';
+import 'package:recoverylab_front/views/user_view/profile/settings.dart';
+import 'package:recoverylab_front/views/user_view/profile/terms.dart';
+import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step1.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
@@ -38,6 +49,15 @@ class Routes {
   static const String categories = '/categories';
   static const String serviceDetails = '/serviceDetails';
   static const String packagesPage = '/packagesPage';
+  static const String packageDetails = '/packageDetails';
+  static const String settings = '/settings';
+  static const String helpAndSupport = '/helpAndSupport';
+  static const String termsAndPolicies = '/termsAndPolicies';
+  static const String resetPassword = '/resetPassword';
+  static const String coupons = '/coupons';
+  static const String editHealthSurvey = '/editHealthSurvey';
+  static const String upgradeMembership = '/upgradeMembership';
+  static const String couponRedeemed = '/couponRedeemed';
 }
 
 class RoutesGenerator {
@@ -73,12 +93,46 @@ class RoutesGenerator {
         );
       case Routes.otpSignup:
         return MaterialPageRoute(builder: (_) => SignupOtp());
+      case Routes.packageDetails:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => PackageDetailsPage(
+              title: args['title'] as String,
+              description: args['description'] as String,
+              imagePath: args['imagePath'] as String,
+              totalDuration: args['totalDuration'] as String,
+              price: args['price'] as String,
+              // FIX: Correctly map the List<Map<String, dynamic>> arguments
+              // to the expected List<Map<String, String>> type for PackageDetailsPage
+              inclusions: (args['inclusions'] as List<dynamic>)
+                  .map((e) => Map<String, String>.from(e))
+                  .toList(),
+            ),
+          );
+        }
+        return _errorRoute();
       case Routes.packagesPage:
         return MaterialPageRoute(builder: (_) => const PackagesPage());
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
       case Routes.style:
         return MaterialPageRoute(builder: (_) => const ServicesSelectionPage());
+      case Routes.settings:
+        return MaterialPageRoute(builder: (_) => const SettingsPage());
+      case Routes.helpAndSupport:
+        return MaterialPageRoute(builder: (_) => const HelpAndSupportPage());
+      case Routes.termsAndPolicies:
+        return MaterialPageRoute(builder: (_) => const TermsAndPoliciesPage());
+      case Routes.resetPassword:
+        return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
+      case Routes.coupons:
+        return MaterialPageRoute(builder: (_) => const CouponsPage());
+      case Routes.couponRedeemed:
+        return MaterialPageRoute(builder: (_) => const CoupomRedeemPage());
+      case Routes.editHealthSurvey:
+        return MaterialPageRoute(builder: (_) => const HealthSurveyPage());
+      case Routes.upgradeMembership:
+        return MaterialPageRoute(builder: (_) => const UpgradeMembershipPage());
       case Routes.mainScreen:
         return MaterialPageRoute(builder: (_) => const MainScreen());
       case Routes.categories:
@@ -92,12 +146,12 @@ class RoutesGenerator {
         if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
             builder: (_) => ServiceDetailsPage(
-              title: args['title']!,
-              location: args['location']!,
-              rating: args['rating']!,
-              image: args['image']!,
-              price: args['price']!,
-              duration: args['duration']!,
+              title: args['title'] as String,
+              location: args['location'] as String,
+              rating: args['rating'] as String,
+              image: args['image'] as String,
+              price: args['price'] as String,
+              duration: args['duration'] as String,
               availableFeatures: List<String>.from(
                 args['availableFeatures'] ?? [],
               ),

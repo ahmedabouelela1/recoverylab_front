@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/views/user_view/home/home.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
+import 'package:recoverylab_front/views/user_view/profile/settings.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -17,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomePage(),
     const Center(child: Text("Bookings Page")),
     const PackagesPage(),
-    const Center(child: Text("Profile Page")),
+    const SettingsPage(),
   ];
 
   void _onItemTapped(int index) {
