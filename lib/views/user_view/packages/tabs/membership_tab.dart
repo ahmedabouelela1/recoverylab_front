@@ -16,7 +16,7 @@ class MembershipTab extends StatelessWidget {
       'duration': 'Full Spa Access', // Reused field for the first feature line
       'details': '12-Week Freeze Period\n25% Off All Services',
       'price': '\$230/year',
-      'imagePath': 'assets/packages/member_1.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/haven.jpg', // Replace with actual path
     },
     {
       'title': 'Gold Membership',
@@ -24,7 +24,7 @@ class MembershipTab extends StatelessWidget {
       'duration': 'Full Spa Access',
       'details': '6-Week Freeze Period\n15% Off All Services',
       'price': '\$130/6 months',
-      'imagePath': 'assets/packages/member_2.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/steam.jpg', // Replace with actual path
     },
     {
       'title': 'Silver Membership',
@@ -32,7 +32,7 @@ class MembershipTab extends StatelessWidget {
       'duration': 'Full Spa Access',
       'details': '2-Week Freeze Period\n10% Off All Services',
       'price': '\$65/3 months',
-      'imagePath': 'assets/packages/member_3.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/spa.jpg', // Replace with actual path
     },
   ];
 

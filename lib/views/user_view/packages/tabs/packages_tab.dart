@@ -16,7 +16,7 @@ class PackagesTab extends StatelessWidget {
       'duration': '15% Off Total Value', // Reused field for the discount
       'details': '', // This line is empty in the screenshot for these packages
       'price': '\$125',
-      'imagePath': 'assets/packages/package_1.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/haven.jpg', // Replace with actual path
     },
     {
       'title': '10-Session Body Boost',
@@ -24,7 +24,7 @@ class PackagesTab extends StatelessWidget {
       'duration': '25% Off + 1 Free Spa Access',
       'details': '',
       'price': '\$225',
-      'imagePath': 'assets/packages/package_2.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/steam.jpg', // Replace with actual path
     },
     {
       'title': '10-Session Body Boost',
@@ -32,7 +32,7 @@ class PackagesTab extends StatelessWidget {
       'duration': '25% Off + 1 Free Spa Access',
       'details': '',
       'price': '\$225',
-      'imagePath': 'assets/packages/package_3.png', // Replace with actual path
+      'imagePath': 'lib/assets/images/retreat.jpg', // Replace with actual path
     },
   ];
 

@@ -1,12 +1,13 @@
-// Content for combo_card.dart, membership_card.dart, and package_card.dart
+// pages/packages/widgets/combo_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:sizer/sizer.dart';
-// Adjust imports based on the card's location relative to configurations/colors.dart
 import 'package:recoverylab_front/configurations/colors.dart';
 
 class ComboCard extends StatelessWidget {
+  // <--- **CRITICAL: The class name is ComboCard**
   final String title;
   final String subtitle; // The smaller text line below the title
   final String durationOrDetail; // The time/discount/freeze period line
@@ -31,29 +32,60 @@ class ComboCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(bottom: 4.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground, // Dark background from your config
+        // Set the background color back to AppColors.cardBackground if you want a dark card body,
+        // but keeping Colors.transparent here as per your provided snippet for the container body.
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Package Image
+          // Package Image with Gradient Overlay
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.asset(
-              imagePath,
-              height: 20.h,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 20.h,
-                color: AppColors.textSecondary.withOpacity(0.1),
-                alignment: Alignment.center,
-                child: Text(
-                  'Image Missing',
-                  style: TextStyle(color: AppColors.textSecondary),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(12),
+              bottom: Radius.circular(12),
+            ),
+            child: Stack(
+              // Added Stack to hold the image and the gradient
+              children: [
+                Image.asset(
+                  imagePath,
+                  height: 20.h,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 20.h,
+                    color: AppColors.textSecondary.withOpacity(0.1),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Image Missing',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
                 ),
-              ),
+                // Gradient Overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(
+                            0.8,
+                          ), // Start with black, adjust opacity as needed
+                          Colors.transparent, // Fade to transparent
+                        ],
+                        stops: const [
+                          0.0,
+                          0.5,
+                        ], // Controls how fast the fade happens (e.g., fade out by halfway)
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(

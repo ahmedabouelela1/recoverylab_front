@@ -1,16 +1,16 @@
-// Content for combo_card.dart, membership_card.dart, and package_card.dart
+// pages/packages/widgets/membership_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:sizer/sizer.dart';
-// Adjust imports based on the card's location relative to configurations/colors.dart
 import 'package:recoverylab_front/configurations/colors.dart';
 
 class MembershipCard extends StatelessWidget {
   final String title;
-  final String subtitle; // The smaller text line below the title
-  final String durationOrDetail; // The time/discount/freeze period line
-  final String detailLine; // The small text detail line (e.g., 'Free towel')
+  final String subtitle; // smaller text line under title
+  final String durationOrDetail; // e.g. freeze period, discount, etc.
+  final String detailLine; // e.g. "Free towel"
   final String price;
   final String imagePath;
   final VoidCallback onBookNow;
@@ -31,31 +31,59 @@ class MembershipCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(bottom: 4.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground, // Dark background from your config
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Package Image
+          // Membership Image with Gradient Overlay
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.asset(
-              imagePath,
-              height: 20.h,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 20.h,
-                color: AppColors.textSecondary.withOpacity(0.1),
-                alignment: Alignment.center,
-                child: Text(
-                  'Image Missing',
-                  style: TextStyle(color: AppColors.textSecondary),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(12),
+              bottom: Radius.circular(12),
+            ),
+            child: Stack(
+              // Added Stack to layer the image and gradient
+              children: [
+                Image.asset(
+                  imagePath,
+                  height: 20.h,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 20.h,
+                    color: AppColors.textSecondary.withOpacity(0.1),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Image Missing',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
                 ),
-              ),
+                // Gradient Overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(
+                            0.8,
+                          ), // Start with opaque black
+                          Colors.transparent, // Fade to transparent
+                        ],
+                        stops: const [0.0, 0.5],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+
+          // Content
           Padding(
             padding: EdgeInsets.all(4.w),
             child: Column(
@@ -76,13 +104,13 @@ class MembershipCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
-                    fontSize: 12.sp,
+                    fontSize: 14.sp,
                     color: AppColors.textSecondary,
                   ),
                 ),
                 SizedBox(height: 1.5.h),
 
-                // Duration/Main Detail Line
+                // Duration / Main detail (using Icons.access_time based on context)
                 Row(
                   children: [
                     Icon(
@@ -94,7 +122,7 @@ class MembershipCard extends StatelessWidget {
                     Text(
                       durationOrDetail,
                       style: GoogleFonts.inter(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -102,23 +130,31 @@ class MembershipCard extends StatelessWidget {
                 ),
                 SizedBox(height: 0.5.h),
 
-                // Secondary Detail Line (like Free towel)
-                Padding(
-                  padding: EdgeInsets.only(left: 1.w),
-                  child: Text(
-                    detailLine,
-                    style: GoogleFonts.inter(
-                      fontSize: 11.sp,
+                // Extra detail (using Icons.card_giftcard_outlined based on context)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.card_giftcard_outlined,
+                      size: 16,
                       color: AppColors.textSecondary,
                     ),
-                  ),
+                    Padding(
+                      padding: EdgeInsets.only(left: 1.w),
+                      child: Text(
+                        detailLine,
+                        style: GoogleFonts.inter(
+                          fontSize: 13.sp,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 2.h),
+                SizedBox(height: 1.h),
 
-                // Price and Book Now Button Row
+                // Price + Book button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +162,7 @@ class MembershipCard extends StatelessWidget {
                         Text(
                           "from",
                           style: GoogleFonts.inter(
-                            fontSize: 10.sp,
+                            fontSize: 14.sp,
                             color: AppColors.textSecondary,
                           ),
                         ),
@@ -140,15 +176,12 @@ class MembershipCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Book Now Button
-                    SizedBox(
+                    AppButton(
+                      label: "Book now",
+                      onPressed: onBookNow,
+                      size: AppButtonSize.medium,
+                      borderRadius: 8,
                       width: 30.w,
-                      child: AppButton(
-                        label: "Book now",
-                        onPressed: onBookNow,
-                        size: AppButtonSize.small,
-                        borderRadius: 8,
-                      ),
                     ),
                   ],
                 ),
