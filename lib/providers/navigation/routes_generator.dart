@@ -1,6 +1,13 @@
 // routes generator
 
 import 'package:flutter/material.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_page_one.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_page_three.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_page_two.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_screen.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
+import 'package:recoverylab_front/views/user_view/bookings/staff_details_page.dart';
 import 'package:recoverylab_front/views/user_view/home/categories.dart';
 import 'package:recoverylab_front/views/user_view/home/category_details.dart';
 import 'package:recoverylab_front/views/user_view/home/main_screen.dart';
@@ -58,6 +65,13 @@ class Routes {
   static const String editHealthSurvey = '/editHealthSurvey';
   static const String upgradeMembership = '/upgradeMembership';
   static const String couponRedeemed = '/couponRedeemed';
+  static const String bookings = '/bookings';
+  static const String bookingsOne = '/bookingsOne';
+  static const String staffDetails = '/staffDetails';
+  static const String bookingsTwo = '/bookingsTwo';
+  static const String bookingsThree = '/bookingsThree';
+  static const String bookingSuccessPage = '/bookingSuccessPage';
+  static const String bookingDetailsPage = '/bookingDetailsPage';
 }
 
 class RoutesGenerator {
@@ -87,6 +101,15 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const SignupStepTwo());
       case Routes.questionnaireStepOne:
         return MaterialPageRoute(builder: (_) => const WellnessQuestionPage());
+      case Routes.bookingSuccessPage:
+        return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
+      case Routes.bookingDetailsPage:
+        if (args is Map<String, dynamic> && args.containsKey('booking')) {
+          return MaterialPageRoute(
+            builder: (_) => BookingDetailsPage(booking: args['booking']),
+          );
+        }
+        return _errorRoute();
       case Routes.questionnaireStepTwo:
         return MaterialPageRoute(
           builder: (_) => const WellnessQuestionPageTwo(),
@@ -113,6 +136,26 @@ class RoutesGenerator {
         return _errorRoute();
       case Routes.packagesPage:
         return MaterialPageRoute(builder: (_) => const PackagesPage());
+      case Routes.bookingsThree:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => BookingPageThree(
+              booking: args['booking'],
+              basePrice: args['basePrice'],
+              totalPrice: args['totalPrice'],
+              selectedAddons: args['selectedAddons'],
+              addonPrices: args['addonPrices'],
+              selectedTherapist: args['selectedTherapist'],
+              selectedDate: args['selectedDate'],
+              startTimeHour: args['startTimeHour'],
+              timePeriod: args['timePeriod'],
+              durationHour: args['durationHour'],
+              durationMinute: args['durationMinute'],
+              personCount: args['personCount'],
+            ),
+          );
+        }
+        return _errorRoute();
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
       case Routes.style:
@@ -133,8 +176,48 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const HealthSurveyPage());
       case Routes.upgradeMembership:
         return MaterialPageRoute(builder: (_) => const UpgradeMembershipPage());
+      case Routes.bookings:
+        return MaterialPageRoute(builder: (_) => const BookingScreen());
+      case Routes.bookingsTwo:
+        if (args is Map<String, dynamic> &&
+            args.containsKey('booking') &&
+            args.containsKey('allStaffMembers')) {
+          return MaterialPageRoute(
+            builder: (_) => BookingPageTwo(
+              booking: args['booking'],
+              allStaffMembers: args['allStaffMembers'],
+              selectedTherapist: args['selectedTherapist'],
+              onTherapistSelected: args['onTherapistSelected'],
+              selectedDate: args['selectedDate'],
+              onDateSelected: args['onDateSelected'],
+              startTimeHour: args['startTimeHour'],
+              onStartTimeHourChanged: args['onStartTimeHourChanged'],
+              durationHour: args['durationHour'],
+              durationMinute: args['durationMinute'],
+              onDurationChanged: args['onDurationChanged'],
+              timePeriod: args['timePeriod'],
+              onTimePeriodChanged: args['onTimePeriodChanged'],
+            ),
+          );
+        }
+        return _errorRoute();
+      case Routes.staffDetails:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => StaffDetailsScreen(staff: args['staff']),
+          );
+        }
+        return _errorRoute();
       case Routes.mainScreen:
         return MaterialPageRoute(builder: (_) => const MainScreen());
+      case Routes.bookingsOne:
+        if (args is Map<String, dynamic> && args.containsKey('booking')) {
+          return MaterialPageRoute(
+            builder: (_) => BookingPageOne(booking: args['booking']),
+          );
+        }
+        return _errorRoute();
+
       case Routes.categories:
         if (args is String) {
           return MaterialPageRoute(
