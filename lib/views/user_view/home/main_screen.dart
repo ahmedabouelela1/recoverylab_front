@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_screen.dart';
 import 'package:recoverylab_front/views/user_view/home/home.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/settings.dart';
@@ -16,7 +17,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = [
     const HomePage(),
-    const Center(child: Text("Bookings Page")),
+    const BookingScreen(),
     const PackagesPage(),
     const SettingsPage(),
   ];

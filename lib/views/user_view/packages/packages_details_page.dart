@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+// import 'package:recoverylab_front/providers/navigation/routes_generator.dart'; // Removed: not needed for navigation
 import 'package:sizer/sizer.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+// import 'package:recoverylab_front/models/booking_model.dart'; // Removed: not needed for navigation
 
 class PackageDetailsPage extends StatelessWidget {
   final String title;
@@ -37,7 +39,7 @@ class PackageDetailsPage extends StatelessWidget {
           "Package Details",
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
-            fontSize: 18.sp,
+            fontSize: 18.sp, // Original size
             color: Colors.white,
           ),
         ),
@@ -49,7 +51,6 @@ class PackageDetailsPage extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Stack(
-              // Added Stack to layer the image and gradient
               children: [
                 Image.asset(
                   imagePath,
@@ -64,7 +65,7 @@ class PackageDetailsPage extends StatelessWidget {
                       'Image Not Found at: $imagePath',
                       style: GoogleFonts.inter(
                         color: AppColors.textSecondary,
-                        fontSize: 13.sp,
+                        fontSize: 13.sp, // Original size
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -78,12 +79,10 @@ class PackageDetailsPage extends StatelessWidget {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withOpacity(
-                            0.8,
-                          ), // Start with opaque black
-                          Colors.transparent, // Fade to transparent
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
                         ],
-                        stops: const [0.0, 0.5], // Control fade speed
+                        stops: const [0.0, 0.5],
                       ),
                     ),
                   ),
@@ -93,7 +92,7 @@ class PackageDetailsPage extends StatelessWidget {
           ),
           SizedBox(height: 2.h),
 
-          // Title Row (Price column removed from here)
+          // Title Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +104,7 @@ class PackageDetailsPage extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 17.sp,
+                        fontSize: 17.sp, // Original size
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
@@ -113,7 +112,6 @@ class PackageDetailsPage extends StatelessWidget {
                   ],
                 ),
               ),
-              // REMOVED: Column displaying the price was here.
             ],
           ),
           SizedBox(height: 3.h),
@@ -121,17 +119,18 @@ class PackageDetailsPage extends StatelessWidget {
           Text(
             description,
             style: GoogleFonts.inter(
-              fontSize: 15.sp,
+              fontSize: 15.sp, // Original size
               color: AppColors.textSecondary,
               height: 1.5,
             ),
           ),
           SizedBox(height: 3.h),
 
+          // What's Included Section
           Text(
             "What's Included",
             style: GoogleFonts.inter(
-              fontSize: 17.sp,
+              fontSize: 17.sp, // Original size
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -153,7 +152,7 @@ class PackageDetailsPage extends StatelessWidget {
                     child: Text(
                       item['name']!,
                       style: GoogleFonts.inter(
-                        fontSize: 15.sp,
+                        fontSize: 15.sp, // Original size
                         color: AppColors.textPrimary,
                       ),
                     ),
@@ -184,7 +183,8 @@ class PackageDetailsPage extends StatelessWidget {
           width: double.infinity,
           size: AppButtonSize.large,
           onPressed: () {
-            print("Book now for $title");
+            // Reverted to having NO navigation
+            print("Book Now button pressed, no navigation defined.");
           },
         ),
       ),
@@ -219,7 +219,7 @@ class PackageDetailsPage extends StatelessWidget {
     bool isPrice = false,
     bool isTime = false,
   }) {
-    final double valueFontSize = 14.sp;
+    final double valueFontSize = 14.sp; // Original size
 
     return Padding(
       padding: EdgeInsets.only(bottom: 1.h),
@@ -230,7 +230,7 @@ class PackageDetailsPage extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 15.sp,
+              fontSize: 15.sp, // Original size
               color: AppColors.textSecondary,
             ),
           ),

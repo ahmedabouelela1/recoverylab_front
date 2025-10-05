@@ -32,29 +32,25 @@ class _CoupomRedeemPageState extends State<CoupomRedeemPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        // Wrap the Column in a Sizedbox to force it to take 100% of the screen width
-        child: SizedBox(
-          width: 100.w, // Ensures the container uses the full width
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
           child: Column(
-            // Now that the Column's parent has full width, this centers the content
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(), // 👈 Spacer 1: Pushes content down
+              SizedBox(height: 25.h), // 👈 pushes content down
               Column(
                 children: [
                   Image.asset(
-                    "lib/assets/images/blue.png",
+                    'lib/assets/images/blue.png',
                     width: 50.w,
-                    height: 50.w,
-                    fit: BoxFit.contain,
+                    height: 30.h,
                   ),
-                  SizedBox(height: 2.h),
+                  const SizedBox(height: 16),
                   Text(
-                    "Coupon\nRedeemed Successfully!",
-                    textAlign: TextAlign.center,
+                    "Your Coupon\nis Successfully Redeemed!",
+                    textAlign:
+                        TextAlign.center, // 👈 ensures both lines are centered
                     style: GoogleFonts.inter(
                       fontSize: 19.sp,
                       fontWeight: FontWeight.w500,
