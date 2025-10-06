@@ -14,12 +14,7 @@ class WelcomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
+        // ❌ REMOVED: The 'leading' property which contained the back button icon.
         title: Text(
           "Log into account",
           style: GoogleFonts.inter(
@@ -31,6 +26,8 @@ class WelcomePage extends StatelessWidget {
         centerTitle: true, // 👈 this centers it properly
         backgroundColor: AppColors.background,
         elevation: 0,
+        // ✅ Kept (or added): This prevents Flutter from automatically adding a back button
+        // if the screen is the child of a Navigator.
         automaticallyImplyLeading: false,
       ),
 

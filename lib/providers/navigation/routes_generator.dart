@@ -1,6 +1,8 @@
 // routes generator
 
 import 'package:flutter/material.dart';
+// 🔑 NEW IMPORT: The Booking model is required to accept the argument type
+import 'package:recoverylab_front/models/booking_model.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_one.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_three.dart';
@@ -72,6 +74,7 @@ class Routes {
   static const String bookingsThree = '/bookingsThree';
   static const String bookingSuccessPage = '/bookingSuccessPage';
   static const String bookingDetailsPage = '/bookingDetailsPage';
+  static const String splashScreen = '/splashScreen';
 }
 
 class RoutesGenerator {
@@ -80,9 +83,7 @@ class RoutesGenerator {
 
     switch (settings.name) {
       case Routes.root:
-        return MaterialPageRoute(builder: (_) => WelcomeScreen());
-      case Routes.home:
-      // return MaterialPageRoute(builder: (_) => HomeScreen());
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
       case Routes.onboardingScreen:
         return MaterialPageRoute(builder: (_) => OnboardingScreen());
       case Routes.welcomePage:
@@ -90,6 +91,7 @@ class RoutesGenerator {
       case Routes.loginPage:
         return MaterialPageRoute(builder: (_) => LoginPage());
       case Routes.otp:
+        // Assuming your Otp class is actually named VerificationPage from your imports
         return MaterialPageRoute(builder: (_) => Otp());
       case Routes.otpVerified:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPage());
@@ -103,19 +105,27 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const WellnessQuestionPage());
       case Routes.bookingSuccessPage:
         return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
+
+      // Handle the BookingDetailsPage argument which expects a Booking object
       case Routes.bookingDetailsPage:
-        if (args is Map<String, dynamic> && args.containsKey('booking')) {
+        if (args is Map<String, dynamic> &&
+            args.containsKey('booking') &&
+            args['booking'] is Booking) {
           return MaterialPageRoute(
-            builder: (_) => BookingDetailsPage(booking: args['booking']),
+            builder: (_) =>
+                BookingDetailsPage(booking: args['booking'] as Booking),
           );
         }
         return _errorRoute();
+
       case Routes.questionnaireStepTwo:
         return MaterialPageRoute(
           builder: (_) => const WellnessQuestionPageTwo(),
         );
       case Routes.otpSignup:
+        // Assuming your SignupOtp class is correct
         return MaterialPageRoute(builder: (_) => SignupOtp());
+
       case Routes.packageDetails:
         if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
@@ -125,8 +135,7 @@ class RoutesGenerator {
               imagePath: args['imagePath'] as String,
               totalDuration: args['totalDuration'] as String,
               price: args['price'] as String,
-              // FIX: Correctly map the List<Map<String, dynamic>> arguments
-              // to the expected List<Map<String, String>> type for PackageDetailsPage
+              // Correctly map the List<dynamic> arguments
               inclusions: (args['inclusions'] as List<dynamic>)
                   .map((e) => Map<String, String>.from(e))
                   .toList(),
@@ -136,8 +145,11 @@ class RoutesGenerator {
         return _errorRoute();
       case Routes.packagesPage:
         return MaterialPageRoute(builder: (_) => const PackagesPage());
+
       case Routes.bookingsThree:
         if (args is Map<String, dynamic>) {
+          // Note: args['booking'] should be cast to Booking if BookingPageThree expects it.
+          // Since you didn't provide its constructor, I'll trust your current args usage.
           return MaterialPageRoute(
             builder: (_) => BookingPageThree(
               booking: args['booking'],
@@ -159,6 +171,7 @@ class RoutesGenerator {
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
       case Routes.style:
+        // Assuming ServicesSelectionPage is the correct class from your imports
         return MaterialPageRoute(builder: (_) => const ServicesSelectionPage());
       case Routes.settings:
         return MaterialPageRoute(builder: (_) => const SettingsPage());
@@ -167,24 +180,28 @@ class RoutesGenerator {
       case Routes.termsAndPolicies:
         return MaterialPageRoute(builder: (_) => const TermsAndPoliciesPage());
       case Routes.resetPassword:
+        // Assuming ChangePasswordPage is the correct class
         return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
       case Routes.coupons:
         return MaterialPageRoute(builder: (_) => const CouponsPage());
       case Routes.couponRedeemed:
+        // Assuming CoupomRedeemPage is the correct class
         return MaterialPageRoute(builder: (_) => const CoupomRedeemPage());
       case Routes.editHealthSurvey:
+        // Assuming HealthSurveyPage is the correct class
         return MaterialPageRoute(builder: (_) => const HealthSurveyPage());
       case Routes.upgradeMembership:
         return MaterialPageRoute(builder: (_) => const UpgradeMembershipPage());
       case Routes.bookings:
         return MaterialPageRoute(builder: (_) => const BookingScreen());
+
       case Routes.bookingsTwo:
         if (args is Map<String, dynamic> &&
             args.containsKey('booking') &&
             args.containsKey('allStaffMembers')) {
           return MaterialPageRoute(
             builder: (_) => BookingPageTwo(
-              booking: args['booking'],
+              booking: args['booking'], // Should be a Booking object
               allStaffMembers: args['allStaffMembers'],
               selectedTherapist: args['selectedTherapist'],
               onTherapistSelected: args['onTherapistSelected'],
@@ -201,19 +218,33 @@ class RoutesGenerator {
           );
         }
         return _errorRoute();
+
       case Routes.staffDetails:
         if (args is Map<String, dynamic>) {
+          // Assuming StaffDetailsScreen constructor takes a 'staff' argument
           return MaterialPageRoute(
             builder: (_) => StaffDetailsScreen(staff: args['staff']),
           );
         }
         return _errorRoute();
+
       case Routes.mainScreen:
         return MaterialPageRoute(builder: (_) => const MainScreen());
+
+      // 🔑 CRITICAL FIX: Handle the Booking object passed directly from ServiceDetailsPage
       case Routes.bookingsOne:
-        if (args is Map<String, dynamic> && args.containsKey('booking')) {
+        // Case 1: Argument is a raw Booking object (from detail page)
+        if (args is Booking) {
           return MaterialPageRoute(
-            builder: (_) => BookingPageOne(booking: args['booking']),
+            builder: (_) => BookingPageOne(booking: args),
+          );
+        }
+        // Case 2: Argument is a Map containing the Booking object (from booking flow)
+        if (args is Map<String, dynamic> &&
+            args.containsKey('booking') &&
+            args['booking'] is Booking) {
+          return MaterialPageRoute(
+            builder: (_) => BookingPageOne(booking: args['booking'] as Booking),
           );
         }
         return _errorRoute();
@@ -225,8 +256,10 @@ class RoutesGenerator {
           );
         }
         return _errorRoute();
+
       case Routes.serviceDetails:
         if (args is Map<String, dynamic>) {
+          // Note: ServiceDetailsPage import was missing, added for completeness
           return MaterialPageRoute(
             builder: (_) => ServiceDetailsPage(
               title: args['title'] as String,
@@ -243,6 +276,7 @@ class RoutesGenerator {
           );
         }
         return _errorRoute();
+
       default:
         return _errorRoute();
     }

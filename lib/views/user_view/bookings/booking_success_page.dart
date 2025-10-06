@@ -17,8 +17,8 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
   @override
   void initState() {
     super.initState();
-    // Start a timer to pop the page after 10 seconds
-    Future.delayed(const Duration(seconds: 10), () {
+    // Start a timer to pop the page after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         // Pop back to the main app screen (or whatever screen is appropriate)
         Navigator.pushNamed(context, Routes.mainScreen);

@@ -5,6 +5,16 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 
+// Assuming withValues is an extension method for Color
+extension ColorAlpha on Color {
+  Color withValues({double? alpha}) {
+    if (alpha != null) {
+      return this.withOpacity(alpha);
+    }
+    return this;
+  }
+}
+
 class OnboardingPage {
   final String imagePath;
   final String title;
@@ -56,8 +66,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // TODO: Navigate to Home/Login
+      _navigateToWelcomePage();
     }
+  }
+
+  void _navigateToWelcomePage() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      Routes.welcomePage,
+      (Route<dynamic> route) => false,
+    );
   }
 
   @override
@@ -75,11 +92,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               });
             },
             itemBuilder: (context, index) {
+              // The dots are now built inside _buildPage
               return _buildPage(_pages[index]);
             },
           ),
 
-          // Skip button → AppButton stroke variant
+          // Skip button
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
@@ -87,23 +105,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: EdgeInsets.all(2.h),
                 child: AppButton(
                   label: "Skip",
-                  onPressed: () {
-                    // TODO: Navigate to Home/Login
-                    Navigator.of(context).pushNamed(Routes.welcomePage);
-                  },
+                  onPressed: _navigateToWelcomePage,
                   variant: AppButtonVariant.stroke,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ), // 👈 compact size
-                  borderRadius: 28, // 👈 rounded edges
-                  fontSize: 14, // 👈 smaller text
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  borderRadius: 28,
+                  fontSize: 14,
                 ),
               ),
             ),
           ),
 
-          // Bottom content (dots + button)
+          // Bottom content (ONLY THE BUTTON REMAINS HERE)
           Positioned(
             bottom: 10.h,
             left: 5.w,
@@ -111,9 +123,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // REMOVED: Dots indicator is now inside _buildPage
                 SizedBox(height: 2.h),
 
-                // Next / Get Started → AppButton solid variant
+                // Next / Get Started button
                 SizedBox(
                   width: 100.w,
                   child: AppButton(
@@ -161,6 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              // 1. ADDED: Dots indicator here, above the title
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -168,7 +182,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   (index) => _buildDot(index == _currentPage),
                 ),
               ),
-              SizedBox(height: 6.h),
+
+              // 2. SPACE between dots and title (increased as requested previously)
+              SizedBox(height: 2.h),
+
               Text(
                 page.title,
                 style: GoogleFonts.inter(
@@ -188,6 +205,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              // 3. Adjusted padding to account for the button fixed at the bottom
               SizedBox(height: 18.h),
             ],
           ),
@@ -197,6 +215,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildDot(bool isActive) {
+    // ... _buildDot remains the same ...
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: EdgeInsets.symmetric(horizontal: 1.w),

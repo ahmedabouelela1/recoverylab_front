@@ -1,18 +1,23 @@
+// service_details_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:sizer/sizer.dart';
+import 'dart:math'; // For temporary ID generation
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/models/booking_model.dart'; // REQUIRED for Booking and BookingStatus
 
 class ServiceDetailsPage extends StatelessWidget {
   final String title;
   final String location;
   final String rating;
   final String image;
-  final String price; // New field for price
-  final String duration; // New field for duration
-  final List<String> availableFeatures; // New field for features
-  final List<Map<String, String>> reviews; // New field for reviews
+  final String price;
+  final String duration;
+  final List<String> availableFeatures;
+  final List<Map<String, String>> reviews;
 
   const ServiceDetailsPage({
     super.key,
@@ -20,10 +25,10 @@ class ServiceDetailsPage extends StatelessWidget {
     required this.location,
     required this.rating,
     required this.image,
-    required this.price, // Required in constructor
-    required this.duration, // Required in constructor
-    required this.availableFeatures, // Required in constructor
-    required this.reviews, // Required in constructor
+    required this.price,
+    required this.duration,
+    required this.availableFeatures,
+    required this.reviews,
   });
 
   @override
@@ -222,8 +227,7 @@ class ServiceDetailsPage extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
-                  color: AppColors
-                      .cardBackground, // Assuming a light card background
+                  color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: AppColors.textSecondary.withOpacity(0.1),
@@ -292,7 +296,38 @@ class ServiceDetailsPage extends StatelessWidget {
           width: double.infinity, // full width
           size: AppButtonSize.large,
           onPressed: () {
-            print("Book now for $title");
+            // Convert String rating to double
+            final double parsedRating = double.tryParse(rating) ?? 0.0;
+
+            // Generate a simple, temporary unique ID
+            final String temporaryId =
+                DateTime.now().millisecondsSinceEpoch.toString() +
+                Random().nextInt(1000).toString();
+
+            // Create the Booking object
+            final Booking newBooking = Booking(
+              id: temporaryId, // REQUIRED: Temporary ID
+              title: title,
+              description: 'Booking for $title at $location.',
+              imageUrl: image,
+              duration: duration,
+              rating: parsedRating, // Converted to double
+              location: location,
+
+              // Provide default/placeholder values for required fields
+              date: '',
+              time: '',
+              status: BookingStatus.upcoming,
+              // Assuming price/serviceName/selectedStaffName are optional or not needed here
+            );
+
+            // Navigate to BookingPageOne, passing the Booking object
+            Navigator.pushNamed(
+              context,
+              Routes.bookingsOne,
+              arguments: newBooking,
+            );
+            print("Navigating to Booking Page One for $title");
           },
         ),
       ),
