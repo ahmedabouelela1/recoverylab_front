@@ -7,6 +7,83 @@ import 'package:sizer/sizer.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  void _showRatingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: 85.w,
+            padding: EdgeInsets.fromLTRB(6.w, 4.h, 8.w, 4.h),
+            // ✅ Wrap content in SingleChildScrollView to avoid overflow
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Close button
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+
+                  // Title
+                  Text(
+                    "How many stars would\nyou give our service?",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18.sp,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+
+                  // Subtext
+                  Text(
+                    "Layla Nour completed your Egyptian\nAromatherapy Massage session",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.sp,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  SizedBox(height: 3.h),
+
+                  // Stars
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 2.w,
+                    runSpacing: 1.h,
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        Icons.star_border,
+                        color: AppColors.textSecondary,
+                        size: 26.sp,
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,8 +182,7 @@ class HomePage extends StatelessWidget {
                   SizedBox(width: 2.w),
                   GestureDetector(
                     onTap: () {
-                      // Handle filter button tap
-                      print("filter button tapped");
+                      _showRatingDialog(context);
                     },
                     child: Container(
                       padding: EdgeInsets.all(10),
@@ -223,7 +299,7 @@ class HomePage extends StatelessWidget {
               ),
               SizedBox(height: 2.h),
               SizedBox(
-                height: 10.h, // ✅ matches category height
+                height: 10.h,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
@@ -300,7 +376,7 @@ class HomePage extends StatelessWidget {
       },
       child: Container(
         width: 44.w,
-        height: 20.h, // ✅ consistent height
+        height: 20.h,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           image: DecorationImage(
@@ -342,16 +418,14 @@ class HomePage extends StatelessWidget {
             'location': location,
             'rating': "4.8 (320)",
             'image': imagePath,
-            'price': "\$120", // ✅ Added
-            'duration': "60 min", // ✅ Added
+            'price': "\$120",
+            'duration': "60 min",
             'availableFeatures': [
-              // ✅ Added
               "Full body massage",
               "Aromatherapy oils",
               "Complimentary tea",
             ],
             'reviews': [
-              // ✅ Added
               {
                 'name': "Alice",
                 'stars': "5",
