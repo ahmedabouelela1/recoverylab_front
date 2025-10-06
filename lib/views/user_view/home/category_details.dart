@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:sizer/sizer.dart';
-import 'dart:math'; // For temporary ID generation
+import 'dart:math';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
-import 'package:recoverylab_front/models/booking_model.dart'; // REQUIRED for Booking and BookingStatus
+import 'package:recoverylab_front/models/booking_model.dart';
 
 class ServiceDetailsPage extends StatelessWidget {
   final String title;
@@ -52,14 +52,35 @@ class ServiceDetailsPage extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.all(4.w),
         children: [
-          // Top image
+          // 🖼️ Image with Gradient Overlay
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.asset(
-              image,
-              height: 20.h,
-              width: double.infinity,
-              fit: BoxFit.cover,
+            child: Stack(
+              children: [
+                Image.asset(
+                  image,
+                  height: 20.h,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+                // 🎨 Gradient overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.4), // soft dark top
+                          Colors.transparent, // clear middle
+                          Colors.black.withOpacity(0.8), // deep bottom
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: 2.h),
@@ -110,7 +131,7 @@ class ServiceDetailsPage extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary, // Highlight price
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
@@ -288,40 +309,32 @@ class ServiceDetailsPage extends StatelessWidget {
         ],
       ),
 
-      // Custom button at bottom
+      // Bottom Button
       bottomNavigationBar: Padding(
         padding: EdgeInsets.all(4.w),
         child: AppButton(
           label: "Book Now",
-          width: double.infinity, // full width
+          width: double.infinity,
           size: AppButtonSize.large,
           onPressed: () {
-            // Convert String rating to double
             final double parsedRating = double.tryParse(rating) ?? 0.0;
-
-            // Generate a simple, temporary unique ID
             final String temporaryId =
                 DateTime.now().millisecondsSinceEpoch.toString() +
                 Random().nextInt(1000).toString();
 
-            // Create the Booking object
             final Booking newBooking = Booking(
-              id: temporaryId, // REQUIRED: Temporary ID
+              id: temporaryId,
               title: title,
               description: 'Booking for $title at $location.',
               imageUrl: image,
               duration: duration,
-              rating: parsedRating, // Converted to double
+              rating: parsedRating,
               location: location,
-
-              // Provide default/placeholder values for required fields
               date: '',
               time: '',
               status: BookingStatus.upcoming,
-              // Assuming price/serviceName/selectedStaffName are optional or not needed here
             );
 
-            // Navigate to BookingPageOne, passing the Booking object
             Navigator.pushNamed(
               context,
               Routes.bookingsOne,
