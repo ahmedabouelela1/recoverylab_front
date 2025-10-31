@@ -140,23 +140,23 @@ class BookingCard extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: 0.5.h),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          color: AppColors.warning,
-                          size: 14,
-                        ),
-                        SizedBox(width: 1.w),
-                        Text(
-                          '${booking.rating}',
-                          style: GoogleFonts.inter(
-                            color: AppColors.textSecondary,
-                            fontSize: 13.sp,
-                          ),
-                        ),
-                      ],
-                    ),
+                    // // Row(
+                    // //   children: [
+                    // //     const Icon(
+                    // //       Icons.star,
+                    // //       color: AppColors.warning,
+                    // //       size: 14,
+                    // //     ),
+                    // //     SizedBox(width: 1.w),
+                    //     // Text(
+                    //     //   '${booking.rating}',
+                    //     //   style: GoogleFonts.inter(
+                    //     //     color: AppColors.textSecondary,
+                    //     //     fontSize: 13.sp,
+                    //     //   ),
+                    //     // ),
+                    //   ],
+                    // ),
                     SizedBox(height: 1.5.h),
                     _buildDetailRow(Icons.location_on, '', booking.location),
                     _buildDetailRow(

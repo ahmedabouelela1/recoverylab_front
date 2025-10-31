@@ -82,15 +82,14 @@ class BookingDetailsPage extends StatelessWidget {
             icon: Icons.access_time,
           ),
 
-          // The rating row is good for a completed booking
-          if (booking.status == BookingStatus.completed)
-            _buildDetailRow(
-              "Rating",
-              '${booking.rating}/5.0',
-              icon: Icons.star,
-              valueColor: AppColors.warning,
-            ),
-
+          // // The rating row is good for a completed booking
+          // if (booking.status == BookingStatus.completed)
+          //   _buildDetailRow(
+          //     // "Rating",
+          //     // '${booking.rating}/5.0',
+          //     // icon: Icons.star,
+          //     // valueColor: AppColors.warning,
+          //   ),
           SizedBox(height: 3.h),
         ],
       ),

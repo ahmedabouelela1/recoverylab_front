@@ -164,19 +164,19 @@ class CategoryDetailsPage extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 0.5.h),
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 15, color: Colors.amber),
-                  SizedBox(width: 1.w),
-                  Text(
-                    rating,
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     const Icon(Icons.star, size: 15, color: Colors.amber),
+              //     SizedBox(width: 1.w),
+              //     Text(
+              //       rating,
+              //       style: GoogleFonts.inter(
+              //         fontSize: 14.sp,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //   ],
+              // ),
               Align(
                 alignment: Alignment.bottomRight,
                 child: Text(

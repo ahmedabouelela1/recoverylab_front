@@ -1,16 +1,68 @@
-// pages/settings/settings_page.dart
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
-  // Helper function for navigation using named routes
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  File? _profileImage;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.textPrimary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text("Take a photo"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final picked = await picker.pickImage(
+                    source: ImageSource.camera,
+                  );
+                  if (picked != null) {
+                    setState(() => _profileImage = File(picked.path));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text("Choose from gallery"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final picked = await picker.pickImage(
+                    source: ImageSource.gallery,
+                  );
+                  if (picked != null) {
+                    setState(() => _profileImage = File(picked.path));
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _navigateToNamed(BuildContext context, String routeName) {
     Navigator.of(context).pushNamed(routeName);
   }
@@ -23,40 +75,30 @@ class SettingsPage extends StatelessWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
-        // This line removes the back arrow or leading icon
         automaticallyImplyLeading: false,
-
         title: Text(
           "Settings",
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             fontSize: 18.sp,
-            color: AppColors.textPrimary, // White
+            color: AppColors.textPrimary,
           ),
         ),
       ),
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
         children: [
-          // 1. Profile Card (User Info & Membership)
           _buildProfileCard(context),
           SizedBox(height: 3.h),
-
-          // 2. Account Section
           _buildSectionTitle("Account"),
           _buildAccountSection(context),
           SizedBox(height: 3.h),
-
-          // 3. Support & About Section
           _buildSectionTitle("Support & About"),
           _buildSupportSection(context),
           SizedBox(height: 10.h),
-
-          // 4. Log out Button
           AppButton(
             label: "Log out",
             onPressed: () {
-              // TODO: Implement Log out logic (e.g., clear session, navigate to login)
               print("User logged out");
             },
             icon: Icons.logout,
@@ -67,8 +109,6 @@ class SettingsPage extends StatelessWidget {
       ),
     );
   }
-
-  // --- Widget Builders ---
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -85,10 +125,9 @@ class SettingsPage extends StatelessWidget {
   }
 
   Widget _buildProfileCard(BuildContext context) {
-    const String profileImagePath = 'lib/assets/images/profile.png';
+    const String defaultProfilePath = 'lib/assets/images/profile.png';
 
     return Container(
-      // Only apply padding for the user info section here
       padding: EdgeInsets.only(top: 4.w, left: 4.w, right: 4.w, bottom: 2.w),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
@@ -97,32 +136,40 @@ class SettingsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User Info Row
           Padding(
-            padding: EdgeInsets.only(bottom: 2.w), // Add some space below info
+            padding: EdgeInsets.only(bottom: 2.w),
             child: Row(
               children: [
-                // Profile Picture with Gold Membership indicator
+                // Profile Picture with Edit Option
                 Stack(
                   alignment: Alignment.bottomRight,
                   children: [
-                    CircleAvatar(
-                      radius: 6.w,
-                      backgroundImage: const AssetImage(profileImagePath),
-                      backgroundColor: AppColors.textSecondary.withOpacity(0.1),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: CircleAvatar(
+                        radius: 6.w,
+                        backgroundImage: _profileImage != null
+                            ? FileImage(_profileImage!)
+                            : const AssetImage(defaultProfilePath)
+                                  as ImageProvider,
+                        backgroundColor: AppColors.textSecondary.withOpacity(
+                          0.1,
+                        ),
+                      ),
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        padding: const EdgeInsets.all(1),
-                        decoration: const BoxDecoration(
-                          color: Colors.yellow, // Gold color for badge
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
                           shape: BoxShape.circle,
                         ),
-                        constraints: BoxConstraints(
-                          minWidth: 1.5.w,
-                          minHeight: 1.5.w,
+                        padding: const EdgeInsets.all(3),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 14,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -152,24 +199,14 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
-
           SizedBox(height: 2.h),
-
-          // DEDICATED GRAY CONTAINER FOR GOLD MEMBERSHIP (NOW NAVIGATING)
           InkWell(
-            onTap: () {
-              // Navigate to a page showing Membership details (or UpgradeMembership if needed)
-              _navigateToNamed(context, Routes.upgradeMembership);
-            },
+            onTap: () => _navigateToNamed(context, Routes.upgradeMembership),
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              // The gray container that is visually distinct
               padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-              margin: EdgeInsets.only(
-                bottom: 2.w,
-              ), // Ensures the card padding is visible below it
+              margin: EdgeInsets.only(bottom: 2.w),
               decoration: BoxDecoration(
-                // Using a light tint of the background for a gray/slightly lighter card look
                 color: AppColors.textPrimary.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -271,15 +308,7 @@ class SettingsPage extends StatelessWidget {
     required String title,
     required VoidCallback onTap,
     bool isLast = false,
-    bool showTrailingIcon = false,
   }) {
-    // Note: The original code didn't set showTrailingIcon to true anywhere.
-    // I've kept it false for consistency with the provided functions,
-    // but the Row structure is still here. You might want to remove 'showTrailingIcon'
-    // from the parameters and always show the trailing icon if you want it on every item.
-    // Since it's a settings list, I'll add the arrow by default on all items for UX,
-    // and remove the `showTrailingIcon` parameter, setting it to true internally.
-
     return InkWell(
       onTap: onTap,
       child: Column(
@@ -299,7 +328,6 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Show the trailing icon for all navigation items
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,

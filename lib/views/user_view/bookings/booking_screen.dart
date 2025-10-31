@@ -16,7 +16,7 @@ List<Booking> mockBookingsData = [
     date: 'Jun 6, 2025',
     time: '10:00 am',
     duration: '1:00 hour',
-    rating: 4.8,
+    //rating: 4.8,
     imageUrl: 'lib/assets/images/spa.jpg',
     status: BookingStatus.upcoming,
     description:
@@ -29,7 +29,7 @@ List<Booking> mockBookingsData = [
     date: 'Jun 6, 2025',
     time: '10:00 am',
     duration: '1:00 hour',
-    rating: 4.8,
+    //rating: 4.8,
     imageUrl: 'lib/assets/images/massage.jpg',
     status: BookingStatus.upcoming,
     description:
@@ -43,7 +43,7 @@ List<Booking> mockBookingsData = [
     date: 'May 1, 2025',
     time: '10:00 am',
     duration: '1:00 hour',
-    rating: 4.8,
+    //rating: 4.8,
     imageUrl: 'lib/assets/images/spa.jpg',
     status: BookingStatus.completed,
     description:
@@ -57,7 +57,7 @@ List<Booking> mockBookingsData = [
     date: 'Apr 10, 2025',
     time: '1:00 pm',
     duration: '1:00 hour',
-    rating: 4.8,
+    //rating: 4.8,
     imageUrl: 'lib/assets/images/haven.jpg',
     status: BookingStatus.cancelled,
     description:

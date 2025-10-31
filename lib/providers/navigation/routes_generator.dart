@@ -264,7 +264,7 @@ class RoutesGenerator {
             builder: (_) => ServiceDetailsPage(
               title: args['title'] as String,
               location: args['location'] as String,
-              rating: args['rating'] as String,
+              //rating: args['rating'] as String,
               image: args['image'] as String,
               price: args['price'] as String,
               duration: args['duration'] as String,

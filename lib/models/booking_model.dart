@@ -7,7 +7,7 @@ class Booking {
   final String date;
   final String time;
   final String duration;
-  final double rating;
+  //final double rating;
   final String imageUrl;
   final BookingStatus status;
   final String description;
@@ -21,7 +21,7 @@ class Booking {
     required this.date,
     required this.time,
     required this.duration,
-    required this.rating,
+    //required this.rating,
     required this.imageUrl,
     required this.status,
     required this.description,
@@ -51,7 +51,7 @@ class Booking {
       date: date ?? this.date,
       time: time ?? this.time,
       duration: duration ?? this.duration,
-      rating: rating ?? this.rating,
+      //rating: rating ?? this.rating,
       imageUrl: imageUrl ?? this.imageUrl,
       status: status ?? this.status,
       description: description ?? this.description,

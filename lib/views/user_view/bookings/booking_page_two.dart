@@ -145,19 +145,19 @@ class _BookingPageTwoState extends State<BookingPageTwo> {
                 ],
               ),
               SizedBox(height: 0.5.h),
-              Row(
-                children: [
-                  const Icon(Icons.star, color: AppColors.warning, size: 16),
-                  SizedBox(width: 1.w),
-                  Text(
-                    "${widget.booking.rating}(320)",
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     const Icon(Icons.star, color: AppColors.warning, size: 16),
+              //     SizedBox(width: 1.w),
+              //     Text(
+              //       "${widget.booking.rating}(320)",
+              //       style: GoogleFonts.inter(
+              //         fontSize: 12.sp,
+              //         color: AppColors.textSecondary,
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ),
