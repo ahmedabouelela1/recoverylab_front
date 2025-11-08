@@ -181,6 +181,7 @@ class PackageDetailsPage extends StatelessWidget {
         child: AppButton(
           label: "Book Now",
           width: double.infinity,
+          borderRadius: 40.sp,
           size: AppButtonSize.large,
           onPressed: () {
             // Reverted to having NO navigation

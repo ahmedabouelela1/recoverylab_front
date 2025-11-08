@@ -100,6 +100,26 @@ class _SignupPageState extends State<SignupPage> {
               ),
               SizedBox(height: 2.5.h),
 
+              AppTextField(
+                label: "Password",
+                hintText: "Enter your password",
+                controller: passwordController,
+                obscureText: obscurePassword,
+                size: AppTextFieldSize.large,
+                borderColor: AppColors.textFieldBorder,
+                fillColor: AppColors.textFieldBackground,
+                textColor: AppColors.textPrimary,
+                suffixIcon: Icon(
+                  obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
+                ),
+                onSuffixTap: () {
+                  setState(() {
+                    obscurePassword = !obscurePassword;
+                  });
+                },
+              ),
+              SizedBox(height: 2.5.h),
               // Password
               AppTextField(
                 label: "Password",
@@ -157,7 +177,7 @@ class _SignupPageState extends State<SignupPage> {
                     "Already part of the Recovery Lab family? ",
                     style: GoogleFonts.inter(
                       fontSize: 14.sp,
-                      color: AppColors.textPrimary,
+                      color: AppColors.strokeBorder,
                     ),
                   ),
                   GestureDetector(
@@ -166,7 +186,7 @@ class _SignupPageState extends State<SignupPage> {
                       "Log In",
                       style: GoogleFonts.inter(
                         fontSize: 14.sp,
-                        color: AppColors.primary,
+                        color: AppColors.secondary,
                       ),
                     ),
                   ),
@@ -220,12 +240,12 @@ class _SignupPageState extends State<SignupPage> {
         children: [
           TextSpan(
             text: "Terms ",
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(color: AppColors.secondary),
           ),
           const TextSpan(text: "and "),
           TextSpan(
             text: "Privacy Policy.",
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(color: AppColors.secondary),
           ),
         ],
       ),

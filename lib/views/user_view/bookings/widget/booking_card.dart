@@ -194,7 +194,7 @@ class BookingCard extends StatelessWidget {
                     // Use the custom stroke color or fallback
                     side: BorderSide(color: strokeBorderColor),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(30.sp),
                     ),
                     padding: EdgeInsets.symmetric(vertical: 1.5.h),
                     backgroundColor: Colors.transparent,
@@ -216,7 +216,7 @@ class BookingCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(30.sp),
                     ),
                     padding: EdgeInsets.symmetric(vertical: 1.5.h),
                   ),

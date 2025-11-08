@@ -41,7 +41,7 @@ class WelcomePage extends StatelessWidget {
               children: [
                 SizedBox(height: 2.h),
                 Text(
-                  "Welcome Back !",
+                  "Welcome Back!",
                   style: GoogleFonts.inter(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w400,
@@ -162,12 +162,12 @@ class WelcomePage extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: "Terms ",
-                        style: TextStyle(color: AppColors.primary),
+                        style: TextStyle(color: AppColors.info),
                       ),
                       const TextSpan(text: "and "),
                       TextSpan(
                         text: "Privacy Policy.",
-                        style: TextStyle(color: AppColors.primary),
+                        style: TextStyle(color: AppColors.info),
                       ),
                     ],
                   ),

@@ -49,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ],
             ),
-            SizedBox(height: 5.h),
+            SizedBox(height: 2.h),
 
             AppTextField(
               label: "Email",
@@ -62,12 +62,12 @@ class _LoginPageState extends State<LoginPage> {
               keyboardType: TextInputType.emailAddress,
             ),
 
-            SizedBox(height: 3.h),
+            SizedBox(height: 2.h),
 
             // Phone Number Field
             AppTextField(
               label: "Phone Number",
-              hintText: "(454) 726-0592",
+              hintText: "(+20) 1*******",
               size: AppTextFieldSize.large,
               controller: phoneController,
               keyboardType: TextInputType.phone,
@@ -77,11 +77,36 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
-            SizedBox(height: 3.h),
+            SizedBox(height: 2.h),
 
             // Password Field
             AppTextField(
               label: "Password",
+              hintText: "Enter your password",
+              size: AppTextFieldSize.large,
+              controller: passwordController,
+              obscureText: obscurePassword,
+              textColor: AppColors.textPrimary,
+              borderColor: AppColors.textFieldBorder,
+              fillColor: AppColors.textFieldBackground,
+              suffixIcon: Icon(
+                obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: AppColors.textSecondary,
+              ),
+              onSuffixTap: () {
+                setState(() {
+                  obscurePassword = !obscurePassword;
+                });
+              },
+              debounceDuration: Duration(
+                milliseconds: 500,
+              ), // 👈 prevents spam-tapping
+            ),
+
+            SizedBox(height: 2.h),
+
+            AppTextField(
+              label: "Password Confirmation",
               hintText: "Enter your password",
               size: AppTextFieldSize.large,
               controller: passwordController,

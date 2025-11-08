@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
-
-// Assuming these are your custom imports and models
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/booking_model.dart';
 import 'package:recoverylab_front/models/staff_member_model.dart';
-// 🔑 Import the next pages/screens
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_three.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_two.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
 import 'package:recoverylab_front/views/user_view/bookings/staff_details_page.dart';
 
-// --- MOCK DATA SETUP ---
-// 🔑 FIX: Get the full reviews list from the model
 final List<Map<String, dynamic>> _laylaReviews = mockLayla.reviews;
 final List<Map<String, dynamic>> _emptyReviews =
     []; // Use this for staff without mock data

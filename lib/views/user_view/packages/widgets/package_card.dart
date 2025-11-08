@@ -182,7 +182,7 @@ class PackageCard extends StatelessWidget {
                       label: "Book now",
                       onPressed: onBookNow,
                       size: AppButtonSize.medium,
-                      borderRadius: 8,
+                      borderRadius: 100,
                       width: 30.w, // consistent with ComboCard
                     ),
                   ],

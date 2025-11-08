@@ -10,18 +10,54 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // ❌ Removed: Timer is no longer needed
-
-  // Function to handle navigation
   void _navigateToNextScreen() {
-    // We use pushReplacementNamed so the user can't come back to the splash screen
     Navigator.of(context).pushReplacementNamed(Routes.onboardingScreen);
   }
 
   @override
   void initState() {
     super.initState();
-    // ❌ Removed: No timer logic here anymore
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    Future.delayed(const Duration(seconds: 2), () {
+      _navigateToNextScreen();
+    });
+    // bool hasInternet = await _hasInternetConnection();
+
+    // if (!hasInternet) {
+    //   _showNoInternetDialog();
+    //   return;
+    // }
+
+    // final token = await _storage.read(key: 'auth_token');
+    // final authUser = await _storage.read(key: 'auth_response');
+
+    // AuthResponse? authResponse;
+
+    // if (authUser != null) {
+    //   try {
+    //     authResponse = AuthResponse.fromJson(jsonDecode(authUser));
+    //   } catch (e) {
+    //   }
+    // }
+
+    // // Wait for the splash screen animation (3 seconds)
+    // await Future.delayed(const Duration(seconds: 2));
+
+    // if (token != null && token.isNotEmpty && authResponse != null) {
+    //   final response = await ref.read(apiProvider).validateToken(token);
+    //   if (response['success'] == false) {
+    //     Navigator.pushReplacementNamed(context, Routes.login);
+    //     return;
+    //   }
+    //   final authResponseNew = AuthResponse.fromJson(response);
+    //   ref.read(userSessionProvider).login(authResponseNew);
+    //   Navigator.pushReplacementNamed(context, Routes.homeScreen);
+    // } else {
+    //   Navigator.pushReplacementNamed(context, Routes.login);
+    // }
   }
 
   @override

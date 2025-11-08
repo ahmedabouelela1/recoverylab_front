@@ -210,7 +210,7 @@ class HomePage extends StatelessWidget {
               SizedBox(height: 1.5.h),
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(14),
+                height: 20.h, // Optional: set a fixed height if needed
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   image: DecorationImage(
@@ -218,50 +218,73 @@ class HomePage extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
                   children: [
-                    Text(
-                      "Massage room",
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 0.5.h),
-                    Text(
-                      "20% discount",
-                      style: GoogleFonts.inter(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 0.5.h),
-                    Text(
-                      "Jun 16 - Jun 18",
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 1.5.h),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: AppColors.secondary),
+                    // Gradient overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.6),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
-                      onPressed: () {},
-                      child: Text(
-                        "Get offer now >",
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15.sp,
-                        ),
+                    ),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Massage room",
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 0.5.h),
+                          Text(
+                            "20% discount",
+                            style: GoogleFonts.inter(
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 0.5.h),
+                          Text(
+                            "Jun 16 - Jun 18",
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 1.5.h),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                side: BorderSide(color: AppColors.secondary),
+                              ),
+                            ),
+                            onPressed: () {},
+                            child: Text(
+                              "Get offer now >",
+                              style: GoogleFonts.inter(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15.sp,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

@@ -261,12 +261,12 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
         children: [
           TextSpan(
             text: "Terms ",
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(color: AppColors.secondary),
           ),
           const TextSpan(text: "and "),
           TextSpan(
             text: "Privacy Policy.",
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(color: AppColors.secondary),
           ),
         ],
       ),
