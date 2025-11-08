@@ -1,5 +1,3 @@
-// lib/pages/booking/booking_page_three.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
@@ -65,6 +63,10 @@ class BookingPageThree extends StatelessWidget {
           _buildPriceDetailsCard(),
           SizedBox(height: 3.h),
 
+          // ⭐ PROMOCODE SECTION
+          _buildPromocodeSection(context),
+          SizedBox(height: 3.h),
+
           _buildPaymentMethodSection(),
           SizedBox(height: 10.h),
         ],
@@ -75,11 +77,9 @@ class BookingPageThree extends StatelessWidget {
   // --- UI Building Blocks ---
 
   Widget _buildServiceHeader() {
-    // Replicates the service card from Page Two
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Image
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Image.asset(
@@ -120,24 +120,9 @@ class BookingPageThree extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 0.5.h),
-              Row(
-                children: [
-                  const Icon(Icons.star, color: AppColors.warning, size: 16),
-                  SizedBox(width: 1.w),
-                  Text(
-                    "${booking.rating}(320)",
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
-        // Checkbox icon
         const Icon(Icons.check_box, color: AppColors.primary, size: 24),
       ],
     );
@@ -197,7 +182,7 @@ class BookingPageThree extends StatelessWidget {
               Container(
                 width: 1.5.h,
                 height: 1.5.h,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.lightGreen,
                   shape: BoxShape.circle,
                 ),
@@ -212,11 +197,11 @@ class BookingPageThree extends StatelessWidget {
   Widget _buildBookingDetailsCard() {
     final List<Map<String, String>> details = [
       {"label": "Package", "value": packageName},
-      {"label": "Person", "value": personCount}, // Uses passed value
+      {"label": "Person", "value": personCount},
       {
         "label": "Date",
         "value":
-            "${_getMonthName(selectedDate.month)} ${selectedDate.day},${selectedDate.year}",
+            "${_getMonthName(selectedDate.month)} ${selectedDate.day}, ${selectedDate.year}",
       },
       {
         "label": "Time",
@@ -226,8 +211,8 @@ class BookingPageThree extends StatelessWidget {
       {
         "label": "Duration",
         "value": durationHour == 0
-            ? "${durationMinute} minute"
-            : "${durationHour} hour",
+            ? "$durationMinute minute"
+            : "$durationHour hour",
       },
     ];
 
@@ -282,7 +267,6 @@ class BookingPageThree extends StatelessWidget {
   }
 
   Widget _buildPriceDetailsCard() {
-    // Calculate total add-on cost
     double totalAddonsCost = 0;
     selectedAddons.forEach((addon, isSelected) {
       if (isSelected) {
@@ -319,7 +303,7 @@ class BookingPageThree extends StatelessWidget {
           ),
           child: Column(
             children: priceItems.map((item) {
-              if (item.containsKey("isDivider") && item["isDivider"] == true) {
+              if (item["isDivider"] == true) {
                 return Padding(
                   padding: EdgeInsets.symmetric(vertical: 0.5.h),
                   child: Divider(
@@ -332,12 +316,13 @@ class BookingPageThree extends StatelessWidget {
               bool isTotal = item["isTotal"] as bool;
               String formattedValue = item["label"] == "Wallet"
                   ? "\$0"
-                  : "\$${item["value"].toStringAsFixed(2)}";
+                  : "\$${(item["value"] as double).toStringAsFixed(2)}";
 
               if (item["value"] == 0.0 &&
                   item["label"] != "Wallet" &&
-                  item["label"] != "Add-ons")
+                  item["label"] != "Add-ons") {
                 return const SizedBox.shrink();
+              }
 
               return Padding(
                 padding: EdgeInsets.symmetric(vertical: 0.8.h),
@@ -374,6 +359,73 @@ class BookingPageThree extends StatelessWidget {
     );
   }
 
+  // ⭐ Promocode Section
+  Widget _buildPromocodeSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Promocode",
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 15.sp,
+          ),
+        ),
+        SizedBox(height: 1.5.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 4.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    hintText: "Enter promocode",
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      color: AppColors.textSecondary.withOpacity(0.6),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  style: GoogleFonts.inter(
+                    fontSize: 14.sp,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Promocode applied (simulated)'),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(15.w, 4.h),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  "Apply",
+                  style: GoogleFonts.inter(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPaymentMethodSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,14 +439,10 @@ class BookingPageThree extends StatelessWidget {
           ),
         ),
         SizedBox(height: 1.5.h),
-
-        // Payment Cards
         _buildPaymentCard(lastFour: "5656", isSelected: true),
         _buildPaymentCard(lastFour: "1234", isSelected: false),
         _buildPaymentCard(lastFour: "4887", isSelected: false),
         SizedBox(height: 2.h),
-
-        // Add new payment method button
         _buildAddNewPaymentButton(),
       ],
     );
@@ -413,10 +461,10 @@ class BookingPageThree extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.credit_card, color: AppColors.textPrimary, size: 24),
+          const Icon(Icons.credit_card, color: AppColors.textPrimary, size: 24),
           SizedBox(width: 4.w),
           Text(
-            "**** 5656".replaceAll("5656", lastFour),
+            "**** $lastFour",
             style: GoogleFonts.inter(
               fontSize: 14.sp,
               color: AppColors.textPrimary,
@@ -424,7 +472,6 @@ class BookingPageThree extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Custom Radio Button
           Container(
             width: 2.5.h,
             height: 2.5.h,
@@ -442,7 +489,7 @@ class BookingPageThree extends StatelessWidget {
                     child: Container(
                       width: 1.2.h,
                       height: 1.2.h,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
@@ -482,7 +529,6 @@ class BookingPageThree extends StatelessWidget {
     );
   }
 
-  // Helper to format date month name
   String _getMonthName(int month) {
     const months = [
       'Jan',
@@ -490,10 +536,10 @@ class BookingPageThree extends StatelessWidget {
       'Mar',
       'Apr',
       'May',
-      'June',
-      'July',
+      'Jun',
+      'Jul',
       'Aug',
-      'Sept',
+      'Sep',
       'Oct',
       'Nov',
       'Dec',

@@ -12,7 +12,7 @@ import 'package:recoverylab_front/models/booking_model.dart';
 class ServiceDetailsPage extends StatelessWidget {
   final String title;
   final String location;
-  final String rating;
+  //final String rating;
   final String image;
   final String price;
   final String duration;
@@ -23,7 +23,7 @@ class ServiceDetailsPage extends StatelessWidget {
     super.key,
     required this.title,
     required this.location,
-    required this.rating,
+    //required this.rating,
     required this.image,
     required this.price,
     required this.duration,
@@ -157,19 +157,19 @@ class ServiceDetailsPage extends StatelessWidget {
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 18, color: Colors.amber),
-                  SizedBox(width: 1.w),
-                  Text(
-                    rating,
-                    style: GoogleFonts.inter(
-                      fontSize: 15.sp,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     const Icon(Icons.star, size: 18, color: Colors.amber),
+              //     SizedBox(width: 1.w),
+              //     Text(
+              //       rating,
+              //       style: GoogleFonts.inter(
+              //         fontSize: 15.sp,
+              //         color: AppColors.textPrimary,
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
           SizedBox(height: 3.h),
@@ -232,80 +232,80 @@ class ServiceDetailsPage extends StatelessWidget {
           ),
           SizedBox(height: 3.h),
 
-          // Customer Reviews Section
-          Text(
-            "Customer Reviews",
-            style: GoogleFonts.inter(
-              fontSize: 17.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 1.h),
-          ...reviews.map(
-            (review) => Padding(
-              padding: EdgeInsets.only(bottom: 2.h),
-              child: Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.textSecondary.withOpacity(0.1),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          review['name']!,
-                          style: GoogleFonts.inter(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            ...List.generate(
-                              int.tryParse(review['stars']!) ?? 0,
-                              (index) => const Icon(
-                                Icons.star,
-                                size: 18,
-                                color: Colors.amber,
-                              ),
-                            ),
-                            SizedBox(width: 1.w),
-                            Text(
-                              review['stars']!,
-                              style: GoogleFonts.inter(
-                                fontSize: 15.sp,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 0.5.h),
-                    Text(
-                      review['comment']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 15.sp,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 3.h),
+          //   // // Customer Reviews Section
+          //   // Text(
+          //   //   "Customer Reviews",
+          //   //   style: GoogleFonts.inter(
+          //   //     fontSize: 17.sp,
+          //   //     fontWeight: FontWeight.w600,
+          //   //     color: AppColors.textPrimary,
+          //   //   ),
+          //   // ),
+          //   // SizedBox(height: 1.h),
+          //   // ...reviews.map(
+          //   //   (review) => Padding(
+          //   //     padding: EdgeInsets.only(bottom: 2.h),
+          //   //     child: Container(
+          //   //       padding: EdgeInsets.all(3.w),
+          //   //       decoration: BoxDecoration(
+          //   //         color: AppColors.cardBackground,
+          //   //         borderRadius: BorderRadius.circular(8),
+          //   //         border: Border.all(
+          //   //           color: AppColors.textSecondary.withOpacity(0.1),
+          //   //           width: 1,
+          //   //         ),
+          //   //       ),
+          //   //       child: Column(
+          //   //         crossAxisAlignment: CrossAxisAlignment.start,
+          //   //         children: [
+          //   //           Row(
+          //   //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   //             children: [
+          //   //               Text(
+          //   //                 review['name']!,
+          //   //                 style: GoogleFonts.inter(
+          //   //                   fontSize: 15.sp,
+          //   //                   fontWeight: FontWeight.bold,
+          //   //                   color: AppColors.textPrimary,
+          //   //                 ),
+          //   //               ),
+          //   //               Row(
+          //   //                 children: [
+          //   //                   ...List.generate(
+          //   //                     int.tryParse(review['stars']!) ?? 0,
+          //   //                     (index) => const Icon(
+          //   //                       Icons.star,
+          //   //                       size: 18,
+          //   //                       color: Colors.amber,
+          //   //                     ),
+          //   //                   ),
+          //   //                   SizedBox(width: 1.w),
+          //   //                   Text(
+          //   //                     review['stars']!,
+          //   //                     style: GoogleFonts.inter(
+          //   //                       fontSize: 15.sp,
+          //   //                       color: AppColors.textPrimary,
+          //   //                     ),
+          //   //                   ),
+          //   //                 ],
+          //   //               ),
+          //   //             ],
+          //   //           ),
+          //   //           SizedBox(height: 0.5.h),
+          //   //           Text(
+          //   //             review['comment']!,
+          //   //             style: GoogleFonts.inter(
+          //   //               fontSize: 15.sp,
+          //   //               color: AppColors.textSecondary,
+          //   //               height: 1.4,
+          //   //             ),
+          //   //           ),
+          //   //         ],
+          //   //       ),
+          //   //     ),
+          //   //   ),
+          //   ),
+          //   SizedBox(height: 3.h),
         ],
       ),
 
@@ -317,7 +317,7 @@ class ServiceDetailsPage extends StatelessWidget {
           width: double.infinity,
           size: AppButtonSize.large,
           onPressed: () {
-            final double parsedRating = double.tryParse(rating) ?? 0.0;
+            //final double parsedRating = double.tryParse(rating) ?? 0.0;
             final String temporaryId =
                 DateTime.now().millisecondsSinceEpoch.toString() +
                 Random().nextInt(1000).toString();
@@ -328,7 +328,7 @@ class ServiceDetailsPage extends StatelessWidget {
               description: 'Booking for $title at $location.',
               imageUrl: image,
               duration: duration,
-              rating: parsedRating,
+              //rating: parsedRating,
               location: location,
               date: '',
               time: '',

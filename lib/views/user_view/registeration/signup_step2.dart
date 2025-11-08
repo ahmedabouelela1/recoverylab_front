@@ -126,43 +126,6 @@ class _SignupStepTwoState extends State<SignupStepTwo> {
 
               SizedBox(height: 2.5.h),
 
-              // Athlete Radio
-              Text(
-                "Athlete",
-                style: GoogleFonts.inter(
-                  fontSize: 16.sp,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Radio(
-                    value: true,
-                    groupValue: athlete,
-                    onChanged: (val) => setState(() => athlete = val as bool),
-                    activeColor: AppColors.primary,
-                  ),
-                  const Text(
-                    "Yes",
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  SizedBox(width: 20.w),
-                  Radio(
-                    value: false,
-                    groupValue: athlete,
-                    onChanged: (val) => setState(() => athlete = val as bool),
-                    activeColor: AppColors.primary,
-                  ),
-
-                  const Text(
-                    "No",
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                ],
-              ),
-              SizedBox(height: 2.5.h),
-
               // Location Options
               Text(
                 "Choose your location",

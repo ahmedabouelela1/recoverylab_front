@@ -14,7 +14,8 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final TextEditingController nameController = TextEditingController();
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -61,18 +62,28 @@ class _SignupPageState extends State<SignupPage> {
               ),
               SizedBox(height: 4.h),
 
-              // Name
+              // First Name
               AppTextField(
-                label: "Name",
-                hintText: "Enter your full name",
-                controller: nameController,
+                label: "First Name",
+                hintText: "Enter your first name",
+                controller: firstNameController,
                 size: AppTextFieldSize.large,
                 borderColor: AppColors.textFieldBorder,
                 fillColor: AppColors.textFieldBackground,
                 textColor: AppColors.textPrimary,
               ),
               SizedBox(height: 2.5.h),
-
+              // Last Name
+              AppTextField(
+                label: "Last Name",
+                hintText: "Enter your last name",
+                controller: lastNameController,
+                size: AppTextFieldSize.large,
+                borderColor: AppColors.textFieldBorder,
+                fillColor: AppColors.textFieldBackground,
+                textColor: AppColors.textPrimary,
+              ),
+              SizedBox(height: 2.5.h),
               // Email
               AppTextField(
                 label: "Email",

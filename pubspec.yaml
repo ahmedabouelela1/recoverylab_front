@@ -10,13 +10,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_svg: ^2.0.9 # ✅ move this here, outside flutter:
+  flutter_svg: ^2.0.9
 
   cupertino_icons: ^1.0.8
   sizer: ^3.1.3
   google_fonts: ^6.3.1
   font_awesome_flutter: ^10.7.0
   dotted_line: ^3.0.0
+  image_picker: ^1.1.2
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "lib/assets/images/app_icon.jpg"
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
@@ -10,6 +11,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  Timer? _timer;
+
   void _navigateToNextScreen() {
     Navigator.of(context).pushReplacementNamed(Routes.onboardingScreen);
   }
@@ -62,7 +65,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
-    // ❌ Removed: No need to cancel a timer
+    // ✅ Cancel timer to prevent leaks
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -70,20 +74,12 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      // ✅ ADDED: GestureDetector to capture the tap event anywhere on the screen
-      body: GestureDetector(
-        onTap: _navigateToNextScreen, // Call the navigation function on tap
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'lib/assets/images/logo1.png',
-                width: 200,
-                height: 200,
-              ),
-            ],
-          ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('lib/assets/images/logo1.png', width: 200, height: 200),
+          ],
         ),
       ),
     );

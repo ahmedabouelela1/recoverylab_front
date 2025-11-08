@@ -4,85 +4,21 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  void _showRatingDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          contentPadding: EdgeInsets.zero,
-          content: Container(
-            width: 85.w,
-            padding: EdgeInsets.fromLTRB(6.w, 4.h, 8.w, 4.h),
-            // ✅ Wrap content in SingleChildScrollView to avoid overflow
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Close button
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Icon(
-                        Icons.close,
-                        color: AppColors.textSecondary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
 
-                  // Title
-                  Text(
-                    "How many stars would\nyou give our service?",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18.sp,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
-
-                  // Subtext
-                  Text(
-                    "Layla Nour completed your Egyptian\nAromatherapy Massage session",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 13.sp,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  SizedBox(height: 3.h),
-
-                  // Stars
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 2.w,
-                    runSpacing: 1.h,
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        Icons.star_border,
-                        color: AppColors.textSecondary,
-                        size: 26.sp,
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+class _HomePageState extends State<HomePage> {
+  final List<String> branches = [
+    'All Branches',
+    'Sheikh Zayed',
+    'New Cairo',
+    'October City',
+  ];
+  String? selectedBranch = 'All Branches';
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +30,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Row: Profile + Greeting + Notification
+              // 👤 Top Row: Profile + Greeting + Notification
               Row(
                 children: [
                   CircleAvatar(
@@ -104,27 +40,16 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: 3.w),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Hi Michael,",
-                        style: GoogleFonts.inter(
-                          color: AppColors.textSecondary,
-                          fontSize: 14.sp,
-                        ),
+                  Expanded(
+                    child: Text(
+                      "Hi Michael,",
+                      style: GoogleFonts.inter(
+                        color: AppColors.textSecondary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
                       ),
-                      Text(
-                        "Good Morning!",
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const Spacer(),
                   Stack(
                     children: [
                       Icon(
@@ -152,9 +77,23 @@ class HomePage extends StatelessWidget {
                 ],
               ),
 
+              SizedBox(height: 2.5.h),
+
+              // 🏢 Branch Dropdown (below greeting)
+              Text(
+                "Select Branch",
+                style: GoogleFonts.inter(
+                  fontSize: 13.sp,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 1.h),
+              _buildBranchDropdown(),
+
               SizedBox(height: 3.h),
 
-              // Search Bar
+              // 🔍 Search Bar
               Row(
                 children: [
                   Expanded(
@@ -180,25 +119,20 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: 2.w),
-                  GestureDetector(
-                    onTap: () {
-                      _showRatingDialog(context);
-                    },
-                    child: Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.tune, color: AppColors.textSecondary),
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Icon(Icons.tune, color: AppColors.textSecondary),
                   ),
                 ],
               ),
 
               SizedBox(height: 3.h),
 
-              // Special Offers
+              // 🌟 Special Offers
               Text(
                 "Special offers",
                 style: GoogleFonts.inter(
@@ -279,7 +213,7 @@ class HomePage extends StatelessWidget {
                               "Get offer now >",
                               style: GoogleFonts.inter(
                                 color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 15.sp,
                               ),
                             ),
@@ -293,7 +227,7 @@ class HomePage extends StatelessWidget {
 
               SizedBox(height: 3.h),
 
-              // Browse Categories
+              // 🧭 Browse Categories
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -339,7 +273,7 @@ class HomePage extends StatelessWidget {
 
               SizedBox(height: 3.h),
 
-              // Recommended for you
+              // 💆 Recommended for you
               Text(
                 "Recommended for you",
                 style: GoogleFonts.inter(
@@ -373,7 +307,7 @@ class HomePage extends StatelessWidget {
 
               SizedBox(height: 4.h),
 
-              // Page indicator
+              // 🔘 Page indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -391,11 +325,69 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // 🏢 Styled Branch Dropdown
+  Widget _buildBranchDropdown() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.2.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedBranch,
+          isExpanded: true,
+          dropdownColor: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(14),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.primary,
+            size: 22,
+          ),
+          style: GoogleFonts.inter(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+          onChanged: (String? newValue) {
+            setState(() {
+              selectedBranch = newValue;
+            });
+          },
+          items: branches.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.store_mall_directory_outlined,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 2.w),
+                  Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // 🧩 Category Tile
   Widget _buildCategory(BuildContext context, String title, String imagePath) {
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, Routes.categories, arguments: title);
-        print("$title category tapped");
       },
       child: Container(
         width: 44.w,
@@ -409,8 +401,8 @@ class HomePage extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Container(
-          padding: EdgeInsets.all(8),
           color: Colors.transparent,
+          padding: EdgeInsets.all(8),
           child: Text(
             title,
             style: GoogleFonts.inter(
@@ -424,6 +416,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // ⭐ Recommended Card
   Widget _buildRecommended(
     BuildContext context,
     String title,
@@ -432,14 +425,12 @@ class HomePage extends StatelessWidget {
   ) {
     return GestureDetector(
       onTap: () {
-        print("$title recommended tapped");
         Navigator.pushNamed(
           context,
           Routes.serviceDetails,
           arguments: {
             'title': title,
             'location': location,
-            'rating': "4.8 (320)",
             'image': imagePath,
             'price': "\$120",
             'duration': "60 min",
@@ -447,18 +438,6 @@ class HomePage extends StatelessWidget {
               "Full body massage",
               "Aromatherapy oils",
               "Complimentary tea",
-            ],
-            'reviews': [
-              {
-                'name': "Alice",
-                'stars': "5",
-                'comment': "Absolutely relaxing, best massage I’ve had!",
-              },
-              {
-                'name': "John",
-                'stars': "4",
-                'comment': "Very good service, but could be longer.",
-              },
             ],
           },
         );
@@ -508,20 +487,6 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 0.5.h),
-              Row(
-                children: [
-                  Icon(Icons.star, size: 15, color: Colors.amber),
-                  SizedBox(width: 1.w),
-                  Text(
-                    "4.8 (320)",
-                    style: GoogleFonts.inter(
-                      fontSize: 13.sp,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -529,6 +494,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // 🔘 Page Indicator
   Widget _indicator(bool isActive) {
     return Container(
       width: isActive ? 22 : 8,

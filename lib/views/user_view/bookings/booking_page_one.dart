@@ -433,20 +433,20 @@ class _BookingPageOneState extends State<BookingPageOne> {
                     ),
                   ],
                 ),
-                SizedBox(height: 0.8.h),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: AppColors.warning, size: 18),
-                    SizedBox(width: 1.w),
-                    Text(
-                      "${booking.rating} (320)",
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                // SizedBox(height: 0.8.h),
+                // Row(
+                //   children: [
+                //     const Icon(Icons.star, color: AppColors.warning, size: 18),
+                //     SizedBox(width: 1.w),
+                //     Text(
+                //       "${booking.rating} (320)",
+                //       style: GoogleFonts.inter(
+                //         fontSize: 13.sp,
+                //         color: AppColors.textSecondary,
+                //       ),
+                //     ),
+                //   ],
+                // ),
                 SizedBox(height: 1.h),
                 Text(
                   booking.description,
@@ -511,13 +511,13 @@ class _BookingPageOneState extends State<BookingPageOne> {
                   setState(() => _selectedStaff = member);
 
                   // Navigate to staff details page
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // Uses the StaffDetailsScreen from the staff_details_page.dart file
-                      builder: (context) => StaffDetailsScreen(staff: member),
-                    ),
-                  );
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     // Uses the StaffDetailsScreen from the staff_details_page.dart file
+                  //     builder: (context) => StaffDetailsScreen(staff: member),
+                  //   ),
+                  // );
                 },
                 child: Column(
                   children: [
