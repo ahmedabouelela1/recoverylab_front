@@ -21,6 +21,8 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController passwordController = TextEditingController();
 
   bool obscurePassword = true;
+  // State variable for the profile image path (or File object)
+  String? _profileImagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +63,11 @@ class _SignupPageState extends State<SignupPage> {
                 ),
               ),
               SizedBox(height: 4.h),
+
+              // --- PROFILE PICTURE PICKER START ---
+              Center(child: _buildProfilePicturePicker()),
+              SizedBox(height: 4.h),
+              // --- PROFILE PICTURE PICKER END ---
 
               // First Name
               AppTextField(
@@ -207,6 +214,72 @@ class _SignupPageState extends State<SignupPage> {
           ),
         ),
       ),
+    );
+  }
+
+  // Helper function to show the modal bottom sheet
+  void _showImageSourceOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Implement logic to pick image from gallery
+                  print('Pick image from Gallery');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Implement logic to take photo with camera
+                  print('Take photo with Camera');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfilePicturePicker() {
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: 10.w, // Adjust size as needed
+          backgroundColor: AppColors.textSecondary.withOpacity(0.5),
+          // Use a placeholder if no image is selected, otherwise use the image
+          child: _profileImagePath == null
+              ? Icon(Icons.person, size: 10.w, color: AppColors.background)
+              : null, // Replace null with Image.file(_profileImagePath!)
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: GestureDetector(
+            // CALL THE POP-UP METHOD HERE
+            onTap: _showImageSourceOptions,
+            child: Container(
+              padding: EdgeInsets.all(1.w),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.background, width: 2),
+              ),
+              child: Icon(Icons.add_a_photo, size: 4.w, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
