@@ -18,7 +18,6 @@ import 'package:recoverylab_front/views/user_view/login/otp_verified_page.dart';
 import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
-import 'package:recoverylab_front/views/user_view/login/welcome_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/coupon_redeemed.dart';
@@ -34,8 +33,7 @@ import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
 import 'package:recoverylab_front/views/user_view/registeration/create_account.dart';
 import 'package:recoverylab_front/views/user_view/registeration/otp_verified_signup.dart';
-import 'package:recoverylab_front/views/user_view/registeration/signup_step1.dart';
-import 'package:recoverylab_front/views/user_view/registeration/signup_step2.dart';
+import 'package:recoverylab_front/views/user_view/registeration/signup_screen.dart';
 import 'package:recoverylab_front/views/user_view/registeration/otp_signup.dart';
 
 class Routes {
@@ -86,8 +84,6 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case Routes.onboardingScreen:
         return MaterialPageRoute(builder: (_) => OnboardingScreen());
-      case Routes.welcomePage:
-        return MaterialPageRoute(builder: (_) => WelcomePage());
       case Routes.loginPage:
         return MaterialPageRoute(builder: (_) => LoginPage());
       case Routes.otp:
@@ -99,8 +95,6 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => CreateAccountPage());
       case Routes.signupPage:
         return MaterialPageRoute(builder: (_) => const SignupPage());
-      case Routes.signupStepTwo:
-        return MaterialPageRoute(builder: (_) => const SignupStepTwo());
       case Routes.questionnaireStepOne:
         return MaterialPageRoute(builder: (_) => const WellnessQuestionPage());
       case Routes.bookingSuccessPage:

@@ -12,11 +12,18 @@ class AppColors {
     0xFF1E1E24,
   ); // Dark grey for cards and containers
 
+  // NEW: Subtle accent colors for depth
+  static const surfaceLight = Color(0xFF2A2A32); // Slightly lighter surface
+  static const dividerColor = Color(0xFF333339); // Subtle divider
+
   // Text Colors
   static const textPrimary = Color(0xFFFFFFFF); // Main text color (white)
   static const textSecondary = Color(
     0xFFB3B3B3,
   ); // Secondary text color (light grey for hints, etc.)
+  static const textTertiary = Color(
+    0xFF808080,
+  ); // Even lighter for subtle hints
 
   // TextField Colors
   static const textFieldBorder = Color(
@@ -25,6 +32,11 @@ class AppColors {
   static const textFieldBackground = Color(
     0xFF282828,
   ); // Background color for text fields
+
+  // NEW: Focus state
+  static const focusedBorder = Color(
+    0xFF3A5A9E,
+  ); // Lighter blue for focused state
 
   // Border Colors
   static const strokeBorder = Color(

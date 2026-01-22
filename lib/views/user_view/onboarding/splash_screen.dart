@@ -1,66 +1,66 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/models/User/auth/login_response.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   Timer? _timer;
-
-  void _navigateToNextScreen() {
-    Navigator.of(context).pushReplacementNamed(Routes.onboardingScreen);
-  }
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    _checkAuthStatus();
   }
 
-  Future<void> _checkLoginStatus() async {
-    Future.delayed(const Duration(seconds: 2), () {
-      _navigateToNextScreen();
+  Future<void> _checkAuthStatus() async {
+    final String? userJson = await _storage.read(key: 'user');
+    final String? token = await _storage.read(key: 'auth_token');
+
+    AuthResponse? user;
+
+    if (userJson != null) {
+      try {
+        user = AuthResponse.fromJson(jsonDecode(userJson));
+        ref.read(userSessionProvider.notifier).login(user);
+      } catch (e, s) {
+        Navigator.pushNamed(context, Routes.onboardingScreen);
+      }
+    }
+
+    Future.delayed(const Duration(seconds: 2), () async {
+      if (token == null || token.isEmpty) {
+        Navigator.pushReplacementNamed(context, Routes.onboardingScreen);
+      } else {
+        final response = await ref.read(apiProvider).validateToken(token);
+
+        if (response['success'] == false) {
+          Navigator.pushReplacementNamed(context, Routes.onboardingScreen);
+          return;
+        }
+        final AuthResponse? updatedUser = response['data'] != null
+            ? AuthResponse.fromJson(response)
+            : null;
+        if (updatedUser != null) {
+          ref.read(userSessionProvider.notifier).login(updatedUser);
+        }
+
+        Navigator.pushReplacementNamed(context, Routes.mainScreen);
+      }
     });
-    // bool hasInternet = await _hasInternetConnection();
-
-    // if (!hasInternet) {
-    //   _showNoInternetDialog();
-    //   return;
-    // }
-
-    // final token = await _storage.read(key: 'auth_token');
-    // final authUser = await _storage.read(key: 'auth_response');
-
-    // AuthResponse? authResponse;
-
-    // if (authUser != null) {
-    //   try {
-    //     authResponse = AuthResponse.fromJson(jsonDecode(authUser));
-    //   } catch (e) {
-    //   }
-    // }
-
-    // // Wait for the splash screen animation (3 seconds)
-    // await Future.delayed(const Duration(seconds: 2));
-
-    // if (token != null && token.isNotEmpty && authResponse != null) {
-    //   final response = await ref.read(apiProvider).validateToken(token);
-    //   if (response['success'] == false) {
-    //     Navigator.pushReplacementNamed(context, Routes.login);
-    //     return;
-    //   }
-    //   final authResponseNew = AuthResponse.fromJson(response);
-    //   ref.read(userSessionProvider).login(authResponseNew);
-    //   Navigator.pushReplacementNamed(context, Routes.homeScreen);
-    // } else {
-    //   Navigator.pushReplacementNamed(context, Routes.login);
-    // }
   }
 
   @override
