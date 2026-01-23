@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:recoverylab_front/configurations/constants.dart';
-import 'package:recoverylab_front/models/Branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/services/service_category.dart';
+import 'package:recoverylab_front/models/Offer/offers.dart';
+import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
@@ -111,5 +114,39 @@ class ApiProvider {
         .toList();
 
     return branches;
+  }
+
+  Future<Map<String, dynamic>> gethome() async {
+    final response = await baseGet(ApiRoutes.home);
+    final decoded = _handleResponse(response);
+
+    final data = decoded['data'] as Map<String, dynamic>? ?? {};
+
+    // Parse Offers
+    final offersJson = data['offers'] as List<dynamic>? ?? [];
+    final List<Offers> offers = offersJson
+        .map((json) => Offers.fromJson(json))
+        .toList();
+
+    // Parse Categories
+    final categoriesJson = data['categories'] as List<dynamic>? ?? [];
+    final List<ServiceCategory> categories = categoriesJson
+        .map((json) => ServiceCategory.fromJson(json))
+        .toList();
+
+    // Parse Recommended
+    final recommendedJson = data['recommended'] as List<dynamic>? ?? [];
+    final List<Recommended> recommended = recommendedJson
+        .map((json) => Recommended.fromJson(json))
+        .toList();
+
+    // Replace raw lists with typed objects
+    data['offers'] = offers;
+    data['categories'] = categories;
+    data['recommended'] = recommended;
+
+    // Return same structure, but with typed objects
+    decoded['data'] = data;
+    return decoded;
   }
 }

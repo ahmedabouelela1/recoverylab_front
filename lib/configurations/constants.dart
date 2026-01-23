@@ -6,6 +6,7 @@ class ApiRoutes {
   static const String users = '/users';
   static const String tokenValidation = '/validate-token';
   static const String branch = '/branches';
+  static const String home = '/home';
 }
 
 // const apiUrl = 'https://recoverylab.thecodehaus.co/api';

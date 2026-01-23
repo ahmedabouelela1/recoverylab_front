@@ -22,6 +22,8 @@ dependencies:
   http: ^1.6.0
   flutter_riverpod: ^3.2.0
   flutter_secure_storage: ^10.0.0
+  solar_icons: ^0.0.5
+  curved_navigation_bar: ^1.0.6
 
 flutter_launcher_icons:
   android: true

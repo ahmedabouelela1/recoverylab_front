@@ -1,3 +1,5 @@
+import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+
 class User {
   final int id;
   String firstName;
@@ -6,6 +8,7 @@ class User {
   String email;
   String phone;
   DateTime dateOfBirth;
+  int branchId;
 
   User({
     required this.id,
@@ -15,6 +18,7 @@ class User {
     required this.email,
     required this.phone,
     required this.dateOfBirth,
+    required this.branchId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,7 @@ class User {
       dateOfBirth: DateTime.parse(json['birth_date']),
       email: json['email'],
       phone: json['phone'],
+      branchId: json['branch_id'],
     );
   }
 
@@ -38,6 +43,7 @@ class User {
       'email': email,
       'phone': phone,
       'birth_date': dateOfBirth?.toIso8601String(),
+      'branch_id': branchId,
     };
   }
 
@@ -48,6 +54,7 @@ class User {
     String? email,
     DateTime? dateOfBirth,
     String? gender,
+    int? branchId,
   }) {
     this.firstName = firstName ?? this.firstName;
     this.lastName = lastName ?? this.lastName;
@@ -55,5 +62,6 @@ class User {
     this.dateOfBirth = dateOfBirth ?? this.dateOfBirth;
     this.gender = gender ?? this.gender;
     this.email = email ?? this.email;
+    this.branchId = branchId ?? this.branchId;
   }
 }

@@ -1,18 +1,16 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
-import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
-import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -159,7 +157,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       focusNode: emailFocusNode,
                       label: "Email Address",
                       hintText: "you@example.com",
-                      prefixIcon: Icons.email_outlined,
+                      prefixIcon: SolarIconsBold.letter,
                       keyboardType: TextInputType.emailAddress,
                       errorText: emailError,
                       onChanged: (value) {
@@ -179,7 +177,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       focusNode: passwordFocusNode,
                       label: "Password",
                       hintText: "Enter your password",
-                      prefixIcon: Icons.lock_outline_rounded,
+                      prefixIcon: SolarIconsBold.lock,
                       obscureText: obscurePassword,
                       errorText: passwordError,
                       suffixIcon: GestureDetector(
@@ -582,43 +580,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   Widget _buildFooter() {
     return Column(
       children: [
-        // Guest option
-        // GestureDetector(
-        //   onTap: () {
-        //     Navigator.pushNamed(context, Routes.mainScreen);
-        //   },
-        //   child: Container(
-        //     padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 4.w),
-        //     decoration: BoxDecoration(
-        //       color: AppColors.cardBackground,
-        //       borderRadius: BorderRadius.circular(12),
-        //       border: Border.all(color: AppColors.dividerColor, width: 1),
-        //     ),
-        //     child: Row(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       mainAxisSize: MainAxisSize.min,
-        //       children: [
-        //         Icon(
-        //           Icons.person_outline_rounded,
-        //           size: 16.sp,
-        //           color: AppColors.textSecondary,
-        //         ),
-        //         SizedBox(width: 2.w),
-        //         Text(
-        //           "Continue as Guest",
-        //           style: GoogleFonts.inter(
-        //             fontSize: 13.sp,
-        //             fontWeight: FontWeight.w500,
-        //             color: AppColors.textSecondary,
-        //           ),
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ),
-        // SizedBox(height: 3.h),
-
-        // Sign up link
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

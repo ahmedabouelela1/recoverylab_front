@@ -7,6 +7,7 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -29,8 +30,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _checkAuthStatus() async {
     final String? userJson = await _storage.read(key: 'user');
     final String? token = await _storage.read(key: 'auth_token');
-
     AuthResponse? user;
+
+    // ✅ Fetch branches and store them in BranchesNotifier
+    try {
+      await ref.read(branchesProvider.notifier).fetchBranches();
+    } catch (e) {
+      // Handle errors: you can show a snackbar or log
+      print('Failed to fetch branches: $e');
+    }
 
     if (userJson != null) {
       try {
@@ -51,6 +59,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           Navigator.pushReplacementNamed(context, Routes.onboardingScreen);
           return;
         }
+
         final AuthResponse? updatedUser = response['data'] != null
             ? AuthResponse.fromJson(response)
             : null;

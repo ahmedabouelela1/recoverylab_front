@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
-import 'package:recoverylab_front/models/Branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/User/country.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:sizer/sizer.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
@@ -57,7 +59,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   String? locationError;
 
   final List<String> genders = ["Male", "Female"];
-  final List<Branch> branches = [];
+  List<Branch> branches = [];
 
   // Validation methods
   String? validateFirstName(String? value) {
@@ -671,8 +673,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
               icon: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 3.w),
                 child: Icon(
-                  Icons.arrow_drop_down_rounded,
-                  size: 24.sp,
+                  SolarIconsBold.altArrowDown,
+                  size: 20.sp,
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -944,9 +946,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        final response = await ref.read(apiProvider).getBranches();
+        final branchprovider = ref.read(branchesProvider);
         setState(() {
-          branches.addAll(response);
+          branches = branchprovider;
         });
       } catch (e) {
         AppSnackBar.show(context, 'Failed to load branches');
@@ -1083,7 +1085,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   focusNode: firstNameFocusNode,
                   label: "First Name",
                   hintText: "John",
-                  prefixIcon: Icons.person_outline_rounded,
+                  prefixIcon: SolarIconsOutline.user,
                   errorText: firstNameError,
                   onChanged: (value) {
                     if (firstNameError != null) {
@@ -1101,7 +1103,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   focusNode: lastNameFocusNode,
                   label: "Last Name",
                   hintText: "Doe",
-                  prefixIcon: Icons.person_outline_rounded,
+                  prefixIcon: SolarIconsOutline.user,
                   errorText: lastNameError,
                   onChanged: (value) {
                     if (lastNameError != null) {
@@ -1120,7 +1122,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             focusNode: emailFocusNode,
             label: "Email Address",
             hintText: "john.doe@example.com",
-            prefixIcon: Icons.email_outlined,
+            prefixIcon: SolarIconsBold.letter,
             keyboardType: TextInputType.emailAddress,
             errorText: emailError,
             onChanged: (value) {
@@ -1198,23 +1200,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           ),
           SizedBox(height: 4.h),
 
-          // Phone number field
-          // _buildTextField(
-          //   controller: phoneController,
-          //   focusNode: phoneFocusNode,
-          //   label: "Phone Number",
-          //   hintText: "+201234567890",
-          //   prefixIcon: Icons.phone_outlined,
-          //   keyboardType: TextInputType.phone,
-          //   errorText: phoneError,
-          //   onChanged: (value) {
-          //     if (phoneError != null) {
-          //       setState(() {
-          //         phoneError = validatePhone(value);
-          //       });
-          //     }
-          //   },
-          // ),
           _buildPhoneField(),
 
           SizedBox(height: 2.5.h),
@@ -1225,7 +1210,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             focusNode: passwordFocusNode,
             label: "Password",
             hintText: "Create a strong password (min 8 characters)",
-            prefixIcon: Icons.lock_outline_rounded,
+            prefixIcon: SolarIconsBold.lock,
             obscureText: obscurePassword,
             errorText: passwordError,
             suffixIcon: GestureDetector(
@@ -1265,7 +1250,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             focusNode: confirmPasswordFocusNode,
             label: "Confirm Password",
             hintText: "Re-enter your password",
-            prefixIcon: Icons.lock_reset_outlined,
+            prefixIcon: SolarIconsBold.lock,
             obscureText: obscureConfirmPassword,
             errorText: confirmPasswordError,
             suffixIcon: GestureDetector(
@@ -1348,7 +1333,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             focusNode: dobFocusNode,
             label: "Date of Birth",
             hintText: "DD/MM/YYYY",
-            prefixIcon: Icons.calendar_today_outlined,
+            prefixIcon: SolarIconsBold.calendar,
             errorText: dobError,
             onTap: () async {
               final DateTime? picked = await showDatePicker(
