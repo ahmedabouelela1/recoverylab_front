@@ -188,75 +188,84 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
 
-              // SizedBox(height: 0.8.h),
-              // Container(
-              //   padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
-              //   decoration: BoxDecoration(
-              //     color: tagBgColor,
-              //     borderRadius: BorderRadius.circular(20),
-              //   ),
-              //   child: Row(
-              //     mainAxisSize: MainAxisSize.min,
-              //     children: [
-              //       Icon(SolarIconsOutline.crown, size: 14, color: tagColor),
-              //       SizedBox(width: 1.5.w),
-              //       Text(
-              //         'Premium Member',
-              //         style: GoogleFonts.inter(
-              //           fontSize: 12.sp,
-              //           color: AppColors.focusedBorder,
-              //           fontWeight: FontWeight.w600,
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              SizedBox(height: 0.8.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+                decoration: BoxDecoration(
+                  color: tagBgColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      SolarIconsOutline.crown,
+                      size: 14,
+                      color: AppColors.info,
+                    ),
+                    SizedBox(width: 1.5.w),
+                    Text(
+                      'Premium Member',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
 
         // Notification Button
-        Container(
-          width: 24.sp,
-          height: 24.sp,
-          decoration: BoxDecoration(
-            color: AppColors.focusedBorder.withOpacity(0.2),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.info.withOpacity(0.2),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        GestureDetector(
+          // onTap: () => Navigator.pushNamed(context, Routes.otp),
+          onTap: () =>
+              Navigator.pushNamed(context, Routes.questionnaireStepOne),
+          child: Container(
+            width: 24.sp,
+            height: 24.sp,
+            decoration: BoxDecoration(
+              color: AppColors.focusedBorder.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.info.withOpacity(0.2),
+                width: 1.5,
               ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Icon(
-                  SolarIconsBold.bell,
-                  size: 20,
-                  color: AppColors.textPrimary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              // Positioned(
-              //   top: 10,
-              //   right: 10,
-              //   child: Container(
-              //     width: 10,
-              //     height: 10,
-              //     decoration: BoxDecoration(
-              //       color: Colors.red,
-              //       shape: BoxShape.circle,
-              //       border: Border.all(color: Colors.white, width: 1.5),
-              //     ),
-              //   ),
-              // ),
-            ],
+              ],
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Icon(
+                    SolarIconsBold.bell,
+                    size: 20,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                // Positioned(
+                //   top: 10,
+                //   right: 10,
+                //   child: Container(
+                //     width: 10,
+                //     height: 10,
+                //     decoration: BoxDecoration(
+                //       color: Colors.red,
+                //       shape: BoxShape.circle,
+                //       border: Border.all(color: Colors.white, width: 1.5),
+                //     ),
+                //   ),
+                // ),
+              ],
+            ),
           ),
         ),
       ],
@@ -448,7 +457,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               itemBuilder: (context, index) {
                 // Fixed: Use symmetric padding
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 1.5.w),
+                  padding: EdgeInsets.symmetric(horizontal: 5.w),
                   child: _buildPremiumOfferCard(offers[index]!),
                 );
               },
@@ -520,7 +529,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.2),
+                      Colors.black.withOpacity(0.3),
                       Colors.black.withOpacity(0.7),
                     ],
                   ),
@@ -673,7 +682,11 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, Routes.categories);
+                  Navigator.pushNamed(
+                    context,
+                    Routes.serviceCats,
+                    arguments: {"categories": serviceCategories},
+                  );
                 },
                 child: Container(
                   width: 25.w,

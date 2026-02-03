@@ -1,6 +1,7 @@
 // routes generator
 
 import 'package:flutter/material.dart';
+import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 // 🔑 NEW IMPORT: The Booking model is required to accept the argument type
 import 'package:recoverylab_front/models/booking_model.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
@@ -10,9 +11,10 @@ import 'package:recoverylab_front/views/user_view/bookings/booking_page_two.dart
 import 'package:recoverylab_front/views/user_view/bookings/booking_screen.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
 import 'package:recoverylab_front/views/user_view/bookings/staff_details_page.dart';
-import 'package:recoverylab_front/views/user_view/home/categories.dart';
-import 'package:recoverylab_front/views/user_view/home/category_details.dart';
-import 'package:recoverylab_front/views/user_view/home/main_screen.dart';
+import 'package:recoverylab_front/views/user_view/home/Service/service_categories.dart';
+import 'package:recoverylab_front/views/user_view/home/Service/services_screen.dart';
+import 'package:recoverylab_front/views/user_view/home/Service/service_details.dart';
+import 'package:recoverylab_front/views/user_view/home/navbar.dart';
 import 'package:recoverylab_front/views/user_view/login/login_page.dart';
 import 'package:recoverylab_front/views/user_view/login/otp_verified_page.dart';
 import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
@@ -52,7 +54,7 @@ class Routes {
   static const String questionnaireStepOne = '/questionnaireStepOne';
   static const String questionnaireStepTwo = '/questionnaireStepTwo';
   static const String style = '/style';
-  static const String mainScreen = '/mainScreen';
+  static const String navbar = '/navbar';
   static const String categories = '/categories';
   static const String serviceDetails = '/serviceDetails';
   static const String packagesPage = '/packagesPage';
@@ -73,6 +75,7 @@ class Routes {
   static const String bookingSuccessPage = '/bookingSuccessPage';
   static const String bookingDetailsPage = '/bookingDetailsPage';
   static const String splashScreen = '/splashScreen';
+  static const String serviceCats = '/serviceCats';
 }
 
 class RoutesGenerator {
@@ -87,7 +90,6 @@ class RoutesGenerator {
       case Routes.loginPage:
         return MaterialPageRoute(builder: (_) => LoginPage());
       case Routes.otp:
-        // Assuming your Otp class is actually named VerificationPage from your imports
         return MaterialPageRoute(builder: (_) => Otp());
       case Routes.otpVerified:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPage());
@@ -99,8 +101,13 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const WellnessQuestionPage());
       case Routes.bookingSuccessPage:
         return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
-
-      // Handle the BookingDetailsPage argument which expects a Booking object
+      case Routes.serviceCats:
+        if (args != null && args is Map) {
+          return MaterialPageRoute(
+            builder: (_) => AllCategoriesPage(categories: args['categories']),
+          );
+        }
+        return _errorRoute();
       case Routes.bookingDetailsPage:
         if (args is Map<String, dynamic> &&
             args.containsKey('booking') &&
@@ -222,8 +229,8 @@ class RoutesGenerator {
         }
         return _errorRoute();
 
-      case Routes.mainScreen:
-        return MaterialPageRoute(builder: (_) => const MainScreen());
+      case Routes.navbar:
+        return MaterialPageRoute(builder: (_) => const Navbar());
 
       // 🔑 CRITICAL FIX: Handle the Booking object passed directly from ServiceDetailsPage
       case Routes.bookingsOne:
@@ -244,9 +251,9 @@ class RoutesGenerator {
         return _errorRoute();
 
       case Routes.categories:
-        if (args is String) {
+        if (args != null && args is Map) {
           return MaterialPageRoute(
-            builder: (_) => CategoryDetailsPage(category: args),
+            builder: (_) => ServicesPage(category: args['category']),
           );
         }
         return _errorRoute();

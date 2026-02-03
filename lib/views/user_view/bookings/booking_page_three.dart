@@ -82,7 +82,7 @@ class BookingPageThree extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
+          child: Image.network(
             booking.imageUrl,
             height: 10.h,
             width: 25.w,

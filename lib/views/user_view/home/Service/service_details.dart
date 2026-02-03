@@ -57,7 +57,7 @@ class ServiceDetailsPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: Stack(
               children: [
-                Image.asset(
+                Image.network(
                   image,
                   height: 20.h,
                   width: double.infinity,
@@ -340,7 +340,6 @@ class ServiceDetailsPage extends StatelessWidget {
               Routes.bookingsOne,
               arguments: newBooking,
             );
-            print("Navigating to Booking Page One for $title");
           },
         ),
       ),

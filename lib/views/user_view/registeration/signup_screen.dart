@@ -246,7 +246,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
       if (!mounted) return;
       // AppSnackBar.show(context, 'Account created successfully!');
-      Navigator.pushReplacementNamed(context, Routes.mainScreen);
+      Navigator.pushReplacementNamed(context, Routes.navbar);
     } catch (e) {
       if (e is ApiException) {
         AppSnackBar.show(context, e.message);

@@ -95,7 +95,7 @@ class _BookingPageTwoState extends State<BookingPageTwo> {
         // Image
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
+          child: Image.network(
             widget.booking.imageUrl,
             height: 10.h,
             width: 25.w,

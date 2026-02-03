@@ -21,7 +21,7 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         // Pop back to the main app screen (or whatever screen is appropriate)
-        Navigator.pushNamed(context, Routes.mainScreen);
+        Navigator.pushNamed(context, Routes.navbar);
       }
     });
   }

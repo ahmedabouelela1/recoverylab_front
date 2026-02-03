@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:recoverylab_front/configurations/constants.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/services/service.dart';
 import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
@@ -148,5 +149,16 @@ class ApiProvider {
     // Return same structure, but with typed objects
     decoded['data'] = data;
     return decoded;
+  }
+
+  Future<List<Service?>> getServicesByCategory(int categoryId) async {
+    final response = await baseGet('${ApiRoutes.categoryServices}/$categoryId');
+    final decoded = _handleResponse(response);
+
+    final services = (decoded['data'] as List)
+        .map((serviceJson) => Service.fromJson(serviceJson))
+        .toList();
+
+    return services;
   }
 }

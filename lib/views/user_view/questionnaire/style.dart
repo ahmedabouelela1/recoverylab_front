@@ -158,7 +158,7 @@ class _ServicesSelectionPageState extends State<ServicesSelectionPage> {
               onPressed: () {
                 if (selectedOptions.isNotEmpty) {
                   // ✅ Move forward, e.g., to main screen
-                  Navigator.pushReplacementNamed(context, Routes.mainScreen);
+                  Navigator.pushReplacementNamed(context, Routes.navbar);
                 }
               },
             ),

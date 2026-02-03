@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      imagePath: 'lib/assets/images/splash_main.jpg',
+      imagePath: 'lib/assets/images/onboarding1.jpg',
       title: "Welcome to Recovery Lab",
       description:
           "Your personal wellness companion. Discover a new way to relax, recover, and recharge right at your fingertips.",
@@ -66,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // gradientEndColor: Colors.black.withAlpha((0.1 * 255).toInt()),
     ),
     OnboardingPage(
-      imagePath: 'lib/assets/images/splash2.jpg',
+      imagePath: 'lib/assets/images/onboarding2.jpg',
       title: "Book, Manage, Enjoy",
       description:
           "Choose your service, location, and specialist, then book for yourself or with others quick and easy.",
@@ -74,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       gradientEndColor: Colors.black.withAlpha((0.7 * 255).toInt()),
     ),
     OnboardingPage(
-      imagePath: 'lib/assets/images/splash_3.jpg',
+      imagePath: 'lib/assets/images/onboardin3.jpg',
       title: "Wellness, Made Simple",
       description:
           "Share your health info, pay securely, and manage all your bookings simple and safe.",

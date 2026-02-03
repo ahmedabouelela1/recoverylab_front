@@ -67,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           ref.read(userSessionProvider.notifier).login(updatedUser);
         }
 
-        Navigator.pushReplacementNamed(context, Routes.mainScreen);
+        Navigator.pushReplacementNamed(context, Routes.navbar);
       }
     });
   }
@@ -82,7 +82,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

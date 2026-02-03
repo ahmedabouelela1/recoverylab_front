@@ -264,7 +264,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 if (!mounted) return;
                                 Navigator.pushReplacementNamed(
                                   context,
-                                  Routes.mainScreen,
+                                  Routes.navbar,
                                 );
                               } catch (e) {
                                 if (e is ApiException) {
@@ -347,6 +347,17 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           child: _buildSocialButton(
                             icon: FontAwesomeIcons.apple,
                             label: "Apple",
+                            onPressed: () {
+                              print("Apple login");
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 3.w),
+
+                        Expanded(
+                          child: _buildSocialButton(
+                            icon: FontAwesomeIcons.facebook,
+                            label: "Facebook",
                             onPressed: () {
                               print("Apple login");
                             },

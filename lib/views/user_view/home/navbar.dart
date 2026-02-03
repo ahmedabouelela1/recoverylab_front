@@ -7,14 +7,14 @@ import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/settings.dart';
 import 'package:solar_icons/solar_icons.dart';
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class Navbar extends StatefulWidget {
+  const Navbar({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<Navbar> createState() => _NavbarState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _NavbarState extends State<Navbar> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = const [

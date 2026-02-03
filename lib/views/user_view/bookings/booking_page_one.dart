@@ -395,7 +395,7 @@ class _BookingPageOneState extends State<BookingPageOne> {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(16)),
-            child: Image.asset(
+            child: Image.network(
               booking.imageUrl,
               height: 20.h,
               width: double.infinity,
