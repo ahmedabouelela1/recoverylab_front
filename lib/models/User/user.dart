@@ -8,7 +8,7 @@ class User {
   String email;
   String phone;
   DateTime dateOfBirth;
-  int branchId;
+  int? branchId;
 
   User({
     required this.id,
@@ -18,7 +18,7 @@ class User {
     required this.email,
     required this.phone,
     required this.dateOfBirth,
-    required this.branchId,
+    this.branchId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -30,7 +30,7 @@ class User {
       dateOfBirth: DateTime.parse(json['birth_date']),
       email: json['email'],
       phone: json['phone'],
-      branchId: json['branch_id'],
+      branchId: json['branch_id'] ?? 1,
     );
   }
 

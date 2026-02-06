@@ -6,6 +6,7 @@ class Service {
   final String name;
   final String description;
   final String image;
+  final List<String?> includedIn;
 
   Service({
     required this.id,
@@ -13,6 +14,7 @@ class Service {
     required this.name,
     required this.description,
     required this.image,
+    this.includedIn = const [],
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,11 @@ class Service {
       name: json['name'],
       description: json['description'],
       image: json['image'],
+      includedIn:
+          (json['included_in'] as List<dynamic>?)
+              ?.map((item) => item as String?)
+              .toList() ??
+          [],
     );
   }
 

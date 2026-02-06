@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
-import 'package:recoverylab_front/models/Branch/services/serviceDurations/service_durations.dart';
-import 'package:recoverylab_front/models/Branch/therapists/therapists.dart';
+import 'package:recoverylab_front/models/Branch/branchService/service_durations.dart';
+import 'package:recoverylab_front/models/Branch/staff/staff.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:sizer/sizer.dart';
@@ -28,11 +29,13 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   String notes = '';
-  Therapist? selectedTherapist;
+  Staff? selectedStaff;
   String selectedType = 'single';
+  String? selectedPaymentMethod; // Added for payment method selection
   List<Branch?> branches = [];
-  List<ServiceDuration> durations = [];
-  List<Therapist> therapists = [];
+  List<ServiceDuration?> durations = [];
+  List<Staff?> staffList = [];
+  int defaultCapacity = 2;
 
   // Loading and error states
   bool isLoading = true;
@@ -66,35 +69,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   Future<void> _fetchServiceDetails() async {
     try {
-      // TODO: Replace with actual API call
-      await Future.delayed(const Duration(seconds: 1));
+      final branchId = branches[selectedBranchIndex!]!.id;
 
-      final mockResponse = {
-        "durations": [
-          {"minutes": 60, "price": "\$80.00", "description": "Standard"},
-          {"minutes": 90, "price": "\$110.00", "description": "Extended"},
-          {"minutes": 120, "price": "\$140.00", "description": "Ultimate"},
-        ],
-        "therapists": [
-          {
-            "id": "1",
-            "name": "Amira L.",
-            "role": "SENIOR",
-            "image":
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSoTPPGzNCkV9dAgvZ-tehCaqYnKRnkpfLoA&s",
-          },
-          {
-            "id": "2",
-            "name": "Malika S.",
-            "role": "EXPERT",
-            "image":
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSoTPPGzNCkV9dAgvZ-tehCaqYnKRnkpfLoA&s",
-          },
-        ],
-        "available": true,
-      };
+      final response = await ref
+          .read(apiProvider)
+          .getBranchService(branchId: branchId, serviceId: widget.service.id);
 
-      if (mockResponse['available'] == false) {
+      if (response == null || !response.success) {
+        setState(() {
+          hasError = true;
+          errorMessage =
+              response?.message ?? 'Service not available at this branch';
+        });
+        return;
+      }
+
+      if (response.data.isEmpty) {
         setState(() {
           hasError = true;
           errorMessage = 'Service not available at this branch';
@@ -102,17 +92,35 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         return;
       }
 
-      durations = (mockResponse['durations'] as List)
-          .map((d) => ServiceDuration.fromJson(d))
-          .toList();
+      final branchService = response.data[0];
 
-      therapists = (mockResponse['therapists'] as List)
-          .map((t) => Therapist.fromJson(t))
-          .toList();
-
-      if (durations.isNotEmpty && selectedDuration == null) {
-        selectedDuration = durations[0].minutes;
+      // Check if service is offered
+      if (!branchService.isOffered) {
+        setState(() {
+          hasError = true;
+          errorMessage = 'This service is currently not offered at this branch';
+        });
+        return;
       }
+
+      // Set durations from API
+      durations = branchService.branchPricing;
+
+      // Set staff from API
+      staffList = response.staff;
+
+      // Set default capacity
+      defaultCapacity = branchService.defaultCapacity;
+
+      // Set default duration if not already set
+      if (durations.isNotEmpty && selectedDuration == null) {
+        selectedDuration = durations[0]?.minutes;
+      }
+
+      setState(() {
+        hasError = false;
+        errorMessage = null;
+      });
     } catch (e) {
       setState(() {
         hasError = true;
@@ -125,6 +133,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     setState(() {
       selectedBranchIndex = newBranchIndex;
       isLoading = true;
+      // Reset selections
+      selectedDuration = null;
+      selectedStaff = null;
     });
 
     await _fetchServiceDetails();
@@ -196,47 +207,213 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
+  // Show payment method selection modal
+  void _showPaymentMethodSelection() {
+    Navigator.pop(context); // Close confirmation modal
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => _buildPaymentMethodModal(),
+    );
+  }
+
+  Widget _buildPaymentMethodModal() {
+    final paymentMethods = [
+      {
+        'value': 'CARD',
+        'label': 'Credit/Debit Card',
+        'icon': Icons.credit_card,
+      },
+      {'value': 'CASH', 'label': 'Cash on Arrival', 'icon': Icons.money},
+      {
+        'value': 'MOBILE_WALLET',
+        'label': 'Mobile Wallet',
+        'icon': Icons.phone_android,
+      },
+      {
+        'value': 'BANK_TRANSFER',
+        'label': 'Bank Transfer',
+        'icon': Icons.account_balance,
+      },
+    ];
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 4.w,
+        right: 4.w,
+        top: 4.w,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 4.w,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 12.w,
+              height: 0.5.h,
+              decoration: BoxDecoration(
+                color: AppColors.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          SizedBox(height: 3.h),
+
+          Text(
+            'Select Payment Method',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 2.h),
+
+          ...paymentMethods.map((method) {
+            return GestureDetector(
+              onTap: () {
+                setState(
+                  () => selectedPaymentMethod = method['value'] as String,
+                );
+                Navigator.pop(context);
+                _processPayment();
+              },
+              child: Container(
+                margin: EdgeInsets.only(bottom: 2.h),
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.dividerColor),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12.w,
+                      height: 12.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        method['icon'] as IconData,
+                        color: AppColors.info,
+                        size: 20.sp,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: Text(
+                        method['label'] as String,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: AppColors.textTertiary,
+                      size: 16.sp,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+
+          SizedBox(height: 2.h),
+        ],
+      ),
+    );
+  }
+
   // Process payment
-  void _processPayment() {
+  void _processPayment() async {
     final formattedDateTime = _formatDateTimeForApi();
+    final user = ref.read(userSessionProvider).user;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User not logged in'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
 
     final bookingData = {
-      'service_id': widget.service.id,
+      'user_id': user.id,
       'branch_id': branches[selectedBranchIndex!]!.id,
-      'duration': selectedDuration,
-      'date_time': formattedDateTime,
-      'notes': notes,
-      'therapist_id': selectedTherapist?.id,
-      'people_count': selectedPeopleCount,
-      'booking_type': selectedType,
+      'notes': notes.isEmpty ? null : notes,
+      'appointments': [
+        {
+          'service_id': widget.service.id,
+          'duration_minutes': selectedDuration,
+          'scheduled_start': formattedDateTime,
+          'participant_count': selectedPeopleCount,
+          'staff_id': selectedStaff?.user.id,
+        },
+      ],
+      'payment_method': selectedPaymentMethod,
     };
 
-    print('Booking data for payment: $bookingData');
+    print('Booking data for API: $bookingData');
 
-    // TODO: Process payment with third-party API
-    // Example:
-    // 1. Close confirmation modal
-    Navigator.pop(context);
-
-    // 2. Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => _buildPaymentProcessingDialog(),
     );
 
-    // 3. Process payment (mock for now)
-    Future.delayed(Duration(seconds: 2), () {
-      Navigator.pop(context); // Close loading dialog
+    try {
+      // TODO: Call your API to create booking
+      final response = await ref
+          .read(apiProvider)
+          .storeBooking(
+            userId: user.id,
+            branchId: branches[selectedBranchIndex!]!.id,
+            serviceId: widget.service.id,
+            formattedDateTime: formattedDateTime!,
+            durationMinutes: selectedDuration!,
+            participantCount: selectedPeopleCount!,
+            staffId: selectedStaff?.user.id,
+            notes: notes,
+            paymentMethod: selectedPaymentMethod!,
+          );
+      print('Booking API response: $response');
 
-      // 4. Show success modal
+      // For now, simulating API call
+      await Future.delayed(Duration(seconds: 2));
+
+      if (!mounted) return;
+
+      Navigator.pop(context); // Close loading dialog
       _showPaymentSuccessModal();
-    });
+    } catch (e) {
+      if (!mounted) return;
+
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking failed: ${e.toString()}'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    }
   }
 
   Widget _buildBookingConfirmationModal() {
     final selectedDurationData = durations.firstWhere(
-      (d) => d.minutes == selectedDuration,
+      (d) => d?.minutes == selectedDuration,
       orElse: () => durations[0],
     );
 
@@ -251,7 +428,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Draggable handle
           Center(
             child: Container(
               width: 12.w,
@@ -264,7 +440,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Title
           Text(
             'Booking Summary',
             style: TextStyle(
@@ -275,7 +450,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 2.h),
 
-          // Booking details card
           Container(
             padding: EdgeInsets.all(4.w),
             decoration: BoxDecoration(
@@ -285,7 +459,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             ),
             child: Column(
               children: [
-                // Service name
                 Row(
                   children: [
                     Container(
@@ -316,11 +489,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 ),
                 SizedBox(height: 2.h),
 
-                // Divider
                 Container(height: 0.5, color: AppColors.dividerColor),
                 SizedBox(height: 2.h),
 
-                // Booking details grid
                 Column(
                   children: [
                     _buildConfirmationDetail(
@@ -349,13 +520,14 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                           '${selectedPeopleCount} ${selectedPeopleCount == 1 ? 'person' : 'people'}',
                     ),
                     SizedBox(height: 1.5.h),
-                    if (selectedTherapist != null)
+                    if (selectedStaff != null)
                       _buildConfirmationDetail(
                         icon: Icons.person,
-                        label: 'Therapist',
-                        value: selectedTherapist!.name,
+                        label: 'Staff Member',
+                        value:
+                            '${selectedStaff!.user.firstName} ${selectedStaff!.user.lastName}',
                       ),
-                    if (selectedTherapist != null) SizedBox(height: 1.5.h),
+                    if (selectedStaff != null) SizedBox(height: 1.5.h),
                     _buildConfirmationDetail(
                       icon: Icons.location_on,
                       label: 'Branch',
@@ -374,11 +546,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 ),
                 SizedBox(height: 2.h),
 
-                // Divider
                 Container(height: 0.5, color: AppColors.dividerColor),
                 SizedBox(height: 2.h),
 
-                // Price summary
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -390,7 +560,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                     ),
                     Text(
-                      selectedDurationData.price,
+                      '\$${selectedDurationData?.price ?? '0'}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 18.sp,
@@ -404,7 +574,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Confirm button
           Row(
             children: [
               Expanded(
@@ -433,7 +602,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               SizedBox(width: 4.w),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _processPayment,
+                  onPressed: _showPaymentMethodSelection,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.secondary,
@@ -448,14 +617,14 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Pay Now',
+                        'Continue to Payment',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(width: 2.w),
-                      Icon(Icons.lock, size: 16.sp),
+                      Icon(Icons.arrow_forward, size: 16.sp),
                     ],
                   ),
                 ),
@@ -570,7 +739,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Success icon
           Container(
             width: 20.w,
             height: 20.w,
@@ -582,7 +750,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Success message
           Text(
             'Payment Successful!',
             style: TextStyle(
@@ -604,7 +771,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Booking ID
           Container(
             padding: EdgeInsets.all(4.w),
             decoration: BoxDecoration(
@@ -653,7 +819,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Next steps
           Container(
             padding: EdgeInsets.all(4.w),
             decoration: BoxDecoration(
@@ -695,14 +860,13 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 3.h),
 
-          // Action buttons
           Row(
             children: [
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // Close success modal
-                    Navigator.pop(context); // Go back to service details
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceLight,
@@ -726,8 +890,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // Close success modal
-                    Navigator.pop(context); // Go back to service details
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                     // TODO: Navigate to bookings screen
                   },
                   style: ElevatedButton.styleFrom(
@@ -800,6 +964,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               children: [
                 SizedBox(height: 2.h),
                 _buildBranchSelector(),
+                SizedBox(height: 4.h),
                 Icon(Icons.info_outline, size: 60.sp, color: AppColors.warning),
                 SizedBox(height: 2.h),
                 Text(
@@ -868,6 +1033,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 SizedBox(height: 2.h),
                 _buildAboutService(),
                 SizedBox(height: 2.h),
+                _buildIncludedServices(),
+                SizedBox(height: 2.h),
                 _buildPeopleSelector(),
                 SizedBox(height: 2.h),
                 _buildDateSelector(),
@@ -875,7 +1042,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 _buildTimeSelector(),
                 SizedBox(height: 2.h),
                 _buildDurationSelector(),
-                if (therapists.isNotEmpty) _buildTherapistSelector(),
+                if (staffList.isNotEmpty) _buildStaffSelector(),
                 _buildNotesField(),
                 SizedBox(height: 14.h),
               ],
@@ -959,7 +1126,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   Icon(Icons.people, color: AppColors.info, size: 14.sp),
                   SizedBox(width: 1.w),
                   Text(
-                    'UP TO 2\nPEOPLE',
+                    'UP TO $defaultCapacity\nPEOPLE',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.info,
@@ -1391,8 +1558,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         ),
         SizedBox(height: 2.h),
         Column(
-          children: durations.map((duration) {
-            final isSelected = selectedDuration == duration.minutes;
+          children: durations.where((d) => d != null).map((duration) {
+            final isSelected = selectedDuration == duration!.minutes;
             return GestureDetector(
               onTap: () => setState(() => selectedDuration = duration.minutes),
               child: Container(
@@ -1443,20 +1610,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                               fontSize: 14.sp,
                             ),
                           ),
-                          SizedBox(height: 0.5.h),
-                          Text(
-                            duration.description,
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11.sp,
+                          if (duration.description != null) ...[
+                            SizedBox(height: 0.5.h),
+                            Text(
+                              duration.description!,
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11.sp,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
                     SizedBox(width: 4.w),
                     Text(
-                      duration.price,
+                      '\$${duration.price}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
@@ -1499,12 +1668,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
-  Widget _buildTherapistSelector() {
+  Widget _buildStaffSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SELECT THERAPIST (OPTIONAL)',
+          'SELECT STAFF MEMBER (OPTIONAL)',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12.sp,
@@ -1519,21 +1688,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           child: ListView.separated(
             padding: EdgeInsets.only(bottom: 2.h),
             scrollDirection: Axis.horizontal,
-            itemCount: therapists.length,
+            itemCount: staffList.length,
             separatorBuilder: (_, __) => SizedBox(width: 4.w),
             itemBuilder: (context, index) {
-              final therapist = therapists[index];
-              final isSelected = selectedTherapist?.id == therapist.id;
+              final staff = staffList[index];
+              if (staff == null) return const SizedBox.shrink();
+
+              final isSelected = selectedStaff?.user.id == staff.user.id;
 
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    selectedTherapist = isSelected ? null : therapist;
+                    selectedStaff = isSelected ? null : staff;
                   });
                 },
                 child: Column(
                   children: [
-                    /// Avatar with border
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: EdgeInsets.all(isSelected ? 0.8.w : 0.5.w),
@@ -1541,22 +1711,21 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isSelected
-                              ? AppColors
-                                    .info // gold-like ring
+                              ? AppColors.info
                               : AppColors.dividerColor,
                           width: isSelected ? 3 : 1.5,
                         ),
                       ),
                       child: CircleAvatar(
                         radius: 8.w,
-                        backgroundImage: NetworkImage(therapist.image),
+                        backgroundImage: NetworkImage(staff.profilePicture),
                         backgroundColor: AppColors.surfaceLight,
                       ),
                     ),
 
                     SizedBox(height: 1.h),
                     Text(
-                      therapist.name,
+                      '${staff.user.firstName} ${staff.user.lastName.substring(0, 1)}.',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 13.sp,
@@ -1567,7 +1736,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     SizedBox(height: 0.5.h),
 
                     Text(
-                      therapist.role.toUpperCase(),
+                      staff.employeeId,
                       style: TextStyle(
                         color: AppColors.textTertiary,
                         fontSize: 10.sp,
@@ -1682,7 +1851,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     if (hasError || durations.isEmpty) return const SizedBox.shrink();
 
     final selectedDurationData = durations.firstWhere(
-      (d) => d.minutes == selectedDuration,
+      (d) => d?.minutes == selectedDuration,
       orElse: () => durations[0],
     );
 
@@ -1722,7 +1891,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     ),
                     SizedBox(height: 0.5.h),
                     Text(
-                      selectedDurationData.price,
+                      '\$${selectedDurationData?.price ?? '0'}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 24.sp,
@@ -1886,6 +2055,63 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildIncludedServices() {
+    final List<String?> services = [...widget.service.includedIn];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Included in Service',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        GridView.count(
+          padding: EdgeInsets.only(top: 2.h),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 3,
+          crossAxisSpacing: 3.w,
+          mainAxisSpacing: 2.h,
+          children: services.map((service) {
+            return Container(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    SolarIconsOutline.startShine,
+                    color: AppColors.info,
+                    size: 18.sp,
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Text(
+                      service ?? 'Additional Service',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:recoverylab_front/configurations/constants.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/branchService/branch_service_response.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
 import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
@@ -160,5 +161,48 @@ class ApiProvider {
         .toList();
 
     return services;
+  }
+
+  Future<BranchServiceResponse?> getBranchService({
+    required int branchId,
+    required int serviceId,
+  }) async {
+    final response = await baseGet(
+      '${ApiRoutes.branchServices}/$branchId/$serviceId',
+    );
+    final decoded = _handleResponse(response);
+
+    return BranchServiceResponse.fromJson(decoded);
+  }
+
+  Future<Map<String, dynamic>> storeBooking({
+    required int userId,
+    required int branchId,
+    required int serviceId,
+    required String formattedDateTime,
+    required int durationMinutes,
+    required int participantCount,
+    int? staffId,
+    String? notes,
+    required String paymentMethod,
+  }) async {
+    final response = await basePost(ApiRoutes.booking, {
+      'user_id': userId,
+      'branch_id': branchId,
+      'notes': notes?.isEmpty ?? true ? null : notes,
+      'appointments': [
+        {
+          'service_id': serviceId,
+          'duration_minutes': durationMinutes,
+          'scheduled_start': formattedDateTime,
+          'participant_count': participantCount,
+          'staff_id': staffId,
+        },
+      ],
+      'payment_method': paymentMethod,
+    });
+
+    final decoded = _handleResponse(response);
+    return decoded;
   }
 }

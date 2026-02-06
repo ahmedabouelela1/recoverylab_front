@@ -748,7 +748,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildModernCategory(ServiceCategory category) {
     return GestureDetector(
       onTap: () {
-        // Navigator.pushNamed(context, Routes.categories, arguments: category.id);
+        Navigator.pushNamed(
+          context,
+          Routes.categories,
+          arguments: {'category': category},
+        );
       },
       child: Container(
         width: 35.w,
