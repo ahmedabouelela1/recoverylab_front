@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -87,7 +86,8 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
       ),
       body: Column(
         children: [
-          _buildBranchSelector(),
+          // _buildBranchSelector(),
+          _searchBar(),
 
           // Services list
           Expanded(
@@ -121,101 +121,27 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
     );
   }
 
-  Widget _buildBranchSelector() {
+  Widget _searchBar() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 5.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 2.h),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0.5.h),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.info.withOpacity(0.2),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<Branch>(
-                value: selectedBranch,
-                isExpanded: true,
-                dropdownColor: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(16),
-                icon: Icon(
-                  SolarIconsOutline.altArrowDown,
-                  color: AppColors.secondary,
-                  size: 24,
-                ),
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-                hint: branches.isEmpty
-                    ? Text(
-                        'Loading branches...',
-                        style: GoogleFonts.inter(
-                          fontSize: 13.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                      )
-                    : null,
-                onChanged: (Branch? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      selectedBranch = newValue;
-                    });
-                  }
-                },
-                items: branches.map<DropdownMenuItem<Branch>>((Branch branch) {
-                  return DropdownMenuItem<Branch>(
-                    value: branch,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.focusedBorder.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            SolarIconsOutline.mapPoint,
-                            size: 18,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            branch.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search services...',
+          hintStyle: GoogleFonts.inter(fontSize: 13.sp, color: Colors.white),
+          prefixIcon: Icon(
+            SolarIconsOutline.magnifier,
+            color: Colors.white,
+            size: 20.sp,
           ),
-        ],
+          filled: true,
+          fillColor: AppColors.cardBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        cursorColor: Colors.white,
+        onChanged: (value) {},
       ),
     );
   }
@@ -226,18 +152,10 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
   }) {
     return GestureDetector(
       onTap: () {
-        print('service.image: ${service.image}');
         Navigator.pushNamed(
           context,
           Routes.serviceDetails,
-          arguments: {
-            'title': "${service.name} Details",
-            'location': service.description,
-            'branch': selectedBranch,
-            'price': "123456",
-            'duration': "12345",
-            'image': service.image,
-          },
+          arguments: {'service': service},
         );
       },
       child: Container(

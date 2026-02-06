@@ -259,21 +259,10 @@ class RoutesGenerator {
         return _errorRoute();
 
       case Routes.serviceDetails:
+        // return MaterialPageRoute(builder: (_) => const MassageBookingScreen());
         if (args is Map<String, dynamic>) {
-          // Note: ServiceDetailsPage import was missing, added for completeness
           return MaterialPageRoute(
-            builder: (_) => ServiceDetailsPage(
-              title: args['title'] as String,
-              location: args['location'] as String,
-              //rating: args['rating'] as String,
-              image: args['image'] as String,
-              price: args['price'] as String,
-              duration: args['duration'] as String,
-              availableFeatures: List<String>.from(
-                args['availableFeatures'] ?? [],
-              ),
-              reviews: List<Map<String, String>>.from(args['reviews'] ?? []),
-            ),
+            builder: (_) => ServiceDetailsPage(service: args['service']),
           );
         }
         return _errorRoute();

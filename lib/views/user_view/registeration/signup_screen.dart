@@ -1412,7 +1412,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         TextSpan(
                           text: "Terms & Conditions ",
                           style: TextStyle(
-                            color: AppColors.primary,
+                            color: AppColors.info,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1420,7 +1420,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         TextSpan(
                           text: "Privacy Policy",
                           style: TextStyle(
-                            color: AppColors.primary,
+                            color: AppColors.info,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
