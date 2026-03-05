@@ -1,19 +1,27 @@
 // pages/packages/widgets/package_card.dart
+// Single unified card used by CombosTab, MembershipTab, and PackagesTab.
+// Replaces combo_card.dart, membership_card.dart, and the old package_card.dart.
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:recoverylab_front/components/app_button.dart';
 import 'package:sizer/sizer.dart';
+import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/components/app_button.dart';
 
 class PackageCard extends StatelessWidget {
   final String title;
-  final String subtitle; // The smaller text line below the title
-  final String durationOrDetail; // The time/discount/freeze period line
-  final String detailLine; // The small text detail line (e.g., 'Free towel')
+  final String subtitle;
+  final String durationOrDetail;
+  final String detailLine;
+
+  /// Already formatted price string — pass WITHOUT currency symbol.
+  /// The card will prepend "EGP".
   final String price;
   final String imagePath;
   final VoidCallback onBookNow;
+
+  /// Optional badge shown top-left on the image (e.g. "COMBO", "MEMBERSHIP").
+  final String? badge;
 
   const PackageCard({
     super.key,
@@ -24,6 +32,7 @@ class PackageCard extends StatelessWidget {
     required this.price,
     required this.imagePath,
     required this.onBookNow,
+    this.badge,
   });
 
   @override
@@ -31,163 +40,199 @@ class PackageCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(bottom: 4.w),
       decoration: BoxDecoration(
-        color: Colors.transparent, // Dark background from your config
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.16),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Package Image with Gradient Overlay
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
-              // Changed bottom radius to 0 to separate the image visually from the padding below it
-              // consistent with the design implied by the spacing in the screenshots.
-              bottom: Radius.circular(12),
-            ),
-            child: Stack(
-              // Wrap with Stack to layer the gradient
-              children: [
-                Image.asset(
-                  imagePath,
-                  height: 20.h,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 20.h,
-                    color: AppColors.textSecondary.withOpacity(0.1),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Image Missing',
-                      style: TextStyle(color: AppColors.textSecondary),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Hero image ─────────────────────────────────────────────
+            SizedBox(
+              height: 20.h,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.surfaceLight,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        SolarIconsOutline.health,
+                        color: AppColors.textTertiary,
+                        size: 40.sp,
+                      ),
                     ),
                   ),
-                ),
-                // Gradient Overlay
-                Positioned.fill(
-                  child: Container(
+                  // Gradient
+                  Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withOpacity(
-                            0.8,
-                          ), // Start with opaque black
-                          Colors.transparent, // Fade to transparent
+                          Colors.black.withOpacity(0.75),
+                          Colors.transparent,
                         ],
-                        stops: const [0.0, 0.5], // Control fade speed
+                        stops: const [0.0, 0.55],
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 0.5.h),
-
-                // Subtitle
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                SizedBox(height: 1.5.h),
-
-                // Duration/Main Detail Line
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    SizedBox(width: 1.w),
-                    Text(
-                      durationOrDetail,
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 0.5.h),
-
-                // Secondary Detail Line (like Free towel)
-                Row(
-                  children: [
-                    Icon(
-                      Icons.card_giftcard_outlined,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(left: 1.w),
-                      child: Text(
-                        detailLine,
-                        style: GoogleFonts.inter(
-                          fontSize: 13.sp,
-                          color: AppColors.textSecondary,
+                  // Badge
+                  if (badge != null)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 1.h),
-
-                // Price and Book Now Button Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "from",
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            color: AppColors.textSecondary,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.info.withOpacity(0.5),
+                            width: 0.8,
                           ),
                         ),
-                        Text(
-                          price,
-                          style: GoogleFonts.inter(
-                            fontSize: 16.sp,
+                        child: Text(
+                          badge!,
+                          style: TextStyle(
+                            color: AppColors.info,
+                            fontSize: 9.sp,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                            letterSpacing: 0.8,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                    // Book Now Button
-                    AppButton(
-                      label: "Book now",
-                      onPressed: onBookNow,
-                      size: AppButtonSize.medium,
-                      borderRadius: 100,
-                      width: 30.w, // consistent with ComboCard
+                ],
+              ),
+            ),
+
+            // ── Content ────────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.all(4.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  SizedBox(height: 0.5.h),
+
+                  // Subtitle
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  SizedBox(height: 1.5.h),
+
+                  // Detail chips row
+                  Wrap(
+                    spacing: 2.w,
+                    runSpacing: 1.h,
+                    children: [
+                      if (durationOrDetail.isNotEmpty)
+                        _chip(SolarIconsOutline.clockCircle, durationOrDetail),
+                      if (detailLine.isNotEmpty)
+                        _chip(SolarIconsOutline.gift, detailLine),
+                    ],
+                  ),
+                  SizedBox(height: 2.h),
+
+                  // Divider
+                  Container(height: 0.5, color: AppColors.dividerColor),
+                  SizedBox(height: 1.8.h),
+
+                  // Price + button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'FROM',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 0.3.h),
+                          Text(
+                            'EGP $price',
+                            style: TextStyle(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      AppButton(
+                        label: 'Book Now',
+                        onPressed: onBookNow,
+                        size: AppButtonSize.medium,
+                        borderRadius: 100,
+                        width: 32.w,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.dividerColor, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.textTertiary, size: 12.sp),
+          SizedBox(width: 1.5.w),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

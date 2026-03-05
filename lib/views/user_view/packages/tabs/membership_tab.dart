@@ -2,37 +2,35 @@
 
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
-// Note: Changed import to the unified component
-import '../widgets/membership_card.dart'; // Assuming you rename this file content to PackageListItem
+import '../widgets/package_card.dart';
 
 class MembershipTab extends StatelessWidget {
   const MembershipTab({super.key});
 
-  // Data from the Membership screenshot
-  final List<Map<String, String>> membershipPackages = const [
+  static const List<Map<String, String>> _memberships = [
     {
       'title': 'Platinum Membership',
-      'subtitle': '12 Months',
-      'duration': 'Full Spa Access', // Reused field for the first feature line
-      'details': '12-Week Freeze Period\n25% Off All Services',
-      'price': '\$230/year',
-      'imagePath': 'lib/assets/images/haven.jpg', // Replace with actual path
+      'subtitle': '12 Months · Full Spa Access',
+      'duration': '12-Week Freeze Period',
+      'details': '25% Off All Services',
+      'price': '8,600 / year',
+      'imagePath': 'lib/assets/images/haven.jpg',
     },
     {
       'title': 'Gold Membership',
-      'subtitle': '6 Months',
-      'duration': 'Full Spa Access',
-      'details': '6-Week Freeze Period\n15% Off All Services',
-      'price': '\$130/6 months',
-      'imagePath': 'lib/assets/images/steam.jpg', // Replace with actual path
+      'subtitle': '6 Months · Full Spa Access',
+      'duration': '6-Week Freeze Period',
+      'details': '15% Off All Services',
+      'price': '4,900 / 6 months',
+      'imagePath': 'lib/assets/images/steam.jpg',
     },
     {
       'title': 'Silver Membership',
-      'subtitle': '3 Months',
-      'duration': 'Full Spa Access',
-      'details': '2-Week Freeze Period\n10% Off All Services',
-      'price': '\$65/3 months',
-      'imagePath': 'lib/assets/images/spa.jpg', // Replace with actual path
+      'subtitle': '3 Months · Full Spa Access',
+      'duration': '2-Week Freeze Period',
+      'details': '10% Off All Services',
+      'price': '2,450 / 3 months',
+      'imagePath': 'lib/assets/images/spa.jpg',
     },
   ];
 
@@ -40,19 +38,20 @@ class MembershipTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.w),
-      itemCount: membershipPackages.length,
+      itemCount: _memberships.length,
       itemBuilder: (context, index) {
-        final package = membershipPackages[index];
-        // Using MembershipCard which now implements the full design
-        return MembershipCard(
-          title: package['title']!,
-          subtitle: package['subtitle']!,
-          durationOrDetail: package['duration']!,
-          detailLine: package['details']!,
-          price: package['price']!,
-          imagePath: package['imagePath']!,
-          onBookNow: () =>
-              print("Booking ${package['title']} from Membership!"),
+        final p = _memberships[index];
+        return PackageCard(
+          badge: 'MEMBERSHIP',
+          title: p['title']!,
+          subtitle: p['subtitle']!,
+          durationOrDetail: p['duration']!,
+          detailLine: p['details']!,
+          price: p['price']!,
+          imagePath: p['imagePath']!,
+          onBookNow: () {
+            // TODO: navigate to membership purchase flow
+          },
         );
       },
     );

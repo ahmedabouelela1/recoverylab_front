@@ -31,7 +31,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   String notes = '';
   Staff? selectedStaff;
   String selectedType = 'single';
-  String? selectedPaymentMethod; // Added for payment method selection
+  String? selectedPaymentMethod;
+  String? _actualBookingId;
   List<Branch?> branches = [];
   List<ServiceDuration?> durations = [];
   List<Staff?> staffList = [];
@@ -163,6 +164,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please select date and time'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return false;
+    }
+
+    final selectedDateTime = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+      selectedTime!.hour,
+    );
+    if (selectedDateTime.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a future date and time'),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -350,24 +367,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       return;
     }
 
-    final bookingData = {
-      'user_id': user.id,
-      'branch_id': branches[selectedBranchIndex!]!.id,
-      'notes': notes.isEmpty ? null : notes,
-      'appointments': [
-        {
-          'service_id': widget.service.id,
-          'duration_minutes': selectedDuration,
-          'scheduled_start': formattedDateTime,
-          'participant_count': selectedPeopleCount,
-          'staff_id': selectedStaff?.user.id,
-        },
-      ],
-      'payment_method': selectedPaymentMethod,
-    };
-
-    print('Booking data for API: $bookingData');
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -375,7 +374,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
 
     try {
-      // TODO: Call your API to create booking
       final response = await ref
           .read(apiProvider)
           .storeBooking(
@@ -389,10 +387,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             notes: notes,
             paymentMethod: selectedPaymentMethod!,
           );
-      print('Booking API response: $response');
 
-      // For now, simulating API call
-      await Future.delayed(Duration(seconds: 2));
+      final bookingData = response['data'];
+      final id = bookingData?['booking_id'] ?? bookingData?['booking']?['id'];
+      _actualBookingId = id?.toString();
 
       if (!mounted) return;
 
@@ -504,7 +502,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     _buildConfirmationDetail(
                       icon: SolarIconsOutline.clockCircle,
                       label: 'Time',
-                      value: selectedTime!.format(context),
+                      value: _formatHour(selectedTime!.hour),
                     ),
                     SizedBox(height: 1.5.h),
                     _buildConfirmationDetail(
@@ -798,7 +796,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         ),
                       ),
                       Text(
-                        '#BK${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+                        _actualBookingId != null
+                            ? '#BK$_actualBookingId'
+                            : '—',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 14.sp,
@@ -1458,6 +1458,140 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
+  String _formatHour(int hour) {
+    final period = hour < 12 ? 'AM' : 'PM';
+    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    return '$displayHour:00 $period';
+  }
+
+  void _showTimeSelectionSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final now = DateTime.now();
+        final isToday = selectedDate != null &&
+            selectedDate!.year == now.year &&
+            selectedDate!.month == now.month &&
+            selectedDate!.day == now.day;
+
+        // 7 AM → 10 PM (hour slots); for today, skip hours already past
+        final availableHours = List.generate(16, (i) => i + 7).where((hour) {
+          if (!isToday) return true;
+          return hour > now.hour;
+        }).toList();
+
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 4.w,
+            right: 4.w,
+            top: 3.w,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 4.w,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 12.w,
+                  height: 0.5.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              SizedBox(height: 3.h),
+              Text(
+                'SELECT TIME',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              SizedBox(height: 0.5.h),
+              Text(
+                'Appointments start on the hour',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 11.sp,
+                ),
+              ),
+              SizedBox(height: 2.h),
+              if (availableHours.isEmpty)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 3.h),
+                  child: Center(
+                    child: Text(
+                      'No available slots for today.\nPlease select a future date.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13.sp,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 2.w,
+                  runSpacing: 1.5.h,
+                  children: availableHours.map((hour) {
+                    final isSelected = selectedTime?.hour == hour;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(
+                          () => selectedTime = TimeOfDay(hour: hour, minute: 0),
+                        );
+                        Navigator.pop(sheetContext);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.5.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.info.withOpacity(0.15)
+                              : AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.info
+                                : AppColors.dividerColor,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          _formatHour(hour),
+                          style: TextStyle(
+                            color: isSelected
+                                ? AppColors.info
+                                : AppColors.textPrimary,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              SizedBox(height: 3.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildTimeSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1473,28 +1607,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         ),
         SizedBox(height: 1.h),
         GestureDetector(
-          onTap: () async {
-            final pickedTime = await showTimePicker(
-              context: context,
-              initialTime: selectedTime ?? TimeOfDay.now(),
-              builder: (context, child) {
-                return Theme(
-                  data: ThemeData.light().copyWith(
-                    colorScheme: ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: AppColors.secondary,
-                    ),
-                    dialogBackgroundColor: AppColors.background,
-                  ),
-                  child: child!,
-                );
-              },
-            );
-
-            if (pickedTime != null) {
-              setState(() => selectedTime = pickedTime);
-            }
-          },
+          onTap: _showTimeSelectionSheet,
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
             decoration: BoxDecoration(
@@ -1513,7 +1626,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   child: Text(
                     selectedTime == null
                         ? 'Choose a time'
-                        : selectedTime!.format(context),
+                        : _formatHour(selectedTime!.hour),
                     style: TextStyle(
                       color: selectedTime == null
                           ? AppColors.textTertiary

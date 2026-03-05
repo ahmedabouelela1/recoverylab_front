@@ -1,13 +1,6 @@
-// pages/packages/packages_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
-
-// Import your configurations
 import 'package:recoverylab_front/configurations/colors.dart';
-
-// Import your tab files
 import 'tabs/combos_tab.dart';
 import 'tabs/membership_tab.dart';
 import 'tabs/packages_tab.dart';
@@ -20,15 +13,21 @@ class PackagesPage extends StatefulWidget {
 }
 
 class _PackagesPageState extends State<PackagesPage> {
-  // Use a String to track the selected state, as the custom buttons don't use a TabController
   String selectedTab = 'Combos';
 
-  // Map to hold the tab widgets
   final Map<String, Widget> tabViews = const {
     'Combos': CombosTab(),
     'Membership': MembershipTab(),
     'Packages': PackagesTab(),
   };
+
+  final List<String> _tabs = ['Combos', 'Membership', 'Packages'];
+
+  Color _tabColor(String tab) {
+    if (tab == 'Combos') return AppColors.info;
+    if (tab == 'Membership') return AppColors.info;
+    return AppColors.info;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,81 +37,107 @@ class _PackagesPageState extends State<PackagesPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
-        // This line removes the back arrow or leading icon
         automaticallyImplyLeading: false,
-
-        // Note: The iconTheme is now unnecessary since no leading icon will be shown
-        // title: Text( ... ) remains the same
         title: Text(
-          "Packages",
-          style: GoogleFonts.inter(
+          'Packages',
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18.sp,
-            color: AppColors.textPrimary, // White
+            color: AppColors.textPrimary,
           ),
         ),
       ),
       body: Column(
         children: [
-          // 1. Tab/Segmented Control (Top Row) - Custom Implementation
+          // ── Tab selector — exact same as booking screen ─────────────────
           Padding(
-            // Reduced vertical padding as the control seems closer to the app bar
-            padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 4.w),
-            child: Container(
-              // The entire control has a dark background and rounded edges
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground, // Dark grey background
-                borderRadius: BorderRadius.circular(40),
+            padding: EdgeInsets.symmetric(horizontal: 5.w),
+            child: _buildTabSelector(),
+          ),
+
+          SizedBox(height: 2.h),
+
+          // ── Content ─────────────────────────────────────────────────────
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.03),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildTabButton('Combos'),
-                  _buildTabButton('Membership'),
-                  _buildTabButton('Packages'),
-                ],
+              child: KeyedSubtree(
+                key: ValueKey(selectedTab),
+                child: tabViews[selectedTab]!,
               ),
             ),
           ),
-
-          // 2. Current Tab View
-          Expanded(child: tabViews[selectedTab]!),
         ],
       ),
     );
   }
 
-  // Helper widget to build the custom tab buttons (the 'pill' design)
-  Widget _buildTabButton(String tabName) {
-    final isSelected = selectedTab == tabName;
+  Widget _buildTabSelector() {
+    return Container(
+      height: 6.2.h,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.dividerColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: _tabs.map((tab) {
+          final isSelected = selectedTab == tab;
+          final tabColor = _tabColor(tab);
 
-    return Expanded(
-      // Ensures buttons fill the container width
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedTab = tabName;
-          });
-        },
-        child: Container(
-          // Inner padding to make the pill height correct
-          padding: EdgeInsets.symmetric(vertical: 1.2.h, horizontal: 1.w),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            // Use AppColors.textPrimary (White) for selected background
-            color: isSelected ? AppColors.textPrimary : Colors.transparent,
-            borderRadius: BorderRadius.circular(40),
-          ),
-          child: Text(
-            tabName,
-            style: GoogleFonts.inter(
-              fontSize: 14.sp,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              // Use AppColors.background (Black) for selected text
-              color: isSelected ? AppColors.background : AppColors.textPrimary,
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => selectedTab = tab),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                margin: EdgeInsets.all(0.7.w),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? tabColor.withOpacity(0.14)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  border: isSelected
+                      ? Border.all(color: tabColor.withOpacity(0.35), width: 1)
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    tab,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected ? tabColor : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        }).toList(),
       ),
     );
   }

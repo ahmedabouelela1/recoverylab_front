@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:recoverylab_front/configurations/constants.dart';
+import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/Branch/branchService/branch_service_response.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
@@ -37,6 +38,20 @@ class ApiProvider {
     final url = Uri.parse('$apiUrl$endpoint');
     final headers = await ref.read(headersProvider).token;
     final response = await http.get(url, headers: headers);
+    return response;
+  }
+
+  Future<http.Response> basePatch(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    final url = Uri.parse('$apiUrl$endpoint');
+    final headers = await ref.read(headersProvider).token;
+    final response = await http.patch(
+      url,
+      headers: headers,
+      body: jsonEncode(data),
+    );
     return response;
   }
 
@@ -173,6 +188,34 @@ class ApiProvider {
     final decoded = _handleResponse(response);
 
     return BranchServiceResponse.fromJson(decoded);
+  }
+
+  Future<List<ApiBooking>> getBookings() async {
+    final response = await baseGet(ApiRoutes.booking);
+    final decoded = _handleResponse(response);
+
+    // Handle both plain list and paginated { data: [...] } shapes
+    final raw = decoded['data'];
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw.containsKey('data')) {
+      list = raw['data'] as List<dynamic>;
+    } else {
+      list = [];
+    }
+
+    return list
+        .map((j) => ApiBooking.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> cancelAppointment(int appointmentId) async {
+    final response = await basePatch(
+      '${ApiRoutes.appointments}/$appointmentId/status',
+      {'status': 'CANCELLED'},
+    );
+    _handleResponse(response);
   }
 
   Future<Map<String, dynamic>> storeBooking({

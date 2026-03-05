@@ -2,8 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:recoverylab_front/models/Branch/services/service_category.dart';
-// 🔑 NEW IMPORT: The Booking model is required to accept the argument type
+// The old Booking model is kept for the legacy wizard pages (BookingPageOne/Two/Three)
 import 'package:recoverylab_front/models/booking_model.dart';
+import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_one.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_page_three.dart';
@@ -109,12 +110,17 @@ class RoutesGenerator {
         }
         return _errorRoute();
       case Routes.bookingDetailsPage:
+        if (args is ApiBooking) {
+          return MaterialPageRoute(
+            builder: (_) => BookingDetailsPage(booking: args),
+          );
+        }
         if (args is Map<String, dynamic> &&
             args.containsKey('booking') &&
-            args['booking'] is Booking) {
+            args['booking'] is ApiBooking) {
           return MaterialPageRoute(
             builder: (_) =>
-                BookingDetailsPage(booking: args['booking'] as Booking),
+                BookingDetailsPage(booking: args['booking'] as ApiBooking),
           );
         }
         return _errorRoute();

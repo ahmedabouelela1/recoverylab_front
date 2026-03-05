@@ -10,6 +10,7 @@ class ApiRoutes {
   static const String categoryServices = '/category-services';
   static const String branchServices = '/branch-services';
   static const String booking = '/bookings';
+  static const String appointments = '/appointments';
 }
 
 // const apiUrl = 'https://recoverylab.thecodehaus.co/api';
