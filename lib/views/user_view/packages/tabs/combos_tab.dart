@@ -1,7 +1,7 @@
 // pages/packages/tabs/combos_tab.dart
 
 import 'package:flutter/material.dart';
-import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:sizer/sizer.dart';
 import '../widgets/package_card.dart';
 
@@ -102,17 +102,23 @@ class CombosTab extends StatelessWidget {
           detailLine: p['details'] as String,
           price: p['price'] as String,
           imagePath: p['imagePath'] as String,
-          onBookNow: () => Navigator.pushNamed(
+          onBookNow: () => Navigator.push(
             context,
-            Routes.packageDetails,
-            arguments: {
-              'title': p['detail_title'] as String,
-              'description': p['detail_description'] as String,
-              'imagePath': p['detail_imagePath'] as String,
-              'totalDuration': p['detail_totalDuration'] as String,
-              'price': p['detail_price'] as String,
-              'inclusions': p['detail_inclusions'],
-            },
+            MaterialPageRoute(
+              builder: (_) => PackageDetailsPage(
+                type: PackageType.combo,
+                title: p['detail_title'] as String,
+                description: p['detail_description'] as String,
+                imagePath: p['detail_imagePath'] as String,
+                totalDuration: p['detail_totalDuration'] as String,
+                price: p['detail_price'] as String,
+                inclusions: List<Map<String, String>>.from(
+                  (p['detail_inclusions'] as List).map(
+                    (e) => Map<String, String>.from(e as Map),
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },

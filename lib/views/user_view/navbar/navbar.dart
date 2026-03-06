@@ -1,78 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_screen.dart';
+import 'package:recoverylab_front/views/user_view/home/home.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
+import 'package:recoverylab_front/views/user_view/profile/settings.dart';
+import 'package:solar_icons/solar_icons.dart';
 
-class CustomNavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int index;
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
+class Navbar extends StatefulWidget {
+  const Navbar({super.key});
 
-  const CustomNavBarItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-    required this.selectedIndex,
-    required this.onTap,
-  });
+  @override
+  State<Navbar> createState() => _NavbarState();
+}
 
-  bool get isSelected => index == selectedIndex;
+class _NavbarState extends State<Navbar> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = const [
+    HomePage(),
+    BookingScreen(),
+    PackagesPage(),
+    SettingsPage(),
+  ];
+
+  final GlobalKey<CurvedNavigationBarState> _bottomNavKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    final Color iconColor = isSelected ? Colors.black : Colors.grey.shade500;
-    final Color textColor = isSelected ? Colors.black : Colors.grey.shade500;
-    final Color backgroundColor = isSelected
-        ? Colors.white
-        : Colors.transparent;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: _pages[_selectedIndex],
 
-    final double verticalPadding = 1.25.h;
+      bottomNavigationBar: CurvedNavigationBar(
+        key: _bottomNavKey,
+        index: _selectedIndex,
+        height: 60,
+        backgroundColor: Colors.transparent,
+        color: AppColors.primary, // bar color
+        // buttonBackgroundColor: Colors.black, // active icon bg
+        animationDuration: const Duration(milliseconds: 300),
 
-    final Widget content = Container(
-      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: verticalPadding),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: iconColor, size: 24),
-          // if (isSelected) ...[
-          //   SizedBox(width: 1.5.w),
-          //   Text(
-          //     label,
-          //     style: TextStyle(
-          //       color: textColor,
-          //       fontWeight: FontWeight.w600,
-          //       fontSize: 14,
-          //     ),
-          //   ),
-          // ],
+        items: const [
+          Icon(SolarIconsOutline.home, size: 26, color: Colors.white),
+          Icon(SolarIconsOutline.calendarAdd, size: 26, color: Colors.white),
+          Icon(SolarIconsOutline.bedsideTable4, size: 26, color: Colors.white),
+          Icon(SolarIconsOutline.user, size: 26, color: Colors.white),
         ],
-      ),
-    );
 
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        child: Center(
-          // ✅ Keeps item centered inside its slot
-          child: FittedBox(
-            // ✅ Prevents overflow by scaling content slightly if needed
-            fit: BoxFit.scaleDown,
-            child: isSelected
-                ? content
-                : Container(
-                    padding: EdgeInsets.symmetric(vertical: verticalPadding),
-                    alignment: Alignment.center,
-                    child: Icon(icon, color: iconColor, size: 24),
-                  ),
-          ),
-        ),
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

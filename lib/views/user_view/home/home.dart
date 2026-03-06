@@ -8,6 +8,7 @@ import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/User/user.dart';
+import 'package:recoverylab_front/models/staff_member_model.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
@@ -403,31 +404,57 @@ class _HomePageState extends ConsumerState<HomePage> {
                   letterSpacing: -0.3,
                 ),
               ),
-              Container(
-                width: 24.w,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 3.5.w,
-                  vertical: 0.9.h,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(SolarIconsOutline.fire, size: 15, color: Colors.white),
-                    SizedBox(width: 2.w),
-                    Text(
-                      "Hot Deals",
-                      style: GoogleFonts.inter(
-                        fontSize: 12.sp,
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.w600,
+              GestureDetector(
+                onTap: () {
+                  StaffMember staff = StaffMember(
+                    bio:
+                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                    imageUrl:
+                        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8c3RhZmYlMjBtZW1iZXJ8ZW58MHx8MHx8&w=1000&q=80",
+                    name: "John Doe",
+                    reviews: [
+                      {"5 Stars": 120},
+                    ],
+                    role: "Senior Therapist",
+                    rating: 4.8,
+                    reviewsCount: 150,
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    Routes.otp,
+                    arguments: {"staff": staff},
+                  );
+                },
+                child: Container(
+                  width: 24.w,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 3.5.w,
+                    vertical: 0.9.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        SolarIconsOutline.fire,
+                        size: 15,
+                        color: Colors.white,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 2.w),
+                      Text(
+                        "Hot Deals",
+                        style: GoogleFonts.inter(
+                          fontSize: 12.sp,
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

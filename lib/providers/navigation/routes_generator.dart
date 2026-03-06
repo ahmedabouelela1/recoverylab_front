@@ -1,24 +1,17 @@
 // routes generator
 
 import 'package:flutter/material.dart';
-import 'package:recoverylab_front/models/Branch/services/service_category.dart';
-// The old Booking model is kept for the legacy wizard pages (BookingPageOne/Two/Three)
-import 'package:recoverylab_front/models/booking_model.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
-import 'package:recoverylab_front/views/user_view/bookings/booking_page_one.dart';
-import 'package:recoverylab_front/views/user_view/bookings/booking_page_three.dart';
-import 'package:recoverylab_front/views/user_view/bookings/booking_page_two.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_screen.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
-import 'package:recoverylab_front/views/user_view/bookings/staff_details_page.dart';
 import 'package:recoverylab_front/views/user_view/home/Service/service_categories.dart';
 import 'package:recoverylab_front/views/user_view/home/Service/services_screen.dart';
 import 'package:recoverylab_front/views/user_view/home/Service/service_details.dart';
-import 'package:recoverylab_front/views/user_view/home/navbar.dart';
-import 'package:recoverylab_front/views/user_view/login/login_page.dart';
-import 'package:recoverylab_front/views/user_view/login/otp_verified_page.dart';
-import 'package:recoverylab_front/views/user_view/login/verification_page.dart';
+import 'package:recoverylab_front/views/user_view/navbar/navbar.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/login/login_page.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/login/otp_verified_page.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
@@ -34,10 +27,10 @@ import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dar
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step1.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
-import 'package:recoverylab_front/views/user_view/registeration/create_account.dart';
-import 'package:recoverylab_front/views/user_view/registeration/otp_verified_signup.dart';
-import 'package:recoverylab_front/views/user_view/registeration/signup_screen.dart';
-import 'package:recoverylab_front/views/user_view/registeration/otp_signup.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/registeration/create_account.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/registeration/otp_verified_signup.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/registeration/signup_screen.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/registeration/otp_signup.dart';
 
 class Routes {
   static const String root = '/';
@@ -69,10 +62,6 @@ class Routes {
   static const String upgradeMembership = '/upgradeMembership';
   static const String couponRedeemed = '/couponRedeemed';
   static const String bookings = '/bookings';
-  static const String bookingsOne = '/bookingsOne';
-  static const String staffDetails = '/staffDetails';
-  static const String bookingsTwo = '/bookingsTwo';
-  static const String bookingsThree = '/bookingsThree';
   static const String bookingSuccessPage = '/bookingSuccessPage';
   static const String bookingDetailsPage = '/bookingDetailsPage';
   static const String splashScreen = '/splashScreen';
@@ -153,28 +142,6 @@ class RoutesGenerator {
       case Routes.packagesPage:
         return MaterialPageRoute(builder: (_) => const PackagesPage());
 
-      case Routes.bookingsThree:
-        if (args is Map<String, dynamic>) {
-          // Note: args['booking'] should be cast to Booking if BookingPageThree expects it.
-          // Since you didn't provide its constructor, I'll trust your current args usage.
-          return MaterialPageRoute(
-            builder: (_) => BookingPageThree(
-              booking: args['booking'],
-              basePrice: args['basePrice'],
-              totalPrice: args['totalPrice'],
-              selectedAddons: args['selectedAddons'],
-              addonPrices: args['addonPrices'],
-              selectedTherapist: args['selectedTherapist'],
-              selectedDate: args['selectedDate'],
-              startTimeHour: args['startTimeHour'],
-              timePeriod: args['timePeriod'],
-              durationHour: args['durationHour'],
-              durationMinute: args['durationMinute'],
-              personCount: args['personCount'],
-            ),
-          );
-        }
-        return _errorRoute();
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
       case Routes.style:
@@ -183,78 +150,23 @@ class RoutesGenerator {
       case Routes.settings:
         return MaterialPageRoute(builder: (_) => const SettingsPage());
       case Routes.helpAndSupport:
-        return MaterialPageRoute(builder: (_) => const HelpAndSupportPage());
+        return MaterialPageRoute(builder: (_) => const HelpSupportPage());
       case Routes.termsAndPolicies:
-        return MaterialPageRoute(builder: (_) => const TermsAndPoliciesPage());
+        return MaterialPageRoute(builder: (_) => const TermsPoliciesPage());
       case Routes.resetPassword:
-        // Assuming ChangePasswordPage is the correct class
         return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
       case Routes.coupons:
         return MaterialPageRoute(builder: (_) => const CouponsPage());
       case Routes.couponRedeemed:
-        // Assuming CoupomRedeemPage is the correct class
         return MaterialPageRoute(builder: (_) => const CoupomRedeemPage());
       case Routes.editHealthSurvey:
-        // Assuming HealthSurveyPage is the correct class
-        return MaterialPageRoute(builder: (_) => const HealthSurveyPage());
+        return MaterialPageRoute(builder: (_) => const EditHealthSurveyPage());
       case Routes.upgradeMembership:
         return MaterialPageRoute(builder: (_) => const UpgradeMembershipPage());
       case Routes.bookings:
         return MaterialPageRoute(builder: (_) => const BookingScreen());
-
-      case Routes.bookingsTwo:
-        if (args is Map<String, dynamic> &&
-            args.containsKey('booking') &&
-            args.containsKey('allStaffMembers')) {
-          return MaterialPageRoute(
-            builder: (_) => BookingPageTwo(
-              booking: args['booking'], // Should be a Booking object
-              allStaffMembers: args['allStaffMembers'],
-              selectedTherapist: args['selectedTherapist'],
-              onTherapistSelected: args['onTherapistSelected'],
-              selectedDate: args['selectedDate'],
-              onDateSelected: args['onDateSelected'],
-              startTimeHour: args['startTimeHour'],
-              onStartTimeHourChanged: args['onStartTimeHourChanged'],
-              durationHour: args['durationHour'],
-              durationMinute: args['durationMinute'],
-              onDurationChanged: args['onDurationChanged'],
-              timePeriod: args['timePeriod'],
-              onTimePeriodChanged: args['onTimePeriodChanged'],
-            ),
-          );
-        }
-        return _errorRoute();
-
-      case Routes.staffDetails:
-        if (args is Map<String, dynamic>) {
-          // Assuming StaffDetailsScreen constructor takes a 'staff' argument
-          return MaterialPageRoute(
-            builder: (_) => StaffDetailsScreen(staff: args['staff']),
-          );
-        }
-        return _errorRoute();
-
       case Routes.navbar:
         return MaterialPageRoute(builder: (_) => const Navbar());
-
-      // 🔑 CRITICAL FIX: Handle the Booking object passed directly from ServiceDetailsPage
-      case Routes.bookingsOne:
-        // Case 1: Argument is a raw Booking object (from detail page)
-        if (args is Booking) {
-          return MaterialPageRoute(
-            builder: (_) => BookingPageOne(booking: args),
-          );
-        }
-        // Case 2: Argument is a Map containing the Booking object (from booking flow)
-        if (args is Map<String, dynamic> &&
-            args.containsKey('booking') &&
-            args['booking'] is Booking) {
-          return MaterialPageRoute(
-            builder: (_) => BookingPageOne(booking: args['booking'] as Booking),
-          );
-        }
-        return _errorRoute();
 
       case Routes.categories:
         if (args != null && args is Map) {

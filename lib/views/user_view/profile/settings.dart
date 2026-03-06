@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
+import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 
@@ -19,52 +19,112 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.textPrimary,
+      backgroundColor: AppColors.cardBackground,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
         return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text("Take a photo"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final picked = await picker.pickImage(
-                    source: ImageSource.camera,
-                  );
-                  if (picked != null) {
-                    setState(() => _profileImage = File(picked.path));
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text("Choose from gallery"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final picked = await picker.pickImage(
-                    source: ImageSource.gallery,
-                  );
-                  if (picked != null) {
-                    setState(() => _profileImage = File(picked.path));
-                  }
-                },
-              ),
-            ],
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 10.w,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'CHANGE PHOTO',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                _photoOption(
+                  icon: SolarIconsOutline.camera,
+                  label: 'Take a photo',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picked = await picker.pickImage(
+                      source: ImageSource.camera,
+                    );
+                    if (picked != null)
+                      setState(() => _profileImage = File(picked.path));
+                  },
+                ),
+                SizedBox(height: 1.5.h),
+                _photoOption(
+                  icon: SolarIconsOutline.gallery,
+                  label: 'Choose from gallery',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (picked != null)
+                      setState(() => _profileImage = File(picked.path));
+                  },
+                ),
+                SizedBox(height: 2.h),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  void _navigateToNamed(BuildContext context, String routeName) {
-    Navigator.of(context).pushNamed(routeName);
+  Widget _photoOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.dividerColor, width: 0.8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.info, size: 16.sp),
+            ),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -77,8 +137,8 @@ class _SettingsPageState extends State<SettingsPage> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
-          "Settings",
-          style: GoogleFonts.inter(
+          'Settings',
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18.sp,
             color: AppColors.textPrimary,
@@ -86,155 +146,204 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
       body: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
         children: [
           _buildProfileCard(context),
           SizedBox(height: 3.h),
-          _buildSectionTitle("Account"),
-          _buildAccountSection(context),
+          _sectionLabel('ACCOUNT'),
+          SizedBox(height: 1.2.h),
+          _buildSection([
+            _SettingItem(
+              icon: SolarIconsOutline.health,
+              label: 'Edit Health Survey',
+              route: Routes.editHealthSurvey,
+            ),
+            _SettingItem(
+              icon: SolarIconsOutline.lockPassword,
+              label: 'Change Password',
+              route: Routes.resetPassword,
+            ),
+            _SettingItem(
+              icon: SolarIconsOutline.crown,
+              label: 'Upgrade Membership',
+              route: Routes.upgradeMembership,
+            ),
+            _SettingItem(
+              icon: SolarIconsOutline.ticket,
+              label: 'Coupons',
+              route: Routes.coupons,
+            ),
+          ], context),
           SizedBox(height: 3.h),
-          _buildSectionTitle("Support & About"),
-          _buildSupportSection(context),
-          SizedBox(height: 10.h),
+          _sectionLabel('SUPPORT & ABOUT'),
+          SizedBox(height: 1.2.h),
+          _buildSection([
+            _SettingItem(
+              icon: SolarIconsOutline.accumulator,
+              label: 'Help & Support',
+              route: Routes.helpAndSupport,
+            ),
+            _SettingItem(
+              icon: SolarIconsOutline.fileText,
+              label: 'Terms and Policies',
+              route: Routes.termsAndPolicies,
+            ),
+          ], context),
+          SizedBox(height: 4.h),
           AppButton(
-            label: "Log out",
-            onPressed: () {
-              print("User logged out");
-            },
+            label: 'Log Out',
+            onPressed: () {},
             icon: Icons.logout,
             size: AppButtonSize.large,
-            color: AppColors.primary,
+            color: AppColors.error,
           ),
+          SizedBox(height: 4.h),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 2.h, left: 1.w),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 16.sp,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary.withOpacity(0.8),
-        ),
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 12.sp,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 2,
       ),
     );
   }
 
   Widget _buildProfileCard(BuildContext context) {
-    const String defaultProfilePath = 'lib/assets/images/profile.png';
-
+    const defaultProfilePath = 'lib/assets/images/profile.png';
     return Container(
-      padding: EdgeInsets.only(top: 4.w, left: 4.w, right: 4.w, bottom: 2.w),
+      padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dividerColor, width: 0.8),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: 2.w),
-            child: Row(
-              children: [
-                // Profile Picture with Edit Option
-                Stack(
+          Row(
+            children: [
+              // Avatar
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: CircleAvatar(
-                        radius: 6.w,
-                        backgroundImage: _profileImage != null
-                            ? FileImage(_profileImage!)
-                            : const AssetImage(defaultProfilePath)
-                                  as ImageProvider,
-                        backgroundColor: AppColors.textSecondary.withOpacity(
-                          0.1,
+                    CircleAvatar(
+                      radius: 7.w,
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!) as ImageProvider
+                          : const AssetImage(defaultProfilePath),
+                      backgroundColor: AppColors.surfaceLight,
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.cardBackground,
+                          width: 2,
                         ),
                       ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        padding: const EdgeInsets.all(3),
-                        child: const Icon(
-                          Icons.edit,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 10,
+                        color: Colors.white,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(width: 4.w),
-                Column(
+              ),
+              SizedBox(width: 4.w),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Michael Smith",
-                      style: GoogleFonts.inter(
+                      'Michael Smith',
+                      style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                     ),
+                    SizedBox(height: 0.3.h),
                     Text(
-                      "michael.smith@example.com",
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
+                      'michael.smith@example.com',
+                      style: TextStyle(
+                        fontSize: 13.sp,
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           SizedBox(height: 2.h),
-          InkWell(
-            onTap: () => _navigateToNamed(context, Routes.upgradeMembership),
-            borderRadius: BorderRadius.circular(8),
+          Container(height: 0.5, color: AppColors.dividerColor),
+          SizedBox(height: 2.h),
+          // Membership row
+          GestureDetector(
+            onTap: () =>
+                Navigator.of(context).pushNamed(Routes.upgradeMembership),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-              margin: EdgeInsets.only(bottom: 2.w),
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.6.h),
               decoration: BoxDecoration(
-                color: AppColors.textPrimary.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.success.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.success.withOpacity(0.25),
+                  width: 1,
+                ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.workspace_premium_outlined,
-                        size: 20,
-                        color: AppColors.textPrimary,
-                      ),
-                      SizedBox(width: 3.w),
-                      Text(
-                        "Gold Membership",
-                        style: GoogleFonts.inter(
-                          fontSize: 15.sp,
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w500,
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      SolarIconsOutline.crown,
+                      color: AppColors.success,
+                      size: 14.sp,
+                    ),
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Gold Membership',
+                          style: TextStyle(
+                            color: AppColors.success,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          'Tap to upgrade',
+                          style: TextStyle(
+                            color: AppColors.textTertiary,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    size: 16,
-                    color: AppColors.textSecondary.withOpacity(0.5),
+                    size: 14,
+                    color: AppColors.success.withOpacity(0.5),
                   ),
                 ],
               ),
@@ -245,107 +354,89 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAccountSection(BuildContext context) {
+  Widget _buildSection(List<_SettingItem> items, BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dividerColor, width: 0.8),
       ),
       child: Column(
-        children: [
-          _buildSettingItem(
-            icon: Icons.security_outlined,
-            title: "Edit Health Survey",
-            onTap: () => _navigateToNamed(context, Routes.editHealthSurvey),
-          ),
-          _buildSettingItem(
-            icon: Icons.lock_outlined,
-            title: "Change Password",
-            onTap: () => _navigateToNamed(context, Routes.resetPassword),
-          ),
-          _buildSettingItem(
-            icon: Icons.upgrade_outlined,
-            title: "Upgrade Membership",
-            onTap: () => _navigateToNamed(context, Routes.upgradeMembership),
-          ),
-          _buildSettingItem(
-            icon: Icons.local_activity_outlined,
-            title: "Coupons",
-            onTap: () => _navigateToNamed(context, Routes.coupons),
-            isLast: true,
-          ),
-        ],
+        children: items.asMap().entries.map((entry) {
+          final i = entry.key;
+          final item = entry.value;
+          final isLast = i == items.length - 1;
+          return _buildSettingRow(item, context, isLast: isLast);
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildSupportSection(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          _buildSettingItem(
-            icon: Icons.help_outline,
-            title: "Help & Support",
-            onTap: () => _navigateToNamed(context, Routes.helpAndSupport),
-          ),
-          _buildSettingItem(
-            icon: Icons.info_outline,
-            title: "Terms and Policies",
-            onTap: () => _navigateToNamed(context, Routes.termsAndPolicies),
-            isLast: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
+  Widget _buildSettingRow(
+    _SettingItem item,
+    BuildContext context, {
     bool isLast = false,
   }) {
-    return InkWell(
-      onTap: onTap,
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushNamed(item.route),
       child: Column(
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: AppColors.textSecondary),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    item.icon,
+                    size: 16.sp,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 SizedBox(width: 4.w),
                 Expanded(
                   child: Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 15.sp,
+                    item.label,
+                    style: TextStyle(
+                      fontSize: 14.sp,
                       color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  size: 16,
-                  color: AppColors.textSecondary.withOpacity(0.5),
+                  size: 14,
+                  color: AppColors.textTertiary,
                 ),
               ],
             ),
           ),
           if (!isLast)
             Divider(
-              color: AppColors.textSecondary.withOpacity(0.1),
+              color: AppColors.dividerColor,
               height: 1,
-              thickness: 1,
-              indent: 8.w,
+              thickness: 0.5,
+              indent: 14.w,
               endIndent: 4.w,
             ),
         ],
       ),
     );
   }
+}
+
+class _SettingItem {
+  final IconData icon;
+  final String label;
+  final String route;
+  const _SettingItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+  });
 }
