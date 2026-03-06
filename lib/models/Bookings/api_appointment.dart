@@ -9,6 +9,7 @@ class ApiAppointment {
   final int participantCount;
   final int? staffId;
   final String status;
+  final double finalPrice;
   final String? serviceName;
   final String? serviceImage;
   final String? staffFirstName;
@@ -21,6 +22,7 @@ class ApiAppointment {
     this.serviceId,
     this.duration,
     required this.basePrice,
+    required this.finalPrice,
     required this.scheduledStart,
     required this.scheduledEnd,
     required this.participantCount,
@@ -36,7 +38,6 @@ class ApiAppointment {
   factory ApiAppointment.fromJson(Map<String, dynamic> json) {
     final service = json['service'] as Map<String, dynamic>?;
     final staff = json['staff'] as Map<String, dynamic>?;
-    final staffUser = staff?['user'] as Map<String, dynamic>?;
 
     return ApiAppointment(
       id: json['id'],
@@ -45,6 +46,8 @@ class ApiAppointment {
       duration: json['duration'],
       basePrice:
           double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
+      finalPrice:
+          double.tryParse(json['final_price']?.toString() ?? '0') ?? 0.0,
       scheduledStart: DateTime.parse(json['scheduled_start']),
       scheduledEnd: DateTime.parse(json['scheduled_end']),
       participantCount: json['participant_count'] ?? 1,
@@ -52,8 +55,8 @@ class ApiAppointment {
       status: json['status'] ?? 'SCHEDULED',
       serviceName: service?['name'],
       serviceImage: service?['image'],
-      staffFirstName: staffUser?['first_name'],
-      staffLastName: staffUser?['last_name'],
+      staffFirstName: staff?['first_name'],
+      staffLastName: staff?['last_name'],
       staffProfilePicture: staff?['profile_picture'],
     );
   }
@@ -82,9 +85,11 @@ class ApiAppointment {
 
   String get scheduledTimeLabel {
     final h = scheduledStart.hour;
+    final m = scheduledStart.minute;
     final period = h < 12 ? 'AM' : 'PM';
     final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-    return '$displayH:00 $period';
+    final displayM = m.toString().padLeft(2, '0');
+    return '$displayH:$displayM $period';
   }
 
   bool get isActive =>

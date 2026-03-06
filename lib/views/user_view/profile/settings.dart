@@ -170,6 +170,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           SizedBox(height: 1.2.h),
           _buildSection([
             _SettingItem(
+              icon: SolarIconsOutline.wallet,
+              label: 'My Packages & Memberships',
+              route: Routes.myWallet,
+            ),
+            _SettingItem(
               icon: SolarIconsOutline.health,
               label: 'Edit Health Survey',
               route: Routes.editHealthSurvey,
@@ -211,7 +216,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
           AppButton(
             label: 'Log Out',
-            onPressed: () {},
+            onPressed: () async {
+              await ref.read(userSessionProvider.notifier).logout();
+              if (!mounted) return;
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                Routes.loginPage,
+                (route) => false,
+              );
+            },
             icon: Icons.logout,
             size: AppButtonSize.large,
             color: AppColors.error,

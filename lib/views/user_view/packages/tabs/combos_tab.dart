@@ -1,122 +1,97 @@
-// pages/packages/tabs/combos_tab.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recoverylab_front/models/Offer/offer_package.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:sizer/sizer.dart';
 import '../widgets/package_card.dart';
 
-class CombosTab extends StatelessWidget {
+class CombosTab extends ConsumerStatefulWidget {
   const CombosTab({super.key});
 
-  static const List<Map<String, dynamic>> _combos = [
-    {
-      'title': 'Massage + Spa Combo',
-      'subtitle': 'Swedish Massage · Steam Room · Sauna',
-      'duration': '120 min',
-      'details': 'Free towel & locker access',
-      'price': '1,350',
-      'imagePath': 'lib/assets/images/haven.jpg',
-      'detail_title': 'Swedish Relaxation Experience',
-      'detail_description':
-          'A classic combination designed for pure relaxation. Enjoy a gentle Swedish massage followed by detoxifying time in the steam room and sauna.',
-      'detail_imagePath': 'lib/assets/images/haven.jpg',
-      'detail_totalDuration': '120 Minutes',
-      'detail_price': '1350',
-      'detail_inclusions': [
-        {
-          'icon': 'icon_massage',
-          'name': 'Swedish Massage',
-          'duration': '60 min',
-        },
-        {
-          'icon': 'icon_steam_room',
-          'name': 'Steam Room Access',
-          'duration': '30 min',
-        },
-        {'icon': 'icon_sauna', 'name': 'Sauna Session', 'duration': '30 min'},
-      ],
-    },
-    {
-      'title': 'Full Recovery Without Cupping',
-      'subtitle': 'Deep Tissue Massage · Ice Bath · IV Drip',
-      'duration': '150 min',
-      'details': 'Includes Normatec boots',
-      'price': '3,200',
-      'imagePath': 'lib/assets/images/spa.jpg',
-      'detail_title': 'Full Body Reset – Recovery Combo',
-      'detail_description':
-          'Experience the ultimate wellness recovery with a powerful combination of therapeutic treatments designed to relax your body, reduce fatigue, and boost recovery.',
-      'detail_imagePath': 'lib/assets/images/spa.jpg',
-      'detail_totalDuration': '2 Hours 30 Minutes',
-      'detail_price': '3200',
-      'detail_inclusions': [
-        {
-          'icon': 'icon_deep_tissue',
-          'name': 'Deep Tissue Massage',
-          'duration': '60 min',
-        },
-        {
-          'icon': 'icon_ice_bath',
-          'name': 'Ice Bath Session',
-          'duration': '30 min',
-        },
-        {'icon': 'icon_iv_drip', 'name': 'IV Detox Drip', 'duration': '30 min'},
-      ],
-    },
-    {
-      'title': 'Moroccan Bath + Relax Massage',
-      'subtitle': 'Traditional Bath · Relaxation Massage',
-      'duration': '120 min',
-      'details': 'Complimentary herbal drink',
-      'price': '2,100',
-      'imagePath': 'lib/assets/images/steam.jpg',
-      'detail_title': 'Deep Relaxation Moroccan Experience',
-      'detail_description':
-          'Enjoy a traditional purifying Moroccan Hammam followed by a soothing full-body relaxation massage to melt away tension.',
-      'detail_imagePath': 'lib/assets/images/steam.jpg',
-      'detail_totalDuration': '120 Minutes',
-      'detail_price': '2100',
-      'detail_inclusions': [
-        {'icon': 'icon_bath', 'name': 'Moroccan Hammam', 'duration': '60 min'},
-        {
-          'icon': 'icon_massage',
-          'name': 'Relaxation Massage',
-          'duration': '60 min',
-        },
-      ],
-    },
-  ];
+  @override
+  ConsumerState<CombosTab> createState() => _CombosTabState();
+}
+
+class _CombosTabState extends ConsumerState<CombosTab> {
+  List<OfferPackage> _combos = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final result = await ref.read(apiProvider).getPackages(type: 'COMBO');
+      if (mounted)
+        setState(() {
+          _combos = result;
+          _loading = false;
+        });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        AppSnackBar.show(context, e.toString());
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_combos.isEmpty) {
+      return Center(
+        child: Text(
+          'No combos available',
+          style: TextStyle(color: Colors.grey, fontSize: 14.sp),
+        ),
+      );
+    }
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.w),
       itemCount: _combos.length,
       itemBuilder: (context, index) {
         final p = _combos[index];
+        final subtitle = p.rules
+            .map((r) => r.serviceName ?? 'Service ${r.serviceId}')
+            .join(' · ');
+        final totalMin = p.totalDurationMinutes;
+        final durationStr = totalMin > 0 ? '$totalMin min' : '';
+
         return PackageCard(
           badge: 'COMBO',
-          title: p['title'] as String,
-          subtitle: p['subtitle'] as String,
-          durationOrDetail: p['duration'] as String,
-          detailLine: p['details'] as String,
-          price: p['price'] as String,
-          imagePath: p['imagePath'] as String,
+          title: p.name,
+          subtitle: subtitle,
+          durationOrDetail: durationStr,
+          detailLine: '',
+          price: p.price.toStringAsFixed(0),
+          imagePath: 'lib/assets/images/haven.jpg',
           onBookNow: () => Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => PackageDetailsPage(
+                itemId: p.id,
                 type: PackageType.combo,
-                title: p['detail_title'] as String,
-                description: p['detail_description'] as String,
-                imagePath: p['detail_imagePath'] as String,
-                totalDuration: p['detail_totalDuration'] as String,
-                price: p['detail_price'] as String,
-                inclusions: List<Map<String, String>>.from(
-                  (p['detail_inclusions'] as List).map(
-                    (e) => Map<String, String>.from(e as Map),
-                  ),
-                ),
+                title: p.name,
+                description: p.description ?? '',
+                imagePath: 'lib/assets/images/haven.jpg',
+                totalDuration: durationStr,
+                price: p.price.toStringAsFixed(0),
+                inclusions: p.rules
+                    .map(
+                      (r) => {
+                        'icon': 'icon_massage',
+                        'name': r.serviceName ?? 'Service ${r.serviceId}',
+                        'duration': '${r.durationMinutes} min',
+                      },
+                    )
+                    .toList(),
               ),
             ),
           ),

@@ -8,7 +8,6 @@ import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/User/user.dart';
-import 'package:recoverylab_front/models/staff_member_model.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
@@ -221,9 +220,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
         // Notification Button
         GestureDetector(
-          // onTap: () => Navigator.pushNamed(context, Routes.otp),
-          onTap: () =>
-              Navigator.pushNamed(context, Routes.questionnaireStepOne),
+          onTap: () => Navigator.pushNamed(context, Routes.questionnaire),
           child: Container(
             width: 24.sp,
             height: 24.sp,
@@ -298,26 +295,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  StaffMember staff = StaffMember(
-                    bio:
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-                    imageUrl:
-                        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8c3RhZmYlMjBtZW1iZXJ8ZW58MHx8MHx8&w=1000&q=80",
-                    name: "John Doe",
-                    reviews: [
-                      {"5 Stars": 120},
-                    ],
-                    role: "Senior Therapist",
-                    rating: 4.8,
-                    reviewsCount: 150,
-                  );
-                  Navigator.pushNamed(
-                    context,
-                    Routes.otp,
-                    arguments: {"staff": staff},
-                  );
-                },
                 child: Container(
                   width: 24.w,
                   padding: EdgeInsets.symmetric(

@@ -15,10 +15,10 @@ class PackagesPage extends StatefulWidget {
 class _PackagesPageState extends State<PackagesPage> {
   String selectedTab = 'Combos';
 
-  final Map<String, Widget> tabViews = const {
-    'Combos': CombosTab(),
-    'Membership': MembershipTab(),
-    'Packages': PackagesTab(),
+  final Map<String, Widget> tabViews = {
+    'Combos': const CombosTab(),
+    'Membership': const MembershipTab(),
+    'Packages': const PackagesTab(),
   };
 
   final List<String> _tabs = ['Combos', 'Membership', 'Packages'];

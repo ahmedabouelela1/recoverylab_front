@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:recoverylab_front/configurations/constants.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/models/User/user.dart';
@@ -10,7 +12,8 @@ final userSessionProvider = ChangeNotifierProvider<UserSession>(
 );
 
 class UserSession extends ChangeNotifier {
-  final Ref ref; // ✅ Corrected Ref
+  final Ref ref;
+  static const _storage = FlutterSecureStorage();
 
   UserState _state = UserState.loading;
 
@@ -29,6 +32,10 @@ class UserSession extends ChangeNotifier {
       token = response.data.token;
       _state = UserState.active;
       notifyListeners();
+
+      // Persist session so the user stays logged in across restarts.
+      _storage.write(key: 'auth_token', value: token);
+      _storage.write(key: 'user', value: jsonEncode(response.toJson()));
     } else {
       _state = UserState.none;
       notifyListeners();
@@ -37,21 +44,20 @@ class UserSession extends ChangeNotifier {
 
   void setState(UserState newState) {
     _state = newState;
-    notifyListeners(); // ✅ Fix
+    notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
     user = null;
     token = null;
     _state = UserState.none;
     notifyListeners();
-  }
 
-  // void changeProfilePic(String newProfilePic) {
-  //   user?.update(profilePic: newProfilePic);
-  //   _state = UserState.active;
-  //   notifyListeners();
-  // }
+    await Future.wait([
+      _storage.delete(key: 'auth_token'),
+      _storage.delete(key: 'user'),
+    ]);
+  }
 
   void updateUser({
     String? firstName,

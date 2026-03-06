@@ -8,6 +8,8 @@ import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/models/Bookings/api_appointment.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
 import 'package:recoverylab_front/models/Branch/services/service_category.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 
 class BookingDetailsPage extends ConsumerStatefulWidget {
@@ -21,8 +23,28 @@ class BookingDetailsPage extends ConsumerStatefulWidget {
 
 class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   bool _isBookingAgain = false;
+  bool _isRefreshing = false;
+  late ApiBooking _booking;
 
-  ApiBooking get booking => widget.booking;
+  @override
+  void initState() {
+    super.initState();
+    _booking = widget.booking;
+  }
+
+  ApiBooking get booking => _booking;
+
+  Future<void> _refresh() async {
+    setState(() => _isRefreshing = true);
+    try {
+      final updated = await ref.read(apiProvider).getBooking(_booking.id);
+      if (mounted) setState(() => _booking = updated);
+    } catch (e) {
+      if (mounted) AppSnackBar.show(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
 
   Color get _statusColor {
     if (booking.isUpcoming) return AppColors.info;
@@ -53,7 +75,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         name: first.serviceName ?? 'Recovery Session',
         description: '',
         image: first.serviceImage ?? '',
-        category: ServiceCategory(id: 0, name: '', description: '', image: ''),
+        category: ServiceCategory(id: first.serviceId!, name: '', description: '', image: ''),
       );
       if (!mounted) return;
       Navigator.pushNamed(
@@ -227,6 +249,24 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         ),
       ),
       centerTitle: true,
+      actions: [
+        _isRefreshing
+            ? Padding(
+                padding: EdgeInsets.only(right: 4.w),
+                child: const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              )
+            : IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
+                onPressed: _refresh,
+              ),
+      ],
       flexibleSpace: imageUrl != null
           ? FlexibleSpaceBar(
               background: Stack(
@@ -387,7 +427,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             ),
             SizedBox(width: 1.5.w),
             Text(
-              booking.bookingDate.toString(),
+              _formatDate(booking.bookingDate),
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12.sp,
@@ -402,6 +442,11 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
 
   // ── Payment badge ─────────────────────────────────────────────────────────
 
+  String _formatDate(DateTime dt) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
   Widget _paymentBadge() {
     Color color;
     switch (booking.paymentStatus) {
@@ -410,6 +455,12 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         break;
       case 'PENDING':
         color = AppColors.warning;
+        break;
+      case 'PARTIAL':
+        color = AppColors.warning;
+        break;
+      case 'DEFERRED':
+        color = AppColors.textSecondary;
         break;
       case 'REFUNDED':
         color = AppColors.info;
@@ -728,7 +779,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                       ),
                     ),
                     Text(
-                      'EGP ${(apt.basePrice * apt.participantCount).toStringAsFixed(0)}',
+                      'EGP ${(apt.finalPrice * apt.participantCount).toStringAsFixed(0)}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16.sp,

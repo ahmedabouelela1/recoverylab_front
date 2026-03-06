@@ -3,56 +3,65 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
-import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
-// Re-use the same model types as the questionnaire page.
-enum _QuestionType { text, singleChoice, multipleChoice, boolean }
+// ─────────────────────────────────────────────
+// Data models (mirrors backend schema)
+// ─────────────────────────────────────────────
 
-class _Option {
+enum QuestionType { text, singleChoice, multipleChoice, boolean }
+
+class QuestionOption {
   final int id;
   final String text;
-  _Option({required this.id, required this.text});
+  QuestionOption({required this.id, required this.text});
+
+  factory QuestionOption.fromJson(Map<String, dynamic> json) =>
+      QuestionOption(id: json['id'] as int, text: json['text'] as String);
 }
 
-class _Question {
+class Question {
   final int id;
   final String text;
-  final _QuestionType type;
-  final List<_Option> options;
+  final QuestionType type;
+  final List<QuestionOption> options;
 
-  _Question({
+  Question({
     required this.id,
     required this.text,
     required this.type,
     this.options = const [],
   });
 
-  factory _Question.fromJson(Map<String, dynamic> json) {
+  factory Question.fromJson(Map<String, dynamic> json) {
     final typeStr = (json['type'] as String?) ?? 'text';
-    final _QuestionType type;
+    final QuestionType type;
     switch (typeStr) {
       case 'single_choice':
-        type = _QuestionType.singleChoice;
+        type = QuestionType.singleChoice;
         break;
       case 'multiple_choice':
-        type = _QuestionType.multipleChoice;
+        type = QuestionType.multipleChoice;
         break;
       case 'boolean':
-        type = _QuestionType.boolean;
+        type = QuestionType.boolean;
         break;
       default:
-        type = _QuestionType.text;
+        type = QuestionType.text;
     }
+
     final answersRaw = (json['answers'] as List<dynamic>?) ?? [];
-    final options = answersRaw
-        .map((a) => _Option(
-              id: (a as Map<String, dynamic>)['id'] as int,
-              text: a['text'] as String,
-            ))
-        .toList();
-    return _Question(id: json['id'] as int, text: json['text'] as String, type: type, options: options);
+    final options =
+        answersRaw.map((a) => QuestionOption.fromJson(a as Map<String, dynamic>)).toList();
+
+    return Question(
+      id: json['id'] as int,
+      text: json['text'] as String,
+      type: type,
+      options: options,
+    );
   }
 }
 
@@ -60,19 +69,19 @@ class _Question {
 // Page
 // ─────────────────────────────────────────────
 
-class EditHealthSurveyPage extends ConsumerStatefulWidget {
-  const EditHealthSurveyPage({super.key});
+class QuestionnairePage extends ConsumerStatefulWidget {
+  const QuestionnairePage({super.key});
 
   @override
-  ConsumerState<EditHealthSurveyPage> createState() => _EditHealthSurveyPageState();
+  ConsumerState<QuestionnairePage> createState() => _QuestionnairePageState();
 }
 
-class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
+class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
     with SingleTickerProviderStateMixin {
-  // ── Loading ────────────────────────────────
+  // ── Loading state ──────────────────────────
   bool _loading = true;
   String? _loadError;
-  List<_Question> _questions = [];
+  List<Question> _questions = [];
 
   // ── Progress / answers ─────────────────────
   int _currentIndex = 0;
@@ -84,7 +93,7 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
 
-  bool _saving = false;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -100,7 +109,8 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     _fadeAnimation =
         CurvedAnimation(parent: _slideController, curve: Curves.easeOut);
     _slideController.forward();
-    _loadData();
+
+    _fetchQuestions();
   }
 
   @override
@@ -110,64 +120,16 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     super.dispose();
   }
 
-  // ── Fetch questions + existing answers ─────
+  // ── API ────────────────────────────────────
 
-  Future<void> _loadData() async {
-    final userId = ref.read(userSessionProvider).user?.id;
+  Future<void> _fetchQuestions() async {
     try {
-      final api = ref.read(apiProvider);
-      final results = await Future.wait([
-        api.getQuestions(),
-        if (userId != null) api.getUserAnswers(userId),
-      ]);
-
-      final questions = (results[0] as List<Map<String, dynamic>>)
-          .map((j) => _Question.fromJson(j))
-          .toList();
-
-      final Map<int, List<Map<String, dynamic>>> existing =
-          (results.length > 1 && results[1] != null)
-              ? results[1] as Map<int, List<Map<String, dynamic>>>
-              : {};
-
-      // Pre-fill _answers from existing server data.
-      final Map<int, dynamic> prefilled = {};
-      for (final q in questions) {
-        final entries = existing[q.id];
-        if (entries == null || entries.isEmpty) continue;
-
-        switch (q.type) {
-          case _QuestionType.singleChoice:
-            final answerId = entries.first['answer_id'];
-            if (answerId != null) prefilled[q.id] = answerId as int;
-            break;
-          case _QuestionType.multipleChoice:
-            final ids = entries
-                .where((e) => e['answer_id'] != null)
-                .map((e) => e['answer_id'] as int)
-                .toSet();
-            if (ids.isNotEmpty) prefilled[q.id] = ids;
-            break;
-          case _QuestionType.boolean:
-            final val = entries.first['custom_answer'];
-            if (val != null) prefilled[q.id] = val == 'true';
-            break;
-          case _QuestionType.text:
-            final val = entries.first['custom_answer'];
-            if (val != null) prefilled[q.id] = val as String;
-            break;
-        }
-      }
-
+      final raw = await ref.read(apiProvider).getQuestions();
+      final questions = raw.map((j) => Question.fromJson(j)).toList();
       if (mounted) {
         setState(() {
           _questions = questions;
-          _answers.addAll(prefilled);
           _loading = false;
-          // Seed text controller if first question is text.
-          if (questions.isNotEmpty && questions.first.type == _QuestionType.text) {
-            _textController.text = (prefilled[questions.first.id] as String?) ?? '';
-          }
         });
       }
     } catch (e) {
@@ -180,59 +142,71 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     }
   }
 
-  // ── Save ───────────────────────────────────
-
-  Future<void> _save() async {
-    // Persist current text answer if on a text question.
-    if (_questions.isNotEmpty && _current.type == _QuestionType.text) {
-      _answers[_current.id] = _textController.text.trim();
-    }
-
-    setState(() => _saving = true);
+  Future<void> _submitAnswers() async {
+    setState(() => _submitting = true);
     try {
       final payload = _buildPayload();
-      await ref.read(apiProvider).replaceAnswersBulk(payload);
+      await ref.read(apiProvider).submitAnswersBulk(payload);
       if (!mounted) return;
-      AppSnackBar.show(context, 'Health survey updated successfully');
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, Routes.navbar);
     } catch (e) {
       if (!mounted) return;
-      AppSnackBar.show(context, 'Failed to save. Please try again.');
-      setState(() => _saving = false);
+      AppSnackBar.show(context, 'Could not save answers. Please try again.');
+      setState(() => _submitting = false);
     }
   }
 
+  /// Convert _answers map to the bulk API payload.
   List<Map<String, dynamic>> _buildPayload() {
     final List<Map<String, dynamic>> payload = [];
+
     for (final q in _questions) {
       final answer = _answers[q.id];
       if (answer == null) continue;
+
       switch (q.type) {
-        case _QuestionType.singleChoice:
-          payload.add({'question_id': q.id, 'answer_id': answer as int, 'custom_answer': null});
+        case QuestionType.singleChoice:
+          payload.add({
+            'question_id': q.id,
+            'answer_id': answer as int,
+            'custom_answer': null,
+          });
           break;
-        case _QuestionType.multipleChoice:
+        case QuestionType.multipleChoice:
           for (final id in (answer as Set<int>)) {
-            payload.add({'question_id': q.id, 'answer_id': id, 'custom_answer': null});
+            payload.add({
+              'question_id': q.id,
+              'answer_id': id,
+              'custom_answer': null,
+            });
           }
           break;
-        case _QuestionType.boolean:
-          payload.add({'question_id': q.id, 'answer_id': null, 'custom_answer': (answer as bool) ? 'true' : 'false'});
+        case QuestionType.boolean:
+          payload.add({
+            'question_id': q.id,
+            'answer_id': null,
+            'custom_answer': (answer as bool) ? 'true' : 'false',
+          });
           break;
-        case _QuestionType.text:
+        case QuestionType.text:
           final text = answer as String;
           if (text.isNotEmpty) {
-            payload.add({'question_id': q.id, 'answer_id': null, 'custom_answer': text});
+            payload.add({
+              'question_id': q.id,
+              'answer_id': null,
+              'custom_answer': text,
+            });
           }
           break;
       }
     }
+
     return payload;
   }
 
   // ── Navigation ─────────────────────────────
 
-  _Question get _current => _questions[_currentIndex];
+  Question get _current => _questions[_currentIndex];
   int get _total => _questions.length;
   bool get _isLast => _currentIndex == _total - 1;
 
@@ -240,34 +214,32 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     if (_questions.isEmpty) return false;
     final answer = _answers[_current.id];
     switch (_current.type) {
-      case _QuestionType.singleChoice:
+      case QuestionType.singleChoice:
         return answer != null;
-      case _QuestionType.multipleChoice:
+      case QuestionType.multipleChoice:
         return answer != null && (answer as Set).isNotEmpty;
-      case _QuestionType.boolean:
+      case QuestionType.boolean:
         return answer != null;
-      case _QuestionType.text:
+      case QuestionType.text:
         return _textController.text.trim().isNotEmpty;
     }
   }
 
-  // Allow advancing even if unanswered when editing (question may be skipped).
-  bool get _canAdvanceOrSkip => true;
-
   void _goNext() async {
-    if (_current.type == _QuestionType.text) {
+    if (_current.type == QuestionType.text) {
       _answers[_current.id] = _textController.text.trim();
     }
+    if (!_canAdvance) return;
 
     if (_isLast) {
-      await _save();
+      await _submitAnswers();
       return;
     }
 
     await _slideController.reverse();
     setState(() {
       _currentIndex++;
-      if (_current.type == _QuestionType.text) {
+      if (_current.type == QuestionType.text) {
         _textController.text = (_answers[_current.id] as String?) ?? '';
       }
     });
@@ -282,14 +254,18 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     await _slideController.reverse();
     setState(() {
       _currentIndex--;
-      if (_current.type == _QuestionType.text) {
+      if (_current.type == QuestionType.text) {
         _textController.text = (_answers[_current.id] as String?) ?? '';
       }
     });
     _slideController.forward();
   }
 
-  // ── Widgets ────────────────────────────────
+  void _skip() {
+    Navigator.pushReplacementNamed(context, Routes.navbar);
+  }
+
+  // ── Build helpers ──────────────────────────
 
   Widget _buildProgressBar() {
     return Column(
@@ -323,7 +299,11 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
-              Container(height: 0.6.h, width: double.infinity, color: AppColors.dividerColor),
+              Container(
+                height: 0.6.h,
+                width: double.infinity,
+                color: AppColors.dividerColor,
+              ),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeInOut,
@@ -341,7 +321,7 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     );
   }
 
-  Widget _buildSingleChoice(_Question q) {
+  Widget _buildSingleChoice(Question q) {
     final selected = _answers[q.id] as int?;
     return ListView.separated(
       shrinkWrap: true,
@@ -357,7 +337,9 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
             duration: const Duration(milliseconds: 180),
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.08) : AppColors.cardBackground,
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.08)
+                  : AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected ? AppColors.primary : AppColors.dividerColor,
@@ -373,17 +355,24 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textTertiary,
                       width: 2,
                     ),
-                    color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+                    color: isSelected
+                        ? AppColors.primary.withOpacity(0.15)
+                        : Colors.transparent,
                   ),
                   child: isSelected
                       ? Center(
                           child: Container(
                             width: 2.5.w,
                             height: 2.5.w,
-                            decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         )
                       : null,
@@ -393,9 +382,12 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                   child: Text(
                     opt.text,
                     style: TextStyle(
-                      color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                      color: isSelected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
                       fontSize: 14.sp,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -407,7 +399,7 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     );
   }
 
-  Widget _buildMultipleChoice(_Question q) {
+  Widget _buildMultipleChoice(Question q) {
     final selected = (_answers[q.id] as Set<int>?) ?? <int>{};
     return ListView.separated(
       shrinkWrap: true,
@@ -421,7 +413,11 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
           onTap: () {
             setState(() {
               final s = Set<int>.from(selected);
-              isSelected ? s.remove(opt.id) : s.add(opt.id);
+              if (isSelected) {
+                s.remove(opt.id);
+              } else {
+                s.add(opt.id);
+              }
               _answers[q.id] = s;
             });
           },
@@ -429,7 +425,9 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
             duration: const Duration(milliseconds: 180),
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.info.withOpacity(0.08) : AppColors.cardBackground,
+              color: isSelected
+                  ? AppColors.info.withOpacity(0.08)
+                  : AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected ? AppColors.info : AppColors.dividerColor,
@@ -445,7 +443,9 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: isSelected ? AppColors.info : AppColors.textTertiary,
+                      color: isSelected
+                          ? AppColors.info
+                          : AppColors.textTertiary,
                       width: 2,
                     ),
                     color: isSelected ? AppColors.info : Colors.transparent,
@@ -459,9 +459,12 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                   child: Text(
                     opt.text,
                     style: TextStyle(
-                      color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                      color: isSelected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
                       fontSize: 14.sp,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -473,19 +476,35 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     );
   }
 
-  Widget _buildBoolean(_Question q) {
+  Widget _buildBoolean(Question q) {
     final selected = _answers[q.id] as bool?;
     return Row(
       children: [
-        Expanded(child: _buildBoolTile(q: q, value: true, label: 'Yes', icon: SolarIconsOutline.checkCircle, isSelected: selected == true)),
+        Expanded(
+          child: _buildBoolTile(
+            q: q,
+            value: true,
+            label: 'Yes',
+            icon: SolarIconsOutline.checkCircle,
+            isSelected: selected == true,
+          ),
+        ),
         SizedBox(width: 4.w),
-        Expanded(child: _buildBoolTile(q: q, value: false, label: 'No', icon: SolarIconsOutline.closeCircle, isSelected: selected == false)),
+        Expanded(
+          child: _buildBoolTile(
+            q: q,
+            value: false,
+            label: 'No',
+            icon: SolarIconsOutline.closeCircle,
+            isSelected: selected == false,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildBoolTile({
-    required _Question q,
+    required Question q,
     required bool value,
     required String label,
     required IconData icon,
@@ -498,23 +517,38 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
         duration: const Duration(milliseconds: 180),
         height: 14.h,
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : AppColors.cardBackground,
+          color:
+              isSelected ? color.withOpacity(0.1) : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? color : AppColors.dividerColor, width: isSelected ? 1.5 : 1),
+          border: Border.all(
+            color: isSelected ? color : AppColors.dividerColor,
+            width: isSelected ? 1.5 : 1,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? color : AppColors.textTertiary, size: 28.sp),
+            Icon(
+              icon,
+              color: isSelected ? color : AppColors.textTertiary,
+              size: 28.sp,
+            ),
             SizedBox(height: 1.h),
-            Text(label, style: TextStyle(color: isSelected ? color : AppColors.textSecondary, fontSize: 15.sp, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? color : AppColors.textSecondary,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextInput(_Question q) {
+  Widget _buildTextInput(Question q) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
@@ -528,7 +562,8 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
         style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
         decoration: InputDecoration(
           hintText: 'Type your answer here...',
-          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13.sp),
+          hintStyle:
+              TextStyle(color: AppColors.textTertiary, fontSize: 13.sp),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(4.w),
         ),
@@ -536,11 +571,11 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     );
   }
 
-  Widget _buildQuestionBody(_Question q) {
+  Widget _buildQuestionBody(Question q) {
     switch (q.type) {
-      case _QuestionType.singleChoice:
+      case QuestionType.singleChoice:
         return _buildSingleChoice(q);
-      case _QuestionType.multipleChoice:
+      case QuestionType.multipleChoice:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -554,11 +589,20 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(SolarIconsOutline.checkSquare, color: AppColors.info, size: 13.sp),
+                  Icon(
+                    SolarIconsOutline.checkSquare,
+                    color: AppColors.info,
+                    size: 13.sp,
+                  ),
                   SizedBox(width: 1.5.w),
                   Text(
                     'SELECT ALL THAT APPLY',
-                    style: TextStyle(color: AppColors.info, fontSize: 10.sp, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                    style: TextStyle(
+                      color: AppColors.info,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -567,27 +611,47 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
             _buildMultipleChoice(q),
           ],
         );
-      case _QuestionType.boolean:
+      case QuestionType.boolean:
         return _buildBoolean(q);
-      case _QuestionType.text:
+      case QuestionType.text:
         return _buildTextInput(q);
     }
   }
 
-  Widget _buildTypeBadge(_QuestionType type) {
+  Widget _buildTypeBadge(QuestionType type) {
     switch (type) {
-      case _QuestionType.singleChoice:
-        return _badge(icon: SolarIconsOutline.checkCircle, label: 'SINGLE CHOICE', color: AppColors.info);
-      case _QuestionType.multipleChoice:
-        return _badge(icon: SolarIconsOutline.checkSquare, label: 'MULTIPLE CHOICE', color: AppColors.info);
-      case _QuestionType.boolean:
-        return _badge(icon: SolarIconsOutline.help, label: 'YES / NO', color: AppColors.info);
-      case _QuestionType.text:
-        return _badge(icon: SolarIconsOutline.textField, label: 'OPEN ANSWER', color: AppColors.info);
+      case QuestionType.singleChoice:
+        return _badge(
+          icon: SolarIconsOutline.checkCircle,
+          label: 'SINGLE CHOICE',
+          color: AppColors.info,
+        );
+      case QuestionType.multipleChoice:
+        return _badge(
+          icon: SolarIconsOutline.checkSquare,
+          label: 'MULTIPLE CHOICE',
+          color: AppColors.info,
+        );
+      case QuestionType.boolean:
+        return _badge(
+          icon: SolarIconsOutline.help,
+          label: 'YES / NO',
+          color: AppColors.info,
+        );
+      case QuestionType.text:
+        return _badge(
+          icon: SolarIconsOutline.textField,
+          label: 'OPEN ANSWER',
+          color: AppColors.info,
+        );
     }
   }
 
-  Widget _badge({required IconData icon, required String label, required Color color}) {
+  Widget _badge({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
       decoration: BoxDecoration(
@@ -600,7 +664,15 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
         children: [
           Icon(icon, color: color, size: 13.sp),
           SizedBox(width: 1.5.w),
-          Text(label, style: TextStyle(color: color, fontSize: 10.sp, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
+          ),
         ],
       ),
     );
@@ -616,52 +688,102 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: GestureDetector(
-          onTap: _goBack,
+          onTap: _loading ? null : _goBack,
           child: Padding(
             padding: EdgeInsets.only(left: 4.w),
-            child: Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 18.sp),
+            child: Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary,
+              size: 18.sp,
+            ),
           ),
         ),
         title: Text(
-          'Health Survey',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.bold),
+          'Wellness Profile',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _skip,
+            child: Text(
+              'Skip',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+        ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : _loadError != null
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Failed to load questions', style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp)),
+                      Text(
+                        'Failed to load questions',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14.sp,
+                        ),
+                      ),
                       SizedBox(height: 2.h),
                       TextButton(
                         onPressed: () {
-                          setState(() { _loading = true; _loadError = null; });
-                          _loadData();
+                          setState(() {
+                            _loading = true;
+                            _loadError = null;
+                          });
+                          _fetchQuestions();
                         },
-                        child: Text('Retry', style: TextStyle(color: AppColors.primary)),
+                        child: Text(
+                          'Retry',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
                       ),
                     ],
                   ),
                 )
               : _questions.isEmpty
                   ? Center(
-                      child: Text('No questions available', style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp)),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'No questions available',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          TextButton(
+                            onPressed: _skip,
+                            child: Text(
+                              'Continue to app',
+                              style: TextStyle(color: AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   : SafeArea(
                       child: Column(
                         children: [
-                          // Progress bar
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 5.w),
                             child: _buildProgressBar(),
                           ),
                           SizedBox(height: 3.h),
-
-                          // Scrollable question content
                           Expanded(
                             child: SingleChildScrollView(
                               padding: EdgeInsets.symmetric(horizontal: 5.w),
@@ -670,7 +792,8 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                                 child: FadeTransition(
                                   opacity: _fadeAnimation,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       _buildTypeBadge(_current.type),
                                       SizedBox(height: 1.5.h),
@@ -692,13 +815,13 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                               ),
                             ),
                           ),
-
-                          // Bottom nav
                           Padding(
                             padding: EdgeInsets.fromLTRB(5.w, 0, 5.w, 3.h),
                             child: Column(
                               children: [
-                                Container(height: 0.5, color: AppColors.dividerColor),
+                                Container(
+                                    height: 0.5,
+                                    color: AppColors.dividerColor),
                                 SizedBox(height: 2.h),
                                 Row(
                                   children: [
@@ -710,52 +833,85 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
                                           width: 14.w,
                                           decoration: BoxDecoration(
                                             color: AppColors.surfaceLight,
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: AppColors.dividerColor),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            border: Border.all(
+                                                color: AppColors.dividerColor),
                                           ),
-                                          child: Icon(Icons.arrow_back_ios_new, color: AppColors.textSecondary, size: 16.sp),
+                                          child: Icon(
+                                            Icons.arrow_back_ios_new,
+                                            color: AppColors.textSecondary,
+                                            size: 16.sp,
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 3.w),
                                     ],
                                     Expanded(
-                                      child: GestureDetector(
-                                        onTap: _saving ? null : _goNext,
-                                        child: AnimatedOpacity(
-                                          duration: const Duration(milliseconds: 200),
-                                          opacity: _saving ? 0.7 : 1.0,
+                                      child: AnimatedOpacity(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        opacity: _canAdvance ? 1.0 : 0.5,
+                                        child: GestureDetector(
+                                          onTap: (_canAdvance && !_submitting)
+                                              ? _goNext
+                                              : null,
                                           child: Container(
                                             height: 6.h,
                                             decoration: BoxDecoration(
                                               color: AppColors.primary,
-                                              borderRadius: BorderRadius.circular(16),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: AppColors.primary.withOpacity(0.3),
-                                                  blurRadius: 12,
-                                                  offset: const Offset(0, 4),
-                                                ),
-                                              ],
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              boxShadow: _canAdvance
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: AppColors.primary
+                                                            .withOpacity(0.3),
+                                                        blurRadius: 12,
+                                                        offset:
+                                                            const Offset(0, 4),
+                                                      ),
+                                                    ]
+                                                  : [],
                                             ),
-                                            child: _saving
+                                            child: _submitting
                                                 ? Center(
                                                     child: SizedBox(
                                                       width: 20,
                                                       height: 20,
-                                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondary),
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color:
+                                                            AppColors.secondary,
+                                                      ),
                                                     ),
                                                   )
                                                 : Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Text(
-                                                        _isLast ? 'Save Changes' : 'Next',
-                                                        style: TextStyle(color: AppColors.secondary, fontSize: 15.sp, fontWeight: FontWeight.bold),
+                                                        _isLast
+                                                            ? 'Finish'
+                                                            : 'Continue',
+                                                        style: TextStyle(
+                                                          color:
+                                                              AppColors.secondary,
+                                                          fontSize: 15.sp,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
                                                       ),
                                                       SizedBox(width: 2.w),
                                                       Icon(
-                                                        _isLast ? SolarIconsOutline.checkCircle : Icons.arrow_forward,
-                                                        color: AppColors.secondary,
+                                                        _isLast
+                                                            ? Icons.check
+                                                            : Icons
+                                                                .arrow_forward,
+                                                        color:
+                                                            AppColors.secondary,
                                                         size: 16.sp,
                                                       ),
                                                     ],

@@ -11,6 +11,14 @@ class ApiRoutes {
   static const String branchServices = '/branch-services';
   static const String booking = '/bookings';
   static const String appointments = '/appointments';
+  static const String packages = '/packages';
+  static const String membershipPlans = '/membership-plans';
+  static const String userPackages = '/user-packages';
+  static const String userMemberships = '/user-memberships';
+  static const String comboBooking = '/bookings/combo';
+  static const String questions = '/questions';
+  static const String userAnswers = '/user-answers';
+  static const String userAnswersBulk = '/user-answers/bulk';
 }
 
 // const apiUrl = 'https://recoverylab.thecodehaus.co/api';

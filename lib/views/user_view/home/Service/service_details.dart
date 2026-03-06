@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
 import 'package:recoverylab_front/models/Branch/branchService/service_durations.dart';
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
+import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:sizer/sizer.dart';
@@ -37,6 +40,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   List<ServiceDuration?> durations = [];
   List<Staff?> staffList = [];
   int defaultCapacity = 2;
+  List<UserPackage> _myPackages = [];
+  UserPackage? _selectedPackage;
+  BranchSchedule? _schedule;
 
   // Loading and error states
   bool isLoading = true;
@@ -54,10 +60,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       setState(() => isLoading = true);
 
       final user = ref.read(userSessionProvider).user;
-      selectedBranchIndex = user?.branchId ?? 0;
       branches = ref.read(branchesProvider);
+      final idx = branches.indexWhere((b) => b?.id == user?.branchId);
+      selectedBranchIndex = idx >= 0 ? idx : 0;
 
-      await _fetchServiceDetails();
+      await Future.wait([_fetchServiceDetails(), _loadSchedule()]);
+      _loadMyPackages();
       setState(() => isLoading = false);
     } catch (e) {
       setState(() {
@@ -130,6 +138,26 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     }
   }
 
+  Future<void> _loadMyPackages() async {
+    try {
+      final packages = await ref.read(apiProvider).getMyPackages();
+      if (mounted) setState(() => _myPackages = packages);
+    } catch (_) {
+      // Non-critical — user may not have packages
+    }
+  }
+
+  Future<void> _loadSchedule() async {
+    if (branches.isEmpty) return;
+    try {
+      final branchId = branches[selectedBranchIndex ?? 0]!.id;
+      final schedule = await ref.read(apiProvider).getBranchSchedule(branchId);
+      if (mounted) setState(() => _schedule = schedule);
+    } catch (_) {
+      // Non-critical — fall back to hardcoded hours
+    }
+  }
+
   Future<void> _onBranchChanged(int newBranchIndex) async {
     setState(() {
       selectedBranchIndex = newBranchIndex;
@@ -139,7 +167,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       selectedStaff = null;
     });
 
-    await _fetchServiceDetails();
+    await Future.wait([_fetchServiceDetails(), _loadSchedule()]);
     setState(() => isLoading = false);
   }
 
@@ -175,6 +203,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       selectedDate!.month,
       selectedDate!.day,
       selectedTime!.hour,
+      selectedTime!.minute,
     );
     if (selectedDateTime.isBefore(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -386,6 +415,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             staffId: selectedStaff?.user.id,
             notes: notes,
             paymentMethod: selectedPaymentMethod!,
+            usePackageId: _selectedPackage?.id,
           );
 
       final bookingData = response['data'];
@@ -543,6 +573,119 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   ],
                 ),
                 SizedBox(height: 2.h),
+
+                // Package credit selector
+                if (_myPackages.isNotEmpty) ...[
+                  Container(height: 0.5, color: AppColors.dividerColor),
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Apply Package Credit',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                  // None option
+                  StatefulBuilder(
+                    builder: (ctx, setInner) => Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () => setInner(() => _selectedPackage = null),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 3.w,
+                              vertical: 1.2.h,
+                            ),
+                            margin: EdgeInsets.only(bottom: 1.h),
+                            decoration: BoxDecoration(
+                              color: _selectedPackage == null
+                                  ? AppColors.primary.withOpacity(0.12)
+                                  : AppColors.surfaceLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _selectedPackage == null
+                                    ? AppColors.primary
+                                    : AppColors.dividerColor,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.close,
+                                  size: 14.sp,
+                                  color: _selectedPackage == null
+                                      ? AppColors.primary
+                                      : AppColors.textTertiary,
+                                ),
+                                SizedBox(width: 2.w),
+                                Text(
+                                  'No package credit',
+                                  style: TextStyle(
+                                    color: _selectedPackage == null
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary,
+                                    fontSize: 13.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        ..._myPackages.map((pkg) {
+                          final isSelected = _selectedPackage?.id == pkg.id;
+                          return GestureDetector(
+                            onTap: () => setInner(() => _selectedPackage = pkg),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 3.w,
+                                vertical: 1.2.h,
+                              ),
+                              margin: EdgeInsets.only(bottom: 1.h),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary.withOpacity(0.12)
+                                    : AppColors.surfaceLight,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.dividerColor,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.card_giftcard,
+                                    size: 14.sp,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textTertiary,
+                                  ),
+                                  SizedBox(width: 2.w),
+                                  Expanded(
+                                    child: Text(
+                                      '${pkg.package?.name ?? 'Package'} · ${pkg.creditsRemaining} credit${pkg.creditsRemaining == 1 ? '' : 's'} left',
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                        fontSize: 13.sp,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                ],
 
                 Container(height: 0.5, color: AppColors.dividerColor),
                 SizedBox(height: 2.h),
@@ -888,9 +1031,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                    // TODO: Navigate to bookings screen
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      Routes.navbar,
+                      (route) => false,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -1000,17 +1145,17 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         width: 18.w,
                         height: 18.w,
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.1),
+                          color: AppColors.info.withOpacity(0.1),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.warning.withOpacity(0.25),
+                            color: AppColors.info.withOpacity(0.25),
                             width: 1.5,
                           ),
                         ),
                         child: Icon(
                           SolarIconsOutline.mapPoint,
                           size: 28.sp,
-                          color: AppColors.warning,
+                          color: AppColors.info,
                         ),
                       ),
                       SizedBox(height: 2.5.h),
@@ -1530,6 +1675,15 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Widget _buildDateSelector() {
+    // Determine if the selected date is a closed day
+    final bool selectedDayClosed =
+        selectedDate != null &&
+        _schedule != null &&
+        _schedule!.slotsFor(selectedDate!) == null;
+    final String? closedReason = selectedDate != null
+        ? _schedule?.specialDateFor(selectedDate!)?.reason
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1569,7 +1723,36 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             );
 
             if (pickedDate != null) {
-              setState(() => selectedDate = pickedDate);
+              final slots = _schedule?.slotsFor(pickedDate);
+              final special = _schedule?.specialDateFor(pickedDate);
+              if (_schedule != null && slots == null) {
+                // Day is fully closed
+                final reason =
+                    special?.reason ?? 'Branch is closed on this day';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(reason),
+                    backgroundColor: AppColors.warning,
+                  ),
+                );
+              } else if (special != null && !special.isClosed) {
+                // Custom hours — inform the user
+                final open = special.openTime?.substring(0, 5) ?? '';
+                final close = special.closeTime?.substring(0, 5) ?? '';
+                final note = special.reason != null
+                    ? ' · ${special.reason}'
+                    : '';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Special hours on this day: $open – $close$note'),
+                    backgroundColor: AppColors.info,
+                  ),
+                );
+              }
+              setState(() {
+                selectedDate = pickedDate;
+                selectedTime = null; // reset time when date changes
+              });
             }
           },
           child: Container(
@@ -1609,6 +1792,31 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             ),
           ),
         ),
+
+        // Closed-day warning banner
+        if (selectedDayClosed) ...[
+          SizedBox(height: 1.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.2.h),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.error.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.error, size: 15.sp),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Text(
+                    closedReason ?? 'Branch is closed on this day',
+                    style: TextStyle(color: AppColors.error, fontSize: 12.sp),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1635,11 +1843,25 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             selectedDate!.month == now.month &&
             selectedDate!.day == now.day;
 
-        // 7 AM → 10 PM (hour slots); for today, skip hours already past
-        final availableHours = List.generate(16, (i) => i + 7).where((hour) {
+        // Get slots from branch schedule, fall back to 7 AM–10 PM.
+        final scheduleSlots = selectedDate != null
+            ? _schedule?.slotsFor(selectedDate!)
+            : null;
+        final baseSlots = scheduleSlots ?? List.generate(16, (i) => i + 7);
+
+        // For today, skip hours already past.
+        final availableHours = baseSlots.where((hour) {
           if (!isToday) return true;
           return hour > now.hour;
         }).toList();
+
+        // Check if branch is explicitly closed on this day.
+        final isBranchClosed =
+            selectedDate != null && _schedule != null && scheduleSlots == null;
+        final closedLabel = selectedDate != null
+            ? (_schedule?.specialDateFor(selectedDate!)?.reason ??
+                  'Branch is closed on this day')
+            : 'Branch is closed on this day';
 
         return Padding(
           padding: EdgeInsets.only(
@@ -1681,7 +1903,42 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 ),
               ),
               SizedBox(height: 2.h),
-              if (availableHours.isEmpty)
+              if (isBranchClosed)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 3.h),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.event_busy,
+                          color: AppColors.error,
+                          size: 28.sp,
+                        ),
+                        SizedBox(height: 1.h),
+                        Text(
+                          closedLabel,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontSize: 13.sp,
+                            height: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 1.h),
+                        Text(
+                          'Please select a different date.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (availableHours.isEmpty)
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 3.h),
                   child: Center(
@@ -1749,6 +2006,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Widget _buildTimeSelector() {
+    final bool dayClosed =
+        selectedDate != null &&
+        _schedule != null &&
+        _schedule!.slotsFor(selectedDate!) == null;
+    final bool noDateSelected = selectedDate == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1763,38 +2026,102 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         ),
         SizedBox(height: 1.h),
         GestureDetector(
-          onTap: _showTimeSelectionSheet,
+          onTap: () {
+            if (noDateSelected) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Please select a date first'),
+                  backgroundColor: AppColors.info,
+                ),
+              );
+              return;
+            }
+            if (dayClosed) {
+              final reason =
+                  _schedule!.specialDateFor(selectedDate!)?.reason ??
+                  'Branch is closed on this day';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(reason),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+              return;
+            }
+            _showTimeSelectionSheet();
+          },
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground,
+              color: dayClosed
+                  ? AppColors.error.withOpacity(0.06)
+                  : AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
+              border: dayClosed
+                  ? Border.all(color: AppColors.error.withOpacity(0.3))
+                  : null,
             ),
             child: Row(
               children: [
                 Icon(
                   SolarIconsOutline.clockCircle,
-                  color: AppColors.strokeBorder,
+                  color: dayClosed
+                      ? AppColors.error
+                      : noDateSelected
+                      ? AppColors.textTertiary
+                      : AppColors.strokeBorder,
                   size: 20.sp,
                 ),
                 SizedBox(width: 4.w),
                 Expanded(
-                  child: Text(
-                    selectedTime == null
-                        ? 'Choose a time'
-                        : _formatHour(selectedTime!.hour),
-                    style: TextStyle(
-                      color: selectedTime == null
-                          ? AppColors.textTertiary
-                          : AppColors.textPrimary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dayClosed
+                            ? 'Branch closed this day'
+                            : noDateSelected
+                            ? 'Select a date first'
+                            : selectedTime == null
+                            ? 'Choose a time'
+                            : _formatHour(selectedTime!.hour),
+                        style: TextStyle(
+                          color: dayClosed
+                              ? AppColors.error
+                              : noDateSelected
+                              ? AppColors.textTertiary
+                              : selectedTime == null
+                              ? AppColors.textTertiary
+                              : AppColors.textPrimary,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (!dayClosed &&
+                          !noDateSelected &&
+                          _schedule != null) ...[
+                        SizedBox(height: 0.3.h),
+                        Builder(
+                          builder: (context) {
+                            final slots = _schedule!.slotsFor(selectedDate!);
+                            if (slots == null || slots.isEmpty)
+                              return const SizedBox.shrink();
+                            return Text(
+                              'Available: ${_formatHour(slots.first)} – ${_formatHour(slots.last + 1)}',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 11.sp,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 Icon(
-                  Icons.expand_more,
-                  color: AppColors.strokeBorder,
+                  dayClosed ? Icons.block : Icons.expand_more,
+                  color: dayClosed ? AppColors.error : AppColors.strokeBorder,
                   size: 20.sp,
                 ),
               ],

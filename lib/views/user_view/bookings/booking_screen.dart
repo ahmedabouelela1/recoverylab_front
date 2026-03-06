@@ -82,9 +82,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
     setState(() => _isCancelling = true);
     try {
       final active = booking.appointments.where((a) => a.isActive).toList();
+      final errors = <String>[];
       for (final apt in active) {
-        await ref.read(apiProvider).cancelAppointment(apt.id);
+        try {
+          await ref.read(apiProvider).cancelAppointment(apt.id);
+        } catch (e) {
+          errors.add(e.toString());
+        }
       }
+      if (errors.isNotEmpty) throw Exception(errors.first);
       await _fetchBookings();
       if (!mounted) return;
       setState(() => _selectedTab = 'Cancelled');

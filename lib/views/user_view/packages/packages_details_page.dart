@@ -1,14 +1,19 @@
 // pages/details/package_details_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
+import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/views/user_view/packages/combo_booking_screen.dart';
 
 enum PackageType { combo, membership, package }
 
-class PackageDetailsPage extends StatefulWidget {
+class PackageDetailsPage extends ConsumerStatefulWidget {
   final String title;
   final String description;
   final String imagePath;
@@ -19,6 +24,9 @@ class PackageDetailsPage extends StatefulWidget {
   /// Drives the badge label + accent color. Defaults to combo.
   final PackageType type;
 
+  /// Backend ID — used when calling purchase/membership APIs.
+  final int? itemId;
+
   const PackageDetailsPage({
     super.key,
     required this.title,
@@ -28,14 +36,93 @@ class PackageDetailsPage extends StatefulWidget {
     required this.price,
     required this.inclusions,
     this.type = PackageType.combo,
+    this.itemId,
   });
 
   @override
-  State<PackageDetailsPage> createState() => _PackageDetailsPageState();
+  ConsumerState<PackageDetailsPage> createState() => _PackageDetailsPageState();
 }
 
-class _PackageDetailsPageState extends State<PackageDetailsPage> {
+class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
   bool _showFull = false;
+  bool _actionLoading = false;
+
+  Future<void> _handleAction() async {
+    final id = widget.itemId;
+    if (id == null) return;
+
+    final session = ref.read(userSessionProvider);
+    final userId = session.user?.id;
+    if (userId == null) {
+      AppSnackBar.show(context, 'Please log in to continue.');
+      return;
+    }
+
+    switch (widget.type) {
+      case PackageType.combo:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ComboBookingScreen(
+              comboId: id,
+              comboName: widget.title,
+              price: widget.price,
+              totalDuration: widget.totalDuration,
+              inclusions: widget.inclusions,
+            ),
+          ),
+        );
+        break;
+
+      case PackageType.package:
+        setState(() => _actionLoading = true);
+        try {
+          await ref.read(apiProvider).purchasePackage(
+                userId: userId,
+                packageId: id,
+              );
+          if (mounted) {
+            AppSnackBar.show(
+              context,
+              'Package purchased successfully!',
+              backgroundColor: Colors.green,
+            );
+            Navigator.pop(context);
+          }
+        } catch (e) {
+          if (mounted) AppSnackBar.show(context, e.toString());
+        } finally {
+          if (mounted) setState(() => _actionLoading = false);
+        }
+        break;
+
+      case PackageType.membership:
+        setState(() => _actionLoading = true);
+        try {
+          final now = DateTime.now();
+          final today =
+              '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          await ref.read(apiProvider).purchaseMembership(
+                userId: userId,
+                membershipPlanId: id,
+                startDate: today,
+              );
+          if (mounted) {
+            AppSnackBar.show(
+              context,
+              'Membership activated!',
+              backgroundColor: Colors.green,
+            );
+            Navigator.pop(context);
+          }
+        } catch (e) {
+          if (mounted) AppSnackBar.show(context, e.toString());
+        } finally {
+          if (mounted) setState(() => _actionLoading = false);
+        }
+        break;
+    }
+  }
 
   // ── Type-driven values ───────────────────────────────────────────────────
 
@@ -332,13 +419,11 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                   SizedBox(width: 4.w),
                   Expanded(
                     child: AppButton(
-                      label: _bookButtonLabel,
+                      label: _actionLoading ? 'Please wait…' : _bookButtonLabel,
                       width: double.infinity,
                       borderRadius: 16,
                       size: AppButtonSize.large,
-                      onPressed: () {
-                        // TODO: navigate to booking / purchase flow
-                      },
+                      onPressed: _actionLoading ? null : _handleAction,
                     ),
                   ),
                 ],

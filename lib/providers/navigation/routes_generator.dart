@@ -14,6 +14,8 @@ import 'package:recoverylab_front/views/user_view/onboarding/login/otp_verified_
 import 'package:recoverylab_front/views/user_view/onboarding/login/verification_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/onboarding.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/splash_screen.dart';
+import 'package:recoverylab_front/views/user_view/packages/combo_booking_screen.dart';
+import 'package:recoverylab_front/views/user_view/profile/my_wallet_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/coupon_redeemed.dart';
@@ -24,7 +26,7 @@ import 'package:recoverylab_front/views/user_view/profile/reset_password.dart';
 import 'package:recoverylab_front/views/user_view/profile/settings.dart';
 import 'package:recoverylab_front/views/user_view/profile/terms.dart';
 import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dart';
-import 'package:recoverylab_front/views/user_view/questionnaire/questions_step1.dart';
+import 'package:recoverylab_front/views/user_view/questionnaire/questionnaire.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
 import 'package:recoverylab_front/views/user_view/registeration/create_account.dart';
@@ -44,8 +46,7 @@ class Routes {
   static const String createAccount = '/createAccount';
   static const String signupPage = '/signupPage';
   static const String signupStepTwo = '/signupStepTwo';
-  static const String questionnaireStepOne = '/questionnaireStepOne';
-  static const String questionnaireStepTwo = '/questionnaireStepTwo';
+  static const String questionnaire = '/questionnaire';
   static const String style = '/style';
   static const String navbar = '/navbar';
   static const String categories = '/categories';
@@ -65,6 +66,8 @@ class Routes {
   static const String bookingDetailsPage = '/bookingDetailsPage';
   static const String splashScreen = '/splashScreen';
   static const String serviceCats = '/serviceCats';
+  static const String comboBookingScreen = '/comboBookingScreen';
+  static const String myWallet = '/myWallet';
 }
 
 class RoutesGenerator {
@@ -86,8 +89,8 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => CreateAccountPage());
       case Routes.signupPage:
         return MaterialPageRoute(builder: (_) => const SignupPage());
-      case Routes.questionnaireStepOne:
-        return MaterialPageRoute(builder: (_) => const WellnessQuestionPage());
+      case Routes.questionnaire:
+        return MaterialPageRoute(builder: (_) => const QuestionnairePage());
       case Routes.bookingSuccessPage:
         return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
       case Routes.serviceCats:
@@ -113,10 +116,6 @@ class RoutesGenerator {
         }
         return _errorRoute();
 
-      case Routes.questionnaireStepTwo:
-        return MaterialPageRoute(
-          builder: (_) => const WellnessQuestionPageTwo(),
-        );
       case Routes.otpSignup:
         // Assuming your SignupOtp class is correct
         return MaterialPageRoute(builder: (_) => SignupOtp());
@@ -180,6 +179,25 @@ class RoutesGenerator {
         if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
             builder: (_) => ServiceDetailsPage(service: args['service']),
+          );
+        }
+        return _errorRoute();
+
+      case Routes.myWallet:
+        return MaterialPageRoute(builder: (_) => const MyWalletPage());
+
+      case Routes.comboBookingScreen:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => ComboBookingScreen(
+              comboId: args['comboId'] as int,
+              comboName: args['comboName'] as String,
+              price: args['price'] as String,
+              totalDuration: args['totalDuration'] as String,
+              inclusions: (args['inclusions'] as List<dynamic>)
+                  .map((e) => Map<String, String>.from(e))
+                  .toList(),
+            ),
           );
         }
         return _errorRoute();

@@ -21,7 +21,7 @@ class _OtpVerifiedPageSignupState extends State<OtpVerifiedPageSignup> {
     // ✅ Navigate after short delay (2s) to Question 1
     _timer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(Routes.questionnaireStepOne);
+      Navigator.of(context).pushReplacementNamed(Routes.questionnaire);
     });
   }
 

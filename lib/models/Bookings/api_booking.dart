@@ -14,6 +14,7 @@ class ApiBooking {
   final int id;
   final int userId;
   final int branchId;
+  final int? comboId;
   final DateTime bookingDate;
   final ApiBookingStatus status;
   final String paymentStatus;
@@ -30,6 +31,7 @@ class ApiBooking {
     required this.id,
     required this.userId,
     required this.branchId,
+    this.comboId,
     required this.bookingDate,
     required this.status,
     required this.paymentStatus,
@@ -98,8 +100,11 @@ class ApiBooking {
   ApiAppointment? get firstAppointment =>
       appointments.isNotEmpty ? appointments.first : null;
 
-  String get displayTitle =>
-      firstAppointment?.serviceName ?? 'Recovery Session';
+  bool get isCombo => comboId != null;
+
+  String get displayTitle => isCombo
+      ? 'Combo Session'
+      : (firstAppointment?.serviceName ?? 'Recovery Session');
 
   String get displayLocation => branchName ?? '—';
 
@@ -115,6 +120,7 @@ class ApiBooking {
       id: json['id'],
       userId: json['user_id'],
       branchId: json['branch_id'],
+      comboId: json['combo_id'],
       bookingDate: DateTime.parse(json['booking_date']),
       status: _parseStatus(json['status']),
       paymentStatus: json['payment_status'] ?? 'PENDING',
