@@ -27,10 +27,9 @@ import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dar
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step1.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
-import 'package:recoverylab_front/views/user_view/onboarding/registeration/create_account.dart';
-import 'package:recoverylab_front/views/user_view/onboarding/registeration/otp_verified_signup.dart';
-import 'package:recoverylab_front/views/user_view/onboarding/registeration/signup_screen.dart';
-import 'package:recoverylab_front/views/user_view/onboarding/registeration/otp_signup.dart';
+import 'package:recoverylab_front/views/user_view/registeration/create_account.dart';
+import 'package:recoverylab_front/views/user_view/registeration/otp_signup.dart';
+import 'package:recoverylab_front/views/user_view/registeration/signup_screen.dart';
 
 class Routes {
   static const String root = '/';
@@ -143,7 +142,7 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const PackagesPage());
 
       case Routes.otpVerifiedSignup:
-        return MaterialPageRoute(builder: (_) => OtpVerifiedPageSignup());
+        return MaterialPageRoute(builder: (_) => OtpVerifiedPage());
       case Routes.style:
         // Assuming ServicesSelectionPage is the correct class from your imports
         return MaterialPageRoute(builder: (_) => const ServicesSelectionPage());

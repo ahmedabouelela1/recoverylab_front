@@ -144,7 +144,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             // Main Content
             SliverList(
               delegate: SliverChildListDelegate([
-                _buildBranchSelector(),
                 SizedBox(height: 2.h),
                 _buildOffersPageView(),
                 SizedBox(height: 2.h),
@@ -274,112 +273,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // 🏢 Modern Branch Selector - FIXED
-  Widget _buildBranchSelector() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 5.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Your Location",
-            style: GoogleFonts.inter(
-              fontSize: 13.sp,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 1.2.h),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0.5.h),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.info.withOpacity(0.2),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<Branch>(
-                value: selectedBranch,
-                isExpanded: true,
-                dropdownColor: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(16),
-                icon: Icon(
-                  SolarIconsOutline.altArrowDown,
-                  color: AppColors.secondary,
-                  size: 24,
-                ),
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-                hint: branches.isEmpty
-                    ? Text(
-                        'Loading branches...',
-                        style: GoogleFonts.inter(
-                          fontSize: 13.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                      )
-                    : null,
-                onChanged: (Branch? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      selectedBranch = newValue;
-                    });
-                  }
-                },
-                items: branches.map<DropdownMenuItem<Branch>>((Branch branch) {
-                  return DropdownMenuItem<Branch>(
-                    value: branch,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.focusedBorder.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            SolarIconsOutline.mapPoint,
-                            size: 18,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            branch.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // 🌟 Premium Offers PageView - FIXED SPACING
   Widget _buildOffersPageView() {

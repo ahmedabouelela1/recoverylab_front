@@ -796,9 +796,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         ),
                       ),
                       Text(
-                        _actualBookingId != null
-                            ? '#BK$_actualBookingId'
-                            : '—',
+                        _actualBookingId != null ? '#BK$_actualBookingId' : '—',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 14.sp,
@@ -954,60 +952,217 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Widget _buildErrorState() {
+    final bool isBranchMismatch =
+        errorMessage != null &&
+        (errorMessage!.toLowerCase().contains('branch') ||
+            errorMessage!.toLowerCase().contains('offered') ||
+            errorMessage!.toLowerCase().contains('available'));
+
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildHeaderImage(),
           Padding(
-            padding: EdgeInsets.all(4.w),
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 2.h),
-                _buildBranchSelector(),
-                SizedBox(height: 4.h),
-                Icon(Icons.info_outline, size: 60.sp, color: AppColors.warning),
-                SizedBox(height: 2.h),
+
+                // Service name header
                 Text(
-                  'Service Not Available',
+                  widget.service.name,
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
+                    height: 1.1,
                   ),
                 ),
                 SizedBox(height: 2.h),
-                Text(
-                  errorMessage ??
-                      'This service is not available at this branch.\nPlease try another branch.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
+
+                _buildBranchSelector(),
+                SizedBox(height: 3.h),
+
+                // Main error card
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(5.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.dividerColor),
+                  ),
+                  child: Column(
+                    children: [
+                      // Icon container
+                      Container(
+                        width: 18.w,
+                        height: 18.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.warning.withOpacity(0.25),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          SolarIconsOutline.mapPoint,
+                          size: 28.sp,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      SizedBox(height: 2.5.h),
+
+                      Text(
+                        'NOT AVAILABLE HERE',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+
+                      Text(
+                        isBranchMismatch
+                            ? 'This service isn\'t offered\nat this branch'
+                            : 'Unable to Load Service',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                          height: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: 1.5.h),
+
+                      Text(
+                        isBranchMismatch
+                            ? 'Try switching to a different branch — the service\nmay be available at another location near you.'
+                            : (errorMessage ??
+                                  'Something went wrong. Please try again.'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: AppColors.textSecondary,
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: 2.h),
-                ElevatedButton(
-                  onPressed: _loadDetails,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+
+                // Info tip row
+                if (isBranchMismatch) ...[
+                  Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
+                      horizontal: 4.w,
                       vertical: 2.h,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.info.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          SolarIconsOutline.infoCircle,
+                          color: AppColors.info,
+                          size: 18.sp,
+                        ),
+                        SizedBox(width: 3.w),
+                        Expanded(
+                          child: Text(
+                            'Use the branch selector above to check availability at other locations.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12.sp,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Text(
-                    'Retry',
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
+                  SizedBox(height: 2.h),
+                ],
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.dividerColor),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Go Back',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _showBranchSelectionModal,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                SolarIconsOutline.mapPoint,
+                                color: AppColors.secondary,
+                                size: 16.sp,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Switch Branch',
+                                style: TextStyle(
+                                  color: AppColors.secondary,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                SizedBox(height: 4.h),
               ],
             ),
           ),
@@ -1474,7 +1629,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       ),
       builder: (sheetContext) {
         final now = DateTime.now();
-        final isToday = selectedDate != null &&
+        final isToday =
+            selectedDate != null &&
             selectedDate!.year == now.year &&
             selectedDate!.month == now.month &&
             selectedDate!.day == now.day;
