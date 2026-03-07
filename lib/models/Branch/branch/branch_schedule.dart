@@ -1,5 +1,6 @@
 class BranchDayHours {
-  final int dayOfWeek; // 0 = Sunday … 6 = Saturday (matches Laravel Carbon)
+  /// Backend: 1=Monday … 7=Sunday (ISO, matches Carbon dayOfWeekIso and Dart DateTime.weekday)
+  final int dayOfWeek;
   final String openTime; // "HH:MM:SS"
   final String closeTime; // "HH:MM:SS"
   final bool isClosed;
@@ -24,7 +25,8 @@ class BranchDayHours {
 
 class BranchSpecialDate {
   final String date; // "YYYY-MM-DD"
-  final String type; // "CLOSED" | "CUSTOM_HOURS"
+  /// Backend returns 'closed' | 'modified_hours'
+  final String type;
   final String? openTime;
   final String? closeTime;
   final String? reason;
@@ -40,13 +42,13 @@ class BranchSpecialDate {
   factory BranchSpecialDate.fromJson(Map<String, dynamic> json) =>
       BranchSpecialDate(
         date: json['date'] as String,
-        type: (json['type'] as String?) ?? 'CLOSED',
+        type: ((json['type'] as String?) ?? 'closed').toLowerCase(),
         openTime: json['open_time'] as String?,
         closeTime: json['close_time'] as String?,
         reason: json['reason'] as String?,
       );
 
-  bool get isClosed => type == 'CLOSED';
+  bool get isClosed => type == 'closed';
 }
 
 class BranchSchedule {
@@ -77,6 +79,7 @@ class BranchSchedule {
 
   /// Returns available hour slots (as ints, 0–23) for [date].
   /// Returns null when the branch is closed that day.
+  /// Backend uses day_of_week 1=Mon … 7=Sun (ISO); Dart [DateTime.weekday] is the same.
   List<int>? slotsFor(DateTime date) {
     final special = specialDateFor(date);
 
@@ -90,11 +93,10 @@ class BranchSchedule {
       }
     }
 
-    // Fall back to regular weekly hours.
-    // Dart weekday: 1=Mon … 7=Sun → backend: 0=Sun, 1=Mon … 6=Sat
-    final backendDay = date.weekday == 7 ? 0 : date.weekday;
+    // Fall back to regular weekly hours. Backend day_of_week: 1=Mon … 7=Sun (ISO).
+    final dayOfWeek = date.weekday; // Dart: 1=Mon, 7=Sun
     try {
-      final day = hours.firstWhere((h) => h.dayOfWeek == backendDay);
+      final day = hours.firstWhere((h) => h.dayOfWeek == dayOfWeek);
       if (day.isClosed) return null;
       return _slots(day.openHour, day.closeHour);
     } catch (_) {

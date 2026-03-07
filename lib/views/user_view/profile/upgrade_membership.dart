@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 
-class UpgradeMembershipPage extends StatefulWidget {
+class UpgradeMembershipPage extends ConsumerStatefulWidget {
   const UpgradeMembershipPage({super.key});
 
   @override
-  State<UpgradeMembershipPage> createState() => _UpgradeMembershipPageState();
+  ConsumerState<UpgradeMembershipPage> createState() => _UpgradeMembershipPageState();
 }
 
-class _UpgradeMembershipPageState extends State<UpgradeMembershipPage> {
+class _UpgradeMembershipPageState extends ConsumerState<UpgradeMembershipPage> {
   String _selected = 'Gold';
 
   static const _plans = [
@@ -105,47 +107,61 @@ class _UpgradeMembershipPageState extends State<UpgradeMembershipPage> {
           ListView(
             padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
             children: [
-              // Current plan banner
-              Container(
-                padding: EdgeInsets.all(4.w),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFC107).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFC107).withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      SolarIconsOutline.crown,
-                      color: const Color(0xFFFFC107),
-                      size: 16.sp,
+              // Current plan banner (from API)
+              Consumer(
+                builder: (context, ref, _) {
+                  final async = ref.watch(activeMembershipProvider);
+                  final membership = async.value;
+                  final planName = membership?.plan?.name;
+                  final isMember = planName != null && planName.isNotEmpty;
+                  return Container(
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: isMember
+                          ? const Color(0xFFFFC107).withOpacity(0.1)
+                          : AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isMember
+                            ? const Color(0xFFFFC107).withOpacity(0.3)
+                            : AppColors.dividerColor,
+                      ),
                     ),
-                    SizedBox(width: 3.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          'Current Plan',
-                          style: TextStyle(
-                            color: AppColors.textTertiary,
-                            fontSize: 11.sp,
-                            letterSpacing: 1,
-                          ),
+                        Icon(
+                          SolarIconsOutline.crown,
+                          color: isMember ? const Color(0xFFFFC107) : AppColors.textTertiary,
+                          size: 16.sp,
                         ),
-                        Text(
-                          'Gold Membership',
-                          style: TextStyle(
-                            color: const Color(0xFFFFC107),
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        SizedBox(width: 3.w),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Current plan',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 11.sp,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            Text(
+                              async.isLoading
+                                  ? '...'
+                                  : (isMember ? (planName ?? '') : 'Not a member'),
+                              style: TextStyle(
+                                color: isMember ? const Color(0xFFFFC107) : AppColors.textSecondary,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               SizedBox(height: 3.h),
 

@@ -19,17 +19,28 @@ class MembershipBenefit {
     required this.requiresBooking,
   });
 
-  factory MembershipBenefit.fromJson(Map<String, dynamic> json) =>
-      MembershipBenefit(
-        id: json['id'] as int,
-        membershipPlanId: json['membership_plan_id'] as int,
-        benefitType: json['benefit_type'] as String,
-        targetType: json['target_type'] as String,
-        targetId: json['target_id'] as int?,
-        value: json['value'] as num?,
-        freeSessionsPerMonth: json['free_sessions_per_month'] as int?,
-        requiresBooking: (json['requires_booking'] as bool?) ?? false,
+  factory MembershipBenefit.fromJson(Map<String, dynamic> json) {
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+    num? parseNum(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v;
+      return num.tryParse(v.toString());
+    }
+    return MembershipBenefit(
+        id: parseInt(json['id']) ?? 0,
+        membershipPlanId: parseInt(json['membership_plan_id']) ?? 0,
+        benefitType: (json['benefit_type']?.toString()) ?? 'DISCOUNT',
+        targetType: (json['target_type']?.toString()) ?? 'GLOBAL',
+        targetId: parseInt(json['target_id']),
+        value: parseNum(json['value']),
+        freeSessionsPerMonth: parseInt(json['free_sessions_per_month']),
+        requiresBooking: json['requires_booking'] == true || json['requires_booking'] == 1,
       );
+  }
 
   String get displayLabel {
     switch (benefitType) {

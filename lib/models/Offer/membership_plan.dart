@@ -33,16 +33,28 @@ class MembershipPlan {
   bool get hasUnlimitedAccess =>
       benefits.any((b) => b.benefitType == 'UNLIMITED_ACCESS');
 
-  factory MembershipPlan.fromJson(Map<String, dynamic> json) => MembershipPlan(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        description: json['description'] as String?,
-        durationMonths: json['duration_months'] as int,
-        price: json['price'] as num,
-        isActive: (json['is_active'] as bool?) ?? true,
-        freezeWeeks: json['freeze_weeks'] as num?,
+  factory MembershipPlan.fromJson(Map<String, dynamic> json) {
+    num? parseNum(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v;
+      return num.tryParse(v.toString());
+    }
+    int parseInt(dynamic v, int fallback) {
+      if (v == null) return fallback;
+      if (v is int) return v;
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+    return MembershipPlan(
+        id: parseInt(json['id'], 0),
+        name: (json['name']?.toString()) ?? '',
+        description: json['description']?.toString(),
+        durationMonths: parseInt(json['duration_months'], 12),
+        price: parseNum(json['price']) ?? 0,
+        isActive: json['is_active'] == true || json['is_active'] == 1,
+        freezeWeeks: parseNum(json['freeze_weeks']),
         benefits: (json['benefits'] as List<dynamic>? ?? [])
             .map((b) => MembershipBenefit.fromJson(b as Map<String, dynamic>))
             .toList(),
       );
+  }
 }

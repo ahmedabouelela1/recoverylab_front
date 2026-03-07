@@ -150,22 +150,50 @@ class BookingCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            booking.displayTitle,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 19.sp,
-                              fontWeight: FontWeight.w800,
-                              height: 1.1,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.55),
-                                  blurRadius: 8,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  booking.displayTitle,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 19.sp,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.1,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.55),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                              ),
+                              if (booking.appointments.length > 1)
+                                Container(
+                                  margin: EdgeInsets.only(left: 2.w),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 2.5.w,
+                                    vertical: 0.4.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.25),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${booking.appointments.length} sessions',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           SizedBox(height: 0.5.h),
                           Row(
@@ -231,11 +259,19 @@ class BookingCard extends StatelessWidget {
                         icon: SolarIconsOutline.hourglass,
                         label: first.durationLabel,
                       ),
-                      _dot(),
-                      _infoItem(
-                        icon: SolarIconsOutline.usersGroupTwoRounded,
-                        label: '${first.participantCount}',
-                      ),
+                      if (booking.appointments.length > 1) ...[
+                        _dot(),
+                        _infoItem(
+                          icon: SolarIconsOutline.calendar,
+                          label: '${booking.appointments.length} sessions',
+                        ),
+                      ] else ...[
+                        _dot(),
+                        _infoItem(
+                          icon: SolarIconsOutline.usersGroupTwoRounded,
+                          label: '${first.participantCount}',
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -248,78 +284,71 @@ class BookingCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Price
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                    // Price (left)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'TOTAL PRICE',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 0.4.h),
+                        if (hasDiscount)
                           Text(
-                            'TOTAL PRICE',
+                            'EGP ${booking.originalTotal.toStringAsFixed(0)}',
                             style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
+                              color: AppColors.textTertiary,
+                              fontSize: 11.sp,
+                              decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                          SizedBox(height: 0.4.h),
-                          if (hasDiscount)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              'EGP ${booking.originalTotal.toStringAsFixed(0)}',
+                              booking.displayFinalTotal,
                               style: TextStyle(
-                                color: AppColors.textTertiary,
-                                fontSize: 11.sp,
-                                decoration: TextDecoration.lineThrough,
+                                color: AppColors.textPrimary,
+                                fontSize: 21.sp,
+                                fontWeight: FontWeight.bold,
+                                height: 1,
                               ),
                             ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
+                            if (hasDiscount) ...[
+                              SizedBox(width: 2.w),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                                 child: Text(
-                                  'EGP ${booking.finalTotal.toStringAsFixed(0)}',
+                                  'SAVED',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 21.sp,
+                                    color: AppColors.success,
+                                    fontSize: 9.sp,
                                     fontWeight: FontWeight.bold,
-                                    height: 1,
+                                    letterSpacing: 0.5,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (hasDiscount) ...[
-                                SizedBox(width: 2.w),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.success.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    'SAVED',
-                                    style: TextStyle(
-                                      color: AppColors.success,
-                                      fontSize: 9.sp,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
-
-                    SizedBox(width: 3.w),
-
-                    // Buttons
+                    const Spacer(),
+                    // Buttons (far right)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

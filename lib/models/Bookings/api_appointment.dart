@@ -39,25 +39,33 @@ class ApiAppointment {
     final service = json['service'] as Map<String, dynamic>?;
     final staff = json['staff'] as Map<String, dynamic>?;
 
+    DateTime parseDateTime(dynamic v) {
+      if (v == null) return DateTime.now();
+      if (v is DateTime) return v;
+      try {
+        return DateTime.parse(v.toString());
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+
     return ApiAppointment(
-      id: json['id'],
-      bookingId: json['booking_id'],
-      serviceId: json['service_id'],
-      duration: json['duration'],
-      basePrice:
-          double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
-      finalPrice:
-          double.tryParse(json['final_price']?.toString() ?? '0') ?? 0.0,
-      scheduledStart: DateTime.parse(json['scheduled_start']),
-      scheduledEnd: DateTime.parse(json['scheduled_end']),
-      participantCount: json['participant_count'] ?? 1,
-      staffId: json['staff_id'],
-      status: json['status'] ?? 'SCHEDULED',
-      serviceName: service?['name'],
-      serviceImage: service?['image'],
-      staffFirstName: staff?['first_name'],
-      staffLastName: staff?['last_name'],
-      staffProfilePicture: staff?['profile_picture'],
+      id: (json['id'] is int) ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      bookingId: (json['booking_id'] is int) ? json['booking_id'] as int : int.tryParse(json['booking_id']?.toString() ?? '0') ?? 0,
+      serviceId: json['service_id'] != null ? ((json['service_id'] is int) ? json['service_id'] as int : int.tryParse(json['service_id']?.toString() ?? '')) : null,
+      duration: json['duration'] != null ? ((json['duration'] is int) ? json['duration'] as int : int.tryParse(json['duration']?.toString() ?? '')) : null,
+      basePrice: double.tryParse(json['base_price']?.toString() ?? '0') ?? 0.0,
+      finalPrice: double.tryParse(json['final_price']?.toString() ?? '0') ?? 0.0,
+      scheduledStart: parseDateTime(json['scheduled_start']),
+      scheduledEnd: parseDateTime(json['scheduled_end']),
+      participantCount: (json['participant_count'] is int) ? json['participant_count'] as int : int.tryParse(json['participant_count']?.toString() ?? '1') ?? 1,
+      staffId: json['staff_id'] != null ? ((json['staff_id'] is int) ? json['staff_id'] as int : int.tryParse(json['staff_id']?.toString() ?? '')) : null,
+      status: json['status']?.toString() ?? 'SCHEDULED',
+      serviceName: service?['name']?.toString(),
+      serviceImage: service?['image']?.toString(),
+      staffFirstName: staff?['first_name']?.toString(),
+      staffLastName: staff?['last_name']?.toString(),
+      staffProfilePicture: staff?['profile_picture']?.toString(),
     );
   }
 

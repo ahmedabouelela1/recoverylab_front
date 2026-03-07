@@ -25,9 +25,9 @@ class BranchServiceResponse {
           .toList(),
       staff: json['staff_qualified_for_service'] != null
           ? (json['staff_qualified_for_service'] as List)
-                .map((e) => e != null ? Staff.fromJson(e) : null)
+                .map<Staff?>((e) => e != null ? Staff.fromJson(e as Map<String, dynamic>) : null)
                 .toList()
-          : [],
+          : <Staff?>[],
     );
   }
 }

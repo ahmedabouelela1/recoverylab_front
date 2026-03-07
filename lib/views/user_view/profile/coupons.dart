@@ -4,6 +4,7 @@ import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 
 class CouponsPage extends StatefulWidget {
   const CouponsPage({super.key});
@@ -48,22 +49,7 @@ class _CouponsPageState extends State<CouponsPage> {
     if (!mounted) return;
     setState(() => _isRedeeming = false);
     _codeCtrl.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.success,
-        margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text(
-          'Coupon added successfully!',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 13.sp,
-          ),
-        ),
-      ),
-    );
+    AppSnackBar.show(context, 'Coupon added successfully!');
   }
 
   @override
@@ -318,27 +304,7 @@ class _CouponsPageState extends State<CouponsPage> {
                         Clipboard.setData(
                           ClipboardData(text: coupon['code'] as String),
                         );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppColors.cardBackground,
-                            margin: EdgeInsets.symmetric(
-                              horizontal: 5.w,
-                              vertical: 2.h,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            content: Text(
-                              'Code copied!',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 13.sp,
-                              ),
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                        AppSnackBar.show(context, 'Code copied!', duration: const Duration(seconds: 2));
                       },
                       child: Icon(
                         SolarIconsOutline.copy,

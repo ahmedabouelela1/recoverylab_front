@@ -3,6 +3,7 @@ import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -55,38 +56,19 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   Future<void> _save() async {
     if (_newCtrl.text != _confirmCtrl.text) {
-      _snack('Passwords do not match', AppColors.error);
+      AppSnackBar.show(context, 'Passwords do not match');
       return;
     }
     if (_strength(_newCtrl.text) < 2) {
-      _snack('Please choose a stronger password', AppColors.warning);
+      AppSnackBar.show(context, 'Please choose a stronger password');
       return;
     }
     setState(() => _isSaving = true);
     await Future.delayed(const Duration(milliseconds: 800)); // TODO: API
     if (!mounted) return;
     setState(() => _isSaving = false);
-    _snack('Password updated successfully', AppColors.success);
+    AppSnackBar.show(context, 'Password updated successfully');
     Navigator.pop(context);
-  }
-
-  void _snack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: color,
-        margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text(
-          msg,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 13.sp,
-          ),
-        ),
-      ),
-    );
   }
 
   @override

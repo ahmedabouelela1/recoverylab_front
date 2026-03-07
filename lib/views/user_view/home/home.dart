@@ -13,6 +13,7 @@ import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -126,6 +127,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     user = ref.watch(userSessionProvider).user!;
+    final membershipAsync = ref.watch(activeMembershipProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -136,7 +138,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.only(left: 5.w, right: 5.w, top: 2.h),
-                child: _buildSmoothHeader(),
+                child: _buildSmoothHeader(membershipAsync),
               ),
             ),
 
@@ -159,7 +161,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // 👤 Smooth Modern Header
-  Widget _buildSmoothHeader() {
+  Widget _buildSmoothHeader(AsyncValue membershipAsync) {
+    final membership = membershipAsync.value;
+    final planName = membership?.plan?.name;
+    final isMember = planName != null && planName.isNotEmpty;
+
     return Row(
       children: [
         Expanded(
@@ -191,7 +197,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
                 decoration: BoxDecoration(
-                  color: tagBgColor,
+                  color: isMember ? tagBgColor : AppColors.textTertiary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -200,14 +206,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Icon(
                       SolarIconsOutline.crown,
                       size: 14,
-                      color: AppColors.info,
+                      color: isMember ? AppColors.info : AppColors.textTertiary,
                     ),
                     SizedBox(width: 1.5.w),
                     Text(
-                      'Premium Member',
+                      membershipAsync.isLoading
+                          ? '...'
+                          : (isMember ? planName! : 'Not a member'),
                       style: GoogleFonts.inter(
                         fontSize: 12.sp,
-                        color: AppColors.info,
+                        color: isMember ? AppColors.info : AppColors.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

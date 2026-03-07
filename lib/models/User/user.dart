@@ -22,15 +22,24 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    DateTime parseBirthDate(dynamic v) {
+      if (v == null) return DateTime(1990, 1, 1);
+      if (v is DateTime) return v;
+      try {
+        return DateTime.parse(v.toString());
+      } catch (_) {
+        return DateTime(1990, 1, 1);
+      }
+    }
     return User(
-      id: json['id'],
-      firstName: json['first_name'],
-      lastName: json['last_name'],
-      gender: json['gender'],
-      dateOfBirth: DateTime.parse(json['birth_date']),
-      email: json['email'],
-      phone: json['phone'],
-      branchId: json['branch_id'] ?? 1,
+      id: (json['id'] is int) ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      firstName: json['first_name']?.toString() ?? '',
+      lastName: json['last_name']?.toString() ?? '',
+      gender: json['gender']?.toString() ?? '',
+      dateOfBirth: parseBirthDate(json['birth_date']),
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      branchId: json['branch_id'] != null ? (json['branch_id'] is int ? json['branch_id'] as int : int.tryParse(json['branch_id']?.toString() ?? '') ?? 0) : null,
     );
   }
 

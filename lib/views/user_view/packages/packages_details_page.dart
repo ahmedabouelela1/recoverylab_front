@@ -9,6 +9,7 @@ import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:recoverylab_front/views/user_view/packages/combo_booking_screen.dart';
 
 enum PackageType { combo, membership, package }
@@ -82,11 +83,7 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
                 packageId: id,
               );
           if (mounted) {
-            AppSnackBar.show(
-              context,
-              'Package purchased successfully!',
-              backgroundColor: Colors.green,
-            );
+            AppSnackBar.show(context, 'Package purchased successfully!');
             Navigator.pop(context);
           }
         } catch (e) {
@@ -108,11 +105,8 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
                 startDate: today,
               );
           if (mounted) {
-            AppSnackBar.show(
-              context,
-              'Membership activated!',
-              backgroundColor: Colors.green,
-            );
+            ref.invalidate(activeMembershipProvider);
+            AppSnackBar.show(context, 'Membership activated!');
             Navigator.pop(context);
           }
         } catch (e) {

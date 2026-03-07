@@ -8,6 +8,7 @@ import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:sizer/sizer.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ComboBookingScreen extends ConsumerStatefulWidget {
   final int comboId;
@@ -30,8 +31,7 @@ class ComboBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
-  List<Branch?> _branches = [];
-  int _selectedBranchIndex = 0;
+  Branch? _selectedBranch;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   int _participantCount = 1;
@@ -41,10 +41,14 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   @override
   void initState() {
     super.initState();
-    _branches = ref.read(branchesProvider);
+    final branches = ref.read(branchesProvider);
     final user = ref.read(userSessionProvider).user;
-    final idx = _branches.indexWhere((b) => b?.id == user?.branchId);
-    _selectedBranchIndex = idx >= 0 ? idx : 0;
+    if (branches.isNotEmpty) {
+      _selectedBranch = branches.firstWhere(
+        (b) => b?.id == user?.branchId,
+        orElse: () => branches.first!,
+      );
+    }
   }
 
   String? _formatDateTime() {
@@ -67,8 +71,12 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       firstDate: now,
       lastDate: now.add(const Duration(days: 90)),
       builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(primary: AppColors.primary),
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: AppColors.secondary,
+          ),
+          dialogBackgroundColor: AppColors.background,
         ),
         child: child!,
       ),
@@ -81,8 +89,12 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       context: context,
       initialTime: const TimeOfDay(hour: 10, minute: 0),
       builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(primary: AppColors.primary),
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: AppColors.secondary,
+          ),
+          dialogBackgroundColor: AppColors.background,
         ),
         child: child!,
       ),
@@ -95,8 +107,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       AppSnackBar.show(context, 'Please select a date and time.');
       return;
     }
-    final branch = _branches.isNotEmpty ? _branches[_selectedBranchIndex] : null;
-    if (branch == null) {
+    if (_selectedBranch == null) {
       AppSnackBar.show(context, 'No branch available.');
       return;
     }
@@ -113,7 +124,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       await ref.read(apiProvider).storeComboBooking(
             comboId: widget.comboId,
             userId: user.id,
-            branchId: branch.id,
+            branchId: _selectedBranch!.id,
             scheduledStart: scheduled,
             participantCount: _participantCount,
             notes: _notes.isEmpty ? null : _notes,
@@ -133,6 +144,15 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final branches = ref.watch(branchesProvider);
+    if (_selectedBranch == null && branches.isNotEmpty) {
+      final user = ref.read(userSessionProvider).user;
+      _selectedBranch = branches.firstWhere(
+        (b) => b?.id == user?.branchId,
+        orElse: () => branches.first!,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -161,41 +181,21 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
             _sectionCard(
               child: Column(
                 children: [
-                  _detailRow(Icons.spa, 'Combo', widget.comboName),
+                  _detailRow(Icons.spa_outlined, 'Combo', widget.comboName),
                   _divider(),
                   _detailRow(
-                      Icons.schedule, 'Duration', widget.totalDuration),
+                      SolarIconsOutline.clockCircle, 'Duration', widget.totalDuration),
                   _divider(),
-                  _detailRow(Icons.wallet, 'Price', 'EGP ${widget.price}'),
+                  _detailRow(SolarIconsOutline.wallet, 'Price', 'EGP ${widget.price}'),
                 ],
               ),
             ),
             SizedBox(height: 2.h),
 
-            // Branch selector
-            _label('BRANCH'),
-            SizedBox(height: 1.h),
-            if (_branches.isNotEmpty)
-              _sectionCard(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: _selectedBranchIndex,
-                    isExpanded: true,
-                    dropdownColor: AppColors.cardBackground,
-                    style: TextStyle(
-                        color: AppColors.textPrimary, fontSize: 14.sp),
-                    items: List.generate(
-                      _branches.length,
-                      (i) => DropdownMenuItem(
-                        value: i,
-                        child: Text(_branches[i]?.name ?? 'Branch $i'),
-                      ),
-                    ),
-                    onChanged: (v) =>
-                        setState(() => _selectedBranchIndex = v ?? 0),
-                  ),
-                ),
-              ),
+            // Branch selector (same as settings)
+            _label('YOUR BRANCH'),
+            SizedBox(height: 1.2.h),
+            _buildBranchSelector(branches),
             SizedBox(height: 2.h),
 
             // Date & time
@@ -209,7 +209,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                     child: _sectionCard(
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today,
+                          Icon(SolarIconsOutline.calendar,
                               color: AppColors.textTertiary, size: 16.sp),
                           SizedBox(width: 3.w),
                           Text(
@@ -235,7 +235,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                     child: _sectionCard(
                       child: Row(
                         children: [
-                          Icon(Icons.access_time,
+                          Icon(SolarIconsOutline.clockCircle,
                               color: AppColors.textTertiary, size: 16.sp),
                           SizedBox(width: 3.w),
                           Text(
@@ -301,7 +301,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
               decoration: BoxDecoration(
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.dividerColor),
+                border: Border.all(color: AppColors.dividerColor, width: 0.8),
               ),
               child: TextField(
                 style: TextStyle(
@@ -331,11 +331,11 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.dividerColor),
+                    border: Border.all(color: AppColors.dividerColor, width: 0.8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.spa,
+                      Icon(Icons.spa_outlined,
                           color: AppColors.info, size: 16.sp),
                       SizedBox(width: 3.w),
                       Expanded(
@@ -367,7 +367,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           border: Border(
-              top: BorderSide(color: AppColors.dividerColor, width: 0.5)),
+              top: BorderSide(color: AppColors.dividerColor, width: 0.8)),
         ),
         child: ElevatedButton(
           onPressed: _isLoading ? null : _book,
@@ -375,6 +375,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.secondary,
             padding: EdgeInsets.symmetric(vertical: 2.h),
+            elevation: 0,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16)),
           ),
@@ -395,7 +396,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dividerColor),
+        border: Border.all(color: AppColors.dividerColor, width: 0.8),
       ),
       child: child,
     );
@@ -406,9 +407,115 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       text,
       style: TextStyle(
         color: AppColors.textSecondary,
-        fontSize: 11.sp,
+        fontSize: 12.sp,
         fontWeight: FontWeight.bold,
-        letterSpacing: 1.5,
+        letterSpacing: 2,
+      ),
+    );
+  }
+
+  /// Branch selector — same as settings page.
+  Widget _buildBranchSelector(List<Branch?> branches) {
+    if (branches.isEmpty) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.dividerColor, width: 0.8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              SolarIconsOutline.mapPoint,
+              color: AppColors.textTertiary,
+              size: 16.sp,
+            ),
+            SizedBox(width: 3.w),
+            Text(
+              'Loading branches...',
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 13.sp),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0.5.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.info, width: 1),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Branch>(
+          value: _selectedBranch,
+          isExpanded: true,
+          dropdownColor: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          icon: Icon(
+            SolarIconsOutline.altArrowDown,
+            color: AppColors.strokeBorder,
+            size: 20.sp,
+          ),
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+          onChanged: (Branch? val) {
+            if (val != null) setState(() => _selectedBranch = val);
+          },
+          items: branches.whereType<Branch>().map((branch) {
+            return DropdownMenuItem<Branch>(
+              value: branch,
+              child: Row(
+                children: [
+                  Container(
+                    width: 8.w,
+                    height: 8.w,
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      SolarIconsOutline.mapPoint,
+                      size: 14.sp,
+                      color: AppColors.info,
+                    ),
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          branch.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          branch.address,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -444,17 +551,16 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
         width: 8.w,
         height: 8.w,
         decoration: BoxDecoration(
-          color: onTap != null
-              ? AppColors.primary.withOpacity(0.15)
-              : AppColors.surfaceLight,
+          color: AppColors.info.withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           size: 14.sp,
-          color: onTap != null
-              ? AppColors.primary
-              : AppColors.textTertiary,
+          color: AppColors.info
+          //  onTap != null
+              // ? AppColors.primary
+              // : AppColors.textTertiary,
         ),
       ),
     );

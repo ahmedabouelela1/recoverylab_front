@@ -85,20 +85,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.warning,
-          margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          content: Text(
-            'Could not start re-booking. Please try again.',
-            style: TextStyle(color: Colors.white, fontSize: 13.sp),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Could not start re-booking. Please try again.');
     } finally {
       if (mounted) setState(() => _isBookingAgain = false);
     }
@@ -134,14 +121,19 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
 
                       // ── Appointments ────────────────────────────────────
                       _sectionLabel(
-                        booking.appointments.length == 1
-                            ? 'APPOINTMENT'
-                            : 'APPOINTMENTS (${booking.appointments.length})',
+                        booking.appointments.isEmpty
+                            ? 'APPOINTMENTS'
+                            : booking.appointments.length == 1
+                                ? 'APPOINTMENT'
+                                : 'APPOINTMENTS (${booking.appointments.length})',
                       ),
                       SizedBox(height: 1.2.h),
-                      ...booking.appointments.asMap().entries.map(
-                        (e) => _buildAppointmentCard(e.value, e.key + 1),
-                      ),
+                      if (booking.appointments.isEmpty)
+                        _buildNoAppointmentsPlaceholder()
+                      else
+                        ...booking.appointments.asMap().entries.map(
+                          (e) => _buildAppointmentCard(e.value, e.key + 1),
+                        ),
                       SizedBox(height: 3.h),
 
                       // ── Payment ─────────────────────────────────────────
@@ -359,32 +351,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: '#BK${booking.id}'));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppColors.cardBackground,
-                margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                content: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check, color: AppColors.success, size: 14.sp),
-                    SizedBox(width: 2.w),
-                    Text(
-                      'Booking ID copied',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13.sp,
-                      ),
-                    ),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            AppSnackBar.show(context, 'Booking ID copied', duration: const Duration(seconds: 2));
           },
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 3.5.w, vertical: 1.h),
@@ -569,6 +536,36 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   }
 
   // ── Appointment card ──────────────────────────────────────────────────────
+
+  Widget _buildNoAppointmentsPlaceholder() {
+    return Container(
+      padding: EdgeInsets.all(5.w),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dividerColor, width: 0.8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            SolarIconsOutline.calendarMinimalistic,
+            color: AppColors.textTertiary,
+            size: 20.sp,
+          ),
+          SizedBox(width: 3.w),
+          Expanded(
+            child: Text(
+              'No appointment details available. Pull to refresh.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildAppointmentCard(ApiAppointment apt, int index) {
     final Color statusColor;
@@ -778,13 +775,30 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                         fontSize: 13.sp,
                       ),
                     ),
-                    Text(
-                      'EGP ${(apt.finalPrice * apt.participantCount).toStringAsFixed(0)}',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          booking.formatChargedAmount(apt.finalPrice * apt.participantCount),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (apt.finalPrice == 0 && booking.freeReasonLabel != null)
+                          Padding(
+                            padding: EdgeInsets.only(top: 0.3.h),
+                            child: Text(
+                              booking.freeReasonLabel!,
+                              style: TextStyle(
+                                color: AppColors.success,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -894,10 +908,21 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                         ),
                       ),
                     ],
+                    if (booking.freeReasonLabel != null) ...[
+                      SizedBox(height: 0.3.h),
+                      Text(
+                        booking.freeReasonLabel!,
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 Text(
-                  'EGP ${booking.finalTotal.toStringAsFixed(0)}',
+                  booking.displayFinalTotal,
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24.sp,

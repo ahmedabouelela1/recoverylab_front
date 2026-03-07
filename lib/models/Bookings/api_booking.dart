@@ -110,30 +110,73 @@ class ApiBooking {
 
   String? get displayImage => firstAppointment?.serviceImage;
 
+  /// True when total is 0 due to membership or package (not a bug).
+  bool get isFreeByMembershipOrPackage =>
+      finalTotal == 0 &&
+      (discountSource == 'MEMBERSHIP' || discountSource == 'PACKAGE');
+
+  /// Display string for final total: "Free" when 0 with membership/package, else "EGP X".
+  String get displayFinalTotal {
+    if (isFreeByMembershipOrPackage) return 'Free';
+    return 'EGP ${finalTotal.toStringAsFixed(0)}';
+  }
+
+  /// Short label when booking is free due to discount (e.g. "Included in your membership").
+  String? get freeReasonLabel {
+    if (finalTotal != 0) return null;
+    switch (discountSource) {
+      case 'MEMBERSHIP':
+        return 'Included in your membership';
+      case 'PACKAGE':
+        return 'Included with package';
+      default:
+        return null;
+    }
+  }
+
+  /// Format any charged amount in booking context: "Free" when 0 and membership/package, else "EGP X".
+  String formatChargedAmount(double amount) {
+    if (amount == 0 && (discountSource == 'MEMBERSHIP' || discountSource == 'PACKAGE')) {
+      return 'Free';
+    }
+    return 'EGP ${amount.toStringAsFixed(0)}';
+  }
+
   factory ApiBooking.fromJson(Map<String, dynamic> json) {
     final branch = json['branch'] as Map<String, dynamic>?;
-    final appts = (json['appointments'] as List<dynamic>? ?? [])
-        .map((a) => ApiAppointment.fromJson(a as Map<String, dynamic>))
-        .toList();
+    final apptsRaw = json['appointments'];
+    final List<ApiAppointment> appts = apptsRaw is List
+        ? (apptsRaw)
+            .map((a) => ApiAppointment.fromJson(a as Map<String, dynamic>))
+            .toList()
+        : <ApiAppointment>[];
+
+    DateTime parseBookingDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      if (v is DateTime) return v;
+      try {
+        return DateTime.parse(v.toString());
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
 
     return ApiBooking(
-      id: json['id'],
-      userId: json['user_id'],
-      branchId: json['branch_id'],
-      comboId: json['combo_id'],
-      bookingDate: DateTime.parse(json['booking_date']),
-      status: _parseStatus(json['status']),
-      paymentStatus: json['payment_status'] ?? 'PENDING',
-      originalTotal:
-          double.tryParse(json['original_total']?.toString() ?? '0') ?? 0.0,
-      finalTotal:
-          double.tryParse(json['final_total']?.toString() ?? '0') ?? 0.0,
-      discountSource: json['discount_source'] ?? 'NONE',
-      notes: json['notes'],
+      id: (json['id'] is int) ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
+      branchId: (json['branch_id'] is int) ? json['branch_id'] as int : int.tryParse(json['branch_id']?.toString() ?? '0') ?? 0,
+      comboId: json['combo_id'] != null ? ((json['combo_id'] is int) ? json['combo_id'] as int : int.tryParse(json['combo_id']?.toString() ?? '')) : null,
+      bookingDate: parseBookingDate(json['booking_date']),
+      status: _parseStatus(json['status']?.toString()),
+      paymentStatus: json['payment_status']?.toString() ?? 'PENDING',
+      originalTotal: double.tryParse(json['original_total']?.toString() ?? '0') ?? 0.0,
+      finalTotal: double.tryParse(json['final_total']?.toString() ?? '0') ?? 0.0,
+      discountSource: json['discount_source']?.toString() ?? 'NONE',
+      notes: json['notes']?.toString(),
       appointments: appts,
-      branchName: branch?['name'],
-      branchAddress: branch?['address'],
-      branchImage: branch?['image'],
+      branchName: branch?['name']?.toString(),
+      branchAddress: branch?['address']?.toString(),
+      branchImage: branch?['image']?.toString(),
     );
   }
 }

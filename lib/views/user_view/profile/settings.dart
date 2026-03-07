@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -123,6 +124,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userSessionProvider).user;
     final branches = ref.watch(branchesProvider);
+    final membershipAsync = ref.watch(activeMembershipProvider);
 
     // Init selected branch once
     if (_selectedBranch == null && branches.isNotEmpty) {
@@ -156,7 +158,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
         children: [
-          _buildProfileCard(user, initials),
+          _buildProfileCard(user, initials, membershipAsync),
           SizedBox(height: 3.h),
 
           // ── Branch selector ────────────────────────────────────────────
@@ -237,7 +239,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ── Profile card — no photo, initials avatar + edit button ───────────────
 
-  Widget _buildProfileCard(dynamic user, String initials) {
+  Widget _buildProfileCard(dynamic user, String initials, AsyncValue membershipAsync) {
+    final membership = membershipAsync.value;
+    final planName = membership?.plan?.name;
+    final isMember = planName != null && planName.isNotEmpty;
+
     return Container(
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
@@ -299,17 +305,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 0.8.h),
-                    // Member since / role tag
+                    // Membership badge: plan name or "Not a member"
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 2.5.w,
                         vertical: 0.5.h,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.1),
+                        color: isMember
+                            ? AppColors.info.withOpacity(0.1)
+                            : AppColors.textTertiary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: AppColors.info.withOpacity(0.3),
+                          color: isMember
+                              ? AppColors.info.withOpacity(0.3)
+                              : AppColors.textTertiary.withOpacity(0.3),
                           width: 0.8,
                         ),
                       ),
@@ -318,14 +328,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         children: [
                           Icon(
                             SolarIconsOutline.crown,
-                            color: AppColors.info,
+                            color: isMember ? AppColors.info : AppColors.textTertiary,
                             size: 11.sp,
                           ),
                           SizedBox(width: 1.w),
                           Text(
-                            'Gold Member',
+                            membershipAsync.isLoading
+                                ? '...'
+                                : (isMember ? planName! : 'Not a member'),
                             style: TextStyle(
-                              color: AppColors.info,
+                              color: isMember ? AppColors.info : AppColors.textSecondary,
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w700,
                             ),

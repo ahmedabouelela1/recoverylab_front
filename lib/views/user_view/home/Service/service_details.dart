@@ -8,9 +8,13 @@ import 'package:recoverylab_front/models/Branch/branchService/service_durations.
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
 import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/exception_handling.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
+import 'package:recoverylab_front/models/Offer/user_membership.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -189,12 +193,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   // Validate booking
   bool _validateBooking() {
     if (selectedDate == null || selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select date and time'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppSnackBar.show(context, 'Please select date and time');
       return false;
     }
 
@@ -206,39 +205,24 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       selectedTime!.minute,
     );
     if (selectedDateTime.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select a future date and time'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppSnackBar.show(context, 'Please select a future date and time');
       return false;
     }
 
     if (selectedDuration == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select duration'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppSnackBar.show(context, 'Please select duration');
       return false;
     }
 
     if (selectedType == 'group' && selectedPeopleCount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select number of people for group booking'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppSnackBar.show(context, 'Please select number of people for group booking');
       return false;
     }
 
     return true;
   }
 
-  // Show booking confirmation modal
+  // Show booking confirmation modal; on confirm, call API directly (no payment method modal).
   void _showBookingConfirmation() {
     if (!_validateBooking()) return;
 
@@ -252,147 +236,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       builder: (context) => _buildBookingConfirmationModal(),
     );
   }
-
-  // Show payment method selection modal
-  void _showPaymentMethodSelection() {
-    Navigator.pop(context); // Close confirmation modal
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => _buildPaymentMethodModal(),
-    );
-  }
-
-  Widget _buildPaymentMethodModal() {
-    final paymentMethods = [
-      {
-        'value': 'CARD',
-        'label': 'Credit/Debit Card',
-        'icon': Icons.credit_card,
-      },
-      {'value': 'CASH', 'label': 'Cash on Arrival', 'icon': Icons.money},
-      {
-        'value': 'MOBILE_WALLET',
-        'label': 'Mobile Wallet',
-        'icon': Icons.phone_android,
-      },
-      {
-        'value': 'BANK_TRANSFER',
-        'label': 'Bank Transfer',
-        'icon': Icons.account_balance,
-      },
-    ];
-
-    return Container(
-      padding: EdgeInsets.only(
-        left: 4.w,
-        right: 4.w,
-        top: 4.w,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 4.w,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 12.w,
-              height: 0.5.h,
-              decoration: BoxDecoration(
-                color: AppColors.dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          SizedBox(height: 3.h),
-
-          Text(
-            'Select Payment Method',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 2.h),
-
-          ...paymentMethods.map((method) {
-            return GestureDetector(
-              onTap: () {
-                setState(
-                  () => selectedPaymentMethod = method['value'] as String,
-                );
-                Navigator.pop(context);
-                _processPayment();
-              },
-              child: Container(
-                margin: EdgeInsets.only(bottom: 2.h),
-                padding: EdgeInsets.all(4.w),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceLight,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.dividerColor),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12.w,
-                      height: 12.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        method['icon'] as IconData,
-                        color: AppColors.info,
-                        size: 20.sp,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        method['label'] as String,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: AppColors.textTertiary,
-                      size: 16.sp,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-
-          SizedBox(height: 2.h),
-        ],
-      ),
-    );
-  }
-
-  // Process payment
   void _processPayment() async {
     final formattedDateTime = _formatDateTimeForApi();
     final user = ref.read(userSessionProvider).user;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('User not logged in'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppSnackBar.show(context, 'User not logged in');
       return;
     }
 
@@ -413,14 +262,16 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             durationMinutes: selectedDuration!,
             participantCount: selectedPeopleCount!,
             staffId: selectedStaff?.user.id,
-            notes: notes,
-            paymentMethod: selectedPaymentMethod!,
+            notes: notes.isEmpty ? null : notes,
+            paymentMethod: selectedPaymentMethod ?? 'CASH',
             usePackageId: _selectedPackage?.id,
           );
 
-      final bookingData = response['data'];
-      final id = bookingData?['booking_id'] ?? bookingData?['booking']?['id'];
-      _actualBookingId = id?.toString();
+      // Backend returns { success, message, data: { booking, booking_id, ... } }
+      final data = response['data'] as Map<String, dynamic>?;
+      final bookingId = data?['booking_id'];
+      final bookingObj = data?['booking'];
+      _actualBookingId = (bookingId ?? bookingObj?['id'])?.toString();
 
       if (!mounted) return;
 
@@ -430,12 +281,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       if (!mounted) return;
 
       Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Booking failed: ${e.toString()}'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      final message = e is ApiException
+          ? e.message
+          : e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      AppSnackBar.show(context, 'Booking failed: $message');
     }
   }
 
@@ -690,25 +539,64 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 Container(height: 0.5, color: AppColors.dividerColor),
                 SizedBox(height: 2.h),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Amount',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14.sp,
-                      ),
-                    ),
-                    Text(
-                      '\$${selectedDurationData?.price ?? '0'}',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                Builder(
+                  builder: (_) {
+                    final totalInfo = _getDisplayTotalWithMembership(
+                      selectedDurationData?.price,
+                      selectedPeopleCount ?? 1,
+                    );
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Amount',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                            if (totalInfo.$3 != null)
+                              Padding(
+                                padding: EdgeInsets.only(top: 0.3.h),
+                                child: Text(
+                                  totalInfo.$3!,
+                                  style: TextStyle(
+                                    color: AppColors.success,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (totalInfo.$2 != null)
+                              Text(
+                                totalInfo.$2!,
+                                style: TextStyle(
+                                  color: AppColors.textTertiary,
+                                  fontSize: 12.sp,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            Text(
+                              totalInfo.$1,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -743,7 +631,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               SizedBox(width: 4.w),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _showPaymentMethodSelection,
+                  onPressed: () {
+                    Navigator.pop(context); // Close confirmation sheet
+                    _processPayment();       // Call API directly (default payment)
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.secondary,
@@ -758,7 +649,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Continue to Payment',
+                        'Confirm & Book',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
@@ -1729,12 +1620,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 // Day is fully closed
                 final reason =
                     special?.reason ?? 'Branch is closed on this day';
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(reason),
-                    backgroundColor: AppColors.warning,
-                  ),
-                );
+                AppSnackBar.show(context, reason);
               } else if (special != null && !special.isClosed) {
                 // Custom hours — inform the user
                 final open = special.openTime?.substring(0, 5) ?? '';
@@ -1742,12 +1628,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 final note = special.reason != null
                     ? ' · ${special.reason}'
                     : '';
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Special hours on this day: $open – $close$note'),
-                    backgroundColor: AppColors.info,
-                  ),
-                );
+                AppSnackBar.show(context, 'Special hours on this day: $open – $close$note');
               }
               setState(() {
                 selectedDate = pickedDate;
@@ -1827,6 +1708,50 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     return '$displayHour:00 $period';
   }
 
+  /// Format price for display: always EGP, smaller size.
+  String _formatPrice(dynamic price) {
+    if (price == null) return '0 EGP';
+    final p = price is String ? price : price.toString();
+    return '$p EGP';
+  }
+
+  /// Best membership discount % (0–100) for a service. Matches backend logic: ALL, SERVICE, CATEGORY.
+  num _bestMembershipDiscountForService(UserMembership? membership, int serviceId, int categoryId) {
+    if (membership == null || membership.plan == null) return 0;
+    num best = 0;
+    for (final b in membership.plan!.benefits) {
+      final applies = b.targetType == 'ALL' ||
+          (b.targetType == 'SERVICE' && b.targetId == serviceId) ||
+          (b.targetType == 'CATEGORY' && b.targetId == categoryId);
+      if (!applies) continue;
+      if (b.benefitType == 'UNLIMITED_ACCESS') return 100;
+      if (b.benefitType == 'DISCOUNT' && b.value != null && b.value! > best) best = b.value!;
+    }
+    return best;
+  }
+
+  /// Membership-aware total for display. Returns (displayString, originalTotalForStrikethrough or null).
+  (String display, String? original, String? membershipLabel) _getDisplayTotalWithMembership(
+    String? priceStr,
+    int participantCount,
+  ) {
+    final baseTotal = (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
+    final membership = ref.watch(activeMembershipProvider).value;
+    final discountPct = _bestMembershipDiscountForService(
+      membership,
+      widget.service.id,
+      widget.service.category.id,
+    );
+    if (discountPct >= 100) {
+      return ('Free', baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null, 'Included in your membership');
+    }
+    if (discountPct > 0) {
+      final discounted = baseTotal * (1 - discountPct / 100);
+      return ('EGP ${discounted.toStringAsFixed(0)}', 'EGP ${baseTotal.toStringAsFixed(0)}', null);
+    }
+    return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
+  }
+
   void _showTimeSelectionSheet() {
     showModalBottomSheet(
       context: context,
@@ -1848,12 +1773,23 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             ? _schedule?.slotsFor(selectedDate!)
             : null;
         final baseSlots = scheduleSlots ?? List.generate(16, (i) => i + 7);
+        final closeHour = (scheduleSlots != null && scheduleSlots.isNotEmpty)
+            ? (scheduleSlots.last! + 1)
+            : 23;
 
         // For today, skip hours already past.
-        final availableHours = baseSlots.where((hour) {
-          if (!isToday) return true;
-          return hour > now.hour;
+        var availableHours = baseSlots.where((hour) {
+          if (isToday && hour <= now.hour) return false;
+          return true;
         }).toList();
+
+        // Only show slots where appointment end is within branch hours.
+        if (selectedDuration != null && selectedDuration! > 0) {
+          final durationHours = (selectedDuration! / 60).ceil();
+          availableHours = availableHours
+              .where((hour) => hour + durationHours <= closeHour)
+              .toList();
+        }
 
         // Check if branch is explicitly closed on this day.
         final isBranchClosed =
@@ -2028,24 +1964,14 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         GestureDetector(
           onTap: () {
             if (noDateSelected) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Please select a date first'),
-                  backgroundColor: AppColors.info,
-                ),
-              );
+              AppSnackBar.show(context, 'Please select a date first');
               return;
             }
             if (dayClosed) {
               final reason =
                   _schedule!.specialDateFor(selectedDate!)?.reason ??
                   'Branch is closed on this day';
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(reason),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              AppSnackBar.show(context, reason);
               return;
             }
             _showTimeSelectionSheet();
@@ -2221,11 +2147,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     ),
                     SizedBox(width: 4.w),
                     Text(
-                      '\$${duration.price}',
+                      _formatPrice(duration.price),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16.sp,
+                        fontSize: 13.sp,
                       ),
                     ),
                     SizedBox(width: 4.w),
@@ -2314,14 +2240,19 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                       child: CircleAvatar(
                         radius: 8.w,
-                        backgroundImage: NetworkImage(staff.profilePicture),
+                        backgroundImage: (staff.profilePicture.isNotEmpty
+                            ? NetworkImage(staff.profilePicture)
+                            : null),
                         backgroundColor: AppColors.surfaceLight,
+                        child: staff.profilePicture.isEmpty
+                            ? Icon(Icons.person, color: AppColors.textTertiary, size: 20.sp)
+                            : null,
                       ),
                     ),
 
                     SizedBox(height: 1.h),
                     Text(
-                      '${staff.user.firstName} ${staff.user.lastName.substring(0, 1)}.',
+                      '${staff.user.firstName} ${(staff.user.lastName).isNotEmpty ? staff.user.lastName.substring(0, 1) : ''}.',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 13.sp,
@@ -2332,7 +2263,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     SizedBox(height: 0.5.h),
 
                     Text(
-                      staff.employeeId,
+                      staff.employeeId.isNotEmpty ? staff.employeeId : '—',
                       style: TextStyle(
                         color: AppColors.textTertiary,
                         fontSize: 10.sp,
@@ -2450,6 +2381,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       (d) => d?.minutes == selectedDuration,
       orElse: () => durations[0],
     );
+    final totalInfo = _getDisplayTotalWithMembership(
+      selectedDurationData?.price,
+      selectedPeopleCount ?? 1,
+    );
 
     return Positioned(
       bottom: 0,
@@ -2486,14 +2421,35 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                     ),
                     SizedBox(height: 0.5.h),
+                    if (totalInfo.$2 != null)
+                      Text(
+                        totalInfo.$2!,
+                        style: TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 11.sp,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
                     Text(
-                      '\$${selectedDurationData?.price ?? '0'}',
+                      totalInfo.$1,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 24.sp,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (totalInfo.$3 != null)
+                      Padding(
+                        padding: EdgeInsets.only(top: 0.3.h),
+                        child: Text(
+                          totalInfo.$3!,
+                          style: TextStyle(
+                            color: AppColors.success,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 Expanded(

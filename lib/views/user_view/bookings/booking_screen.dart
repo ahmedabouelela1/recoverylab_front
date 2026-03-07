@@ -6,6 +6,7 @@ import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/views/user_view/bookings/widget/booking_card.dart';
 
@@ -94,55 +95,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
       await _fetchBookings();
       if (!mounted) return;
       setState(() => _selectedTab = 'Cancelled');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.success,
-          margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 14),
-              ),
-              SizedBox(width: 3.w),
-              Expanded(
-                child: Text(
-                  'Booking cancelled successfully',
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13.sp,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Booking cancelled successfully');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.error,
-          margin: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          content: Text(
-            'Failed to cancel. Please try again.',
-            style: GoogleFonts.dmSans(color: Colors.white, fontSize: 13.sp),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to cancel. Please try again.');
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }
@@ -495,6 +451,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
 
   Widget _buildSummaryPills() {
     final totalBookings = _bookings.length;
+    final upcomingCount = _bookings.where((b) => b.isUpcoming).length;
     final completedCount = _bookings.where((b) => b.isCompleted).length;
     final cancelledCount = _bookings.where((b) => b.isCancelled).length;
 
@@ -506,10 +463,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
         physics: const BouncingScrollPhysics(),
         children: [
           _summaryPill(
-            label: 'Total',
-            value: '$totalBookings',
+            label: 'Upcoming',
+            value: '$upcomingCount',
             color: AppColors.info,
-            icon: SolarIconsOutline.calendar,
+            icon: SolarIconsOutline.clockCircle,
           ),
           SizedBox(width: 2.w),
           _summaryPill(
@@ -524,6 +481,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
             value: '$cancelledCount',
             color: AppColors.error,
             icon: SolarIconsOutline.closeCircle,
+          ),
+          SizedBox(width: 2.w),
+          _summaryPill(
+            label: 'Total',
+            value: '$totalBookings',
+            color: AppColors.textSecondary,
+            icon: SolarIconsOutline.calendar,
           ),
         ],
       ),
