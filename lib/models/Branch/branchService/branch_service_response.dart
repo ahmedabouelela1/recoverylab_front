@@ -18,11 +18,13 @@ class BranchServiceResponse {
 
   factory BranchServiceResponse.fromJson(Map<String, dynamic> json) {
     return BranchServiceResponse(
-      success: json['success'],
-      message: json['message'],
-      data: (json['data'] as List)
-          .map((e) => BranchService.fromJson(e))
-          .toList(),
+      success: json['success'] == true,
+      message: json['message']?.toString() ?? '',
+      data: (json['data'] is List)
+          ? (json['data'] as List)
+              .map((e) => BranchService.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : [],
       staff: json['staff_qualified_for_service'] != null
           ? (json['staff_qualified_for_service'] as List)
                 .map<Staff?>((e) => e != null ? Staff.fromJson(e as Map<String, dynamic>) : null)

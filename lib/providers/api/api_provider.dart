@@ -16,6 +16,7 @@ import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
+import 'package:recoverylab_front/models/User/user.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 
@@ -53,6 +54,20 @@ class ApiProvider {
     final url = Uri.parse('$apiUrl$endpoint');
     final headers = await ref.read(headersProvider).token;
     final response = await http.patch(
+      url,
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    return response;
+  }
+
+  Future<http.Response> basePut(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    final url = Uri.parse('$apiUrl$endpoint');
+    final headers = await ref.read(headersProvider).token;
+    final response = await http.put(
       url,
       headers: headers,
       body: jsonEncode(data),
@@ -230,6 +245,26 @@ class ApiProvider {
       {'status': 'CANCELLED'},
     );
     _handleResponse(response);
+  }
+
+  /// PUT /users — update current user profile. Updates session with returned user.
+  Future<void> updateUserProfile({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String email,
+  }) async {
+    final response = await basePut(ApiRoutes.users, {
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone': phone,
+      'email': email,
+    });
+    final decoded = _handleResponse(response);
+    final userData = decoded['data'] as Map<String, dynamic>?;
+    if (userData != null) {
+      ref.read(userSessionProvider.notifier).setUser(User.fromJson(userData));
+    }
   }
 
   /// GET /packages — optionally filter by type ('PACKAGE' or 'COMBO').
@@ -449,7 +484,6 @@ class ApiProvider {
     _handleResponse(response);
   }
 
-  /// POST /bookings/combo — book a fixed multi-service combo.
   Future<Map<String, dynamic>> storeComboBooking({
     required int comboId,
     required int userId,

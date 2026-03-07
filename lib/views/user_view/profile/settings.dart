@@ -4,11 +4,14 @@ import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/components/app_snackbar.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -19,6 +22,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   Branch? _selectedBranch;
+  bool _branchesFetchTriggered = false;
 
   // ── Edit profile modal ────────────────────────────────────────────────────
 
@@ -27,6 +31,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final firstCtrl = TextEditingController(text: user?.firstName ?? '');
     final lastCtrl = TextEditingController(text: user?.lastName ?? '');
     final phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    final emailCtrl = TextEditingController(text: user?.email ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -100,12 +105,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 hint: '+20 100 000 0000',
                 keyboardType: TextInputType.phone,
               ),
+              SizedBox(height: 2.h),
+              _sectionLabel('EMAIL'),
+              SizedBox(height: 1.h),
+              _inputField(
+                controller: emailCtrl,
+                hint: 'email@example.com',
+                keyboardType: TextInputType.emailAddress,
+              ),
               SizedBox(height: 3.h),
               AppButton(
                 label: 'Save Changes',
-                onPressed: () {
-                  // TODO: dispatch update
-                  Navigator.pop(ctx);
+                onPressed: () async {
+                  final firstName = firstCtrl.text.trim();
+                  final lastName = lastCtrl.text.trim();
+                  final phone = phoneCtrl.text.trim();
+                  final email = emailCtrl.text.trim();
+                  if (firstName.isEmpty || lastName.isEmpty || email.isEmpty) {
+                    AppSnackbar.show(ctx, 'Please fill first name, last name and email');
+                    return;
+                  }
+                  try {
+                    await ref.read(apiProvider).updateUserProfile(
+                      firstName: firstName,
+                      lastName: lastName,
+                      phone: phone,
+                      email: email,
+                    );
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    AppSnackbar.show(context, 'Profile updated successfully');
+                  } catch (e) {
+                    if (!ctx.mounted) return;
+                    final message = e is ApiException ? e.message : 'Failed to update profile';
+                    AppSnackbar.show(ctx, message);
+                  }
                 },
                 size: AppButtonSize.large,
                 width: double.infinity,
@@ -126,17 +160,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final branches = ref.watch(branchesProvider);
     final membershipAsync = ref.watch(activeMembershipProvider);
 
+    // If branches weren't fetched on splash, fetch when Settings is shown
+    if (branches.isEmpty && !_branchesFetchTriggered) {
+      _branchesFetchTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(branchesProvider.notifier).ensureBranchesFetched();
+      });
+    }
+
     // Init selected branch once
     if (_selectedBranch == null && branches.isNotEmpty) {
       _selectedBranch = branches.firstWhere(
-        (b) => b?.id == user?.branchId,
+        (b) => b.id == user?.branchId,
         orElse: () => branches.first,
       );
     }
 
     final initials = [
-      user?.firstName?.isNotEmpty == true ? user!.firstName[0] : '',
-      user?.lastName?.isNotEmpty == true ? user!.lastName[0] : '',
+      (user != null && user.firstName.isNotEmpty) ? user.firstName[0] : '',
+      (user != null && user.lastName.isNotEmpty) ? user.lastName[0] : '',
     ].join().toUpperCase();
 
     return Scaffold(
@@ -304,47 +346,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 0.8.h),
-                    // Membership badge: plan name or "Not a member"
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 2.5.w,
-                        vertical: 0.5.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isMember
-                            ? AppColors.info.withOpacity(0.1)
-                            : AppColors.textTertiary.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isMember
-                              ? AppColors.info.withOpacity(0.3)
-                              : AppColors.textTertiary.withOpacity(0.3),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            SolarIconsOutline.crown,
-                            color: isMember ? AppColors.info : AppColors.textTertiary,
-                            size: 11.sp,
-                          ),
-                          SizedBox(width: 1.w),
-                          Text(
-                            membershipAsync.isLoading
-                                ? '...'
-                                : (isMember ? planName! : 'Not a member'),
-                            style: TextStyle(
-                              color: isMember ? AppColors.info : AppColors.textSecondary,
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Membership shown in the green row below; no duplicate badge here
                   ],
                 ),
               ),
@@ -387,7 +389,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           SizedBox(height: 2.h),
           Container(height: 0.5, color: AppColors.dividerColor),
           SizedBox(height: 2.h),
-          // Membership upgrade row
+          // Membership row: current plan name if member, else "Upgrade Membership"
           GestureDetector(
             onTap: () =>
                 Navigator.of(context).pushNamed(Routes.upgradeMembership),
@@ -421,7 +423,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Gold Membership',
+                          membershipAsync.isLoading
+                              ? '...'
+                              : (isMember ? planName! : 'Upgrade Membership'),
                           style: TextStyle(
                             color: AppColors.success,
                             fontSize: 14.sp,
@@ -429,7 +433,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                         ),
                         Text(
-                          'Tap to upgrade',
+                          isMember ? 'View benefits' : 'Tap to upgrade',
                           style: TextStyle(
                             color: AppColors.textTertiary,
                             fontSize: 11.sp,

@@ -509,7 +509,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ],
                               ),
                               child: Text(
-                                offer.discount!,
+                                '${offer.discount!}%',
                                 style: GoogleFonts.inter(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w900,
@@ -520,39 +520,39 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   ),
 
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 3.5.w,
-                        vertical: 1.2.h,
-                      ),
-                      width: 30.w,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Book Now',
-                            style: GoogleFonts.inter(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w700,
-                              color: primaryGradientStart,
-                            ),
-                          ),
-                          SizedBox(width: 1.5.w),
-                          Icon(
-                            SolarIconsOutline.arrowRight,
-                            size: 16,
-                            color: primaryGradientStart,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Align(
+                  //   alignment: Alignment.bottomRight,
+                  //   child: Container(
+                  //     padding: EdgeInsets.symmetric(
+                  //       horizontal: 3.5.w,
+                  //       vertical: 1.2.h,
+                  //     ),
+                  //     width: 30.w,
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.white,
+                  //       borderRadius: BorderRadius.circular(14),
+                  //     ),
+                  //     child: Row(
+                  //       mainAxisAlignment: MainAxisAlignment.center,
+                  //       children: [
+                  //         Text(
+                  //           'Book Now',
+                  //           style: GoogleFonts.inter(
+                  //             fontSize: 13.sp,
+                  //             fontWeight: FontWeight.w700,
+                  //             color: primaryGradientStart,
+                  //           ),
+                  //         ),
+                  //         SizedBox(width: 1.5.w),
+                  //         Icon(
+                  //           SolarIconsOutline.arrowRight,
+                  //           size: 16,
+                  //           color: primaryGradientStart,
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
             ),

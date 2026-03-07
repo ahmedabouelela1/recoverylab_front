@@ -21,8 +21,8 @@ class ApiRoutes {
   static const String userAnswersBulk = '/user-answers/bulk';
 }
 
-// const apiUrl = 'https://recoverylab.thecodehaus.co/api';
-const apiUrl = 'http://localhost:8000/api';
+const apiUrl = 'https://recoverylab.thecodehaus.co/api';
+// const apiUrl = 'http://localhost:8000/api';
 
 enum UserState { none, loading, active }
 

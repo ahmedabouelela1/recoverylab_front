@@ -40,7 +40,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   String selectedType = 'single';
   String? selectedPaymentMethod;
   String? _actualBookingId;
-  List<Branch?> branches = [];
+  List<Branch> branches = [];
   List<ServiceDuration?> durations = [];
   List<Staff?> staffList = [];
   int defaultCapacity = 2;
@@ -63,10 +63,26 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     try {
       setState(() => isLoading = true);
 
+      // Ensure branches are loaded (e.g. if user opened service details before splash finished)
+      List<Branch> branchList = ref.read(branchesProvider);
+      if (branchList.isEmpty) {
+        await ref.read(branchesProvider.notifier).ensureBranchesFetched();
+        branchList = ref.read(branchesProvider);
+      }
+
+      branches = branchList;
       final user = ref.read(userSessionProvider).user;
-      branches = ref.read(branchesProvider);
-      final idx = branches.indexWhere((b) => b?.id == user?.branchId);
+      final idx = branches.indexWhere((b) => b.id == user?.branchId);
       selectedBranchIndex = idx >= 0 ? idx : 0;
+
+      if (branches.isEmpty) {
+        setState(() {
+          isLoading = false;
+          hasError = true;
+          errorMessage = 'No branches available. Please select a branch in Settings and try again.';
+        });
+        return;
+      }
 
       await Future.wait([_fetchServiceDetails(), _loadSchedule()]);
       _loadMyPackages();
@@ -82,7 +98,15 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   Future<void> _fetchServiceDetails() async {
     try {
-      final branchId = branches[selectedBranchIndex!]!.id;
+      if (branches.isEmpty || selectedBranchIndex == null || selectedBranchIndex! >= branches.length) {
+        setState(() {
+          hasError = true;
+          errorMessage = 'No branch selected. Please select a branch in Settings.';
+        });
+        return;
+      }
+
+      final branchId = branches[selectedBranchIndex!].id;
 
       final response = await ref
           .read(apiProvider)
@@ -154,7 +178,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   Future<void> _loadSchedule() async {
     if (branches.isEmpty) return;
     try {
-      final branchId = branches[selectedBranchIndex ?? 0]!.id;
+      final branchId = branches[selectedBranchIndex ?? 0].id;
       final schedule = await ref.read(apiProvider).getBranchSchedule(branchId);
       if (mounted) setState(() => _schedule = schedule);
     } catch (_) {
@@ -256,7 +280,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           .read(apiProvider)
           .storeBooking(
             userId: user.id,
-            branchId: branches[selectedBranchIndex!]!.id,
+            branchId: branches[selectedBranchIndex!].id,
             serviceId: widget.service.id,
             formattedDateTime: formattedDateTime!,
             durationMinutes: selectedDuration!,
@@ -408,7 +432,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     _buildConfirmationDetail(
                       icon: Icons.location_on,
                       label: 'Branch',
-                      value: branches[selectedBranchIndex!]!.name,
+                      value: branches[selectedBranchIndex!].name,
                     ),
                     if (notes.isNotEmpty) SizedBox(height: 1.5.h),
                     if (notes.isNotEmpty)
@@ -451,7 +475,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             margin: EdgeInsets.only(bottom: 1.h),
                             decoration: BoxDecoration(
                               color: _selectedPackage == null
-                                  ? AppColors.primary.withOpacity(0.12)
+                                  ? AppColors.primary.withOpacity(0.2)
                                   : AppColors.surfaceLight,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -1371,7 +1395,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        branches[selectedBranchIndex ?? 0]!.name,
+                        branches[selectedBranchIndex ?? 0].name,
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600,
@@ -1380,7 +1404,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                       SizedBox(height: 0.5.h),
                       Text(
-                        branches[selectedBranchIndex ?? 0]!.address,
+                        branches[selectedBranchIndex ?? 0].address,
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12.sp,
@@ -1602,9 +1626,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               builder: (context, child) {
                 return Theme(
                   data: ThemeData.light().copyWith(
-                    colorScheme: ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: AppColors.secondary,
+                    colorScheme: ColorScheme.dark(
+                      primary: AppColors.info,
+                      onPrimary: AppColors.background
                     ),
                     dialogBackgroundColor: AppColors.background,
                   ),
@@ -1774,7 +1798,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             : null;
         final baseSlots = scheduleSlots ?? List.generate(16, (i) => i + 7);
         final closeHour = (scheduleSlots != null && scheduleSlots.isNotEmpty)
-            ? (scheduleSlots.last! + 1)
+            ? (scheduleSlots.last + 1)
             : 23;
 
         // For today, skip hours already past.
@@ -2575,7 +2599,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                branch!.name,
+                                branch.name,
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontSize: 14.sp,

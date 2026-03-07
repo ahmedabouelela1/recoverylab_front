@@ -7,15 +7,27 @@ class BranchesNotifier extends StateNotifier<List<Branch>> {
   final Ref ref;
   BranchesNotifier(this.ref) : super([]);
 
-  // Fetch branches from API and store them in state
+  bool _isFetching = false;
+
+  /// Fetch branches from API and store them in state
   Future<void> fetchBranches() async {
     try {
       final api = ref.read(apiProvider);
       final branches = await api.getBranches();
-      state = branches; // store in-memory
+      state = branches;
     } catch (e) {
-      // Handle errors here if you want, or rethrow
       rethrow;
+    }
+  }
+
+  /// If branches were not loaded yet (e.g. splash skipped), fetch them when a screen needs them.
+  Future<void> ensureBranchesFetched() async {
+    if (state.isNotEmpty || _isFetching) return;
+    _isFetching = true;
+    try {
+      await fetchBranches();
+    } finally {
+      _isFetching = false;
     }
   }
 

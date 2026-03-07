@@ -78,4 +78,11 @@ class UserSession extends ChangeNotifier {
     _state = UserState.active;
     notifyListeners();
   }
+
+  /// Replace session user with the one from API (e.g. after profile update).
+  void setUser(User newUser) {
+    user = newUser;
+    _state = UserState.active;
+    notifyListeners();
+  }
 }
