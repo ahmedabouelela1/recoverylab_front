@@ -99,7 +99,9 @@ class RoutesGenerator {
             builder: (_) => AllCategoriesPage(categories: args['categories']),
           );
         }
-        return _errorRoute();
+        return MaterialPageRoute(
+          builder: (_) => const AllCategoriesPage(),
+        );
       case Routes.bookingDetailsPage:
         if (args is ApiBooking) {
           return MaterialPageRoute(

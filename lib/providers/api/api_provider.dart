@@ -15,6 +15,7 @@ import 'package:recoverylab_front/models/Offer/user_membership.dart';
 import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
+import 'package:recoverylab_front/models/Branch/staff/staff.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/models/User/user.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
@@ -72,6 +73,13 @@ class ApiProvider {
       headers: headers,
       body: jsonEncode(data),
     );
+    return response;
+  }
+
+  Future<http.Response> baseDelete(String endpoint) async {
+    final url = Uri.parse('$apiUrl$endpoint');
+    final headers = await ref.read(headersProvider).token;
+    final response = await http.delete(url, headers: headers);
     return response;
   }
 
@@ -219,9 +227,36 @@ class ApiProvider {
     return BranchServiceResponse.fromJson(decoded);
   }
 
+  /// GET /bookings/available-staff — staff who have the service skill and are available at the given time.
+  /// Use after user selects date/time/duration to show only bookable staff.
+  Future<List<Staff>> getAvailableStaff({
+    required int branchId,
+    required int serviceId,
+    required String scheduledStart,
+    required int durationMinutes,
+  }) async {
+    final uri = Uri.parse('$apiUrl${ApiRoutes.booking}/available-staff').replace(
+      queryParameters: {
+        'branch_id': branchId.toString(),
+        'service_id': serviceId.toString(),
+        'scheduled_start': scheduledStart,
+        'duration_minutes': durationMinutes.toString(),
+      },
+    );
+    final headers = await ref.read(headersProvider).token;
+    final response = await http.get(uri, headers: headers);
+    final decoded = _handleResponse(response);
+    final raw = decoded['data'];
+    final List<dynamic> list = raw is List ? raw : [];
+    return list
+        .map((e) => Staff.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<ApiBooking>> getBookings() async {
     final response = await baseGet(ApiRoutes.booking);
     final decoded = _handleResponse(response);
+    final currentUserId = ref.read(userSessionProvider).user?.id;
 
     // Handle both plain list and paginated { data: [...] } shapes
     final raw = decoded['data'];
@@ -234,9 +269,11 @@ class ApiProvider {
       list = [];
     }
 
-    return list
+    final bookings = list
         .map((j) => ApiBooking.fromJson(j as Map<String, dynamic>))
         .toList();
+    if (currentUserId == null) return bookings;
+    return bookings.where((booking) => booking.userId == currentUserId).toList();
   }
 
   Future<void> cancelAppointment(int appointmentId) async {
@@ -253,18 +290,29 @@ class ApiProvider {
     required String lastName,
     required String phone,
     required String email,
+    int? branchId,
   }) async {
-    final response = await basePut(ApiRoutes.users, {
+    final body = <String, dynamic>{
       'first_name': firstName,
       'last_name': lastName,
       'phone': phone,
       'email': email,
-    });
+    };
+    if (branchId != null) {
+      body['branch_id'] = branchId;
+    }
+    final response = await basePut(ApiRoutes.users, body);
     final decoded = _handleResponse(response);
     final userData = decoded['data'] as Map<String, dynamic>?;
     if (userData != null) {
       ref.read(userSessionProvider.notifier).setUser(User.fromJson(userData));
     }
+  }
+
+  /// DELETE /users — delete current user account. Caller should logout and navigate to login.
+  Future<void> deleteAccount() async {
+    final response = await baseDelete(ApiRoutes.users);
+    _handleResponse(response);
   }
 
   /// GET /packages — optionally filter by type ('PACKAGE' or 'COMBO').
@@ -337,10 +385,12 @@ class ApiProvider {
     return _handleResponse(response);
   }
 
-  /// GET /user-packages — returns active packages with remaining credits.
+  /// GET /user-packages — returns all user packages (use in My Wallet).
+  /// For booking, filter to status == 'ACTIVE' && creditsRemaining > 0 in the UI.
   Future<List<UserPackage>> getMyPackages() async {
     final response = await baseGet(ApiRoutes.userPackages);
     final decoded = _handleResponse(response);
+    final currentUserId = ref.read(userSessionProvider).user?.id;
 
     final raw = decoded['data'];
     final List<dynamic> list;
@@ -352,10 +402,11 @@ class ApiProvider {
       list = [];
     }
 
-    return list
+    final packages = list
         .map((j) => UserPackage.fromJson(j as Map<String, dynamic>))
-        .where((p) => p.status == 'ACTIVE' && p.creditsRemaining > 0)
         .toList();
+    if (currentUserId == null) return packages;
+    return packages.where((pkg) => pkg.userId == currentUserId).toList();
   }
 
   Future<Map<String, dynamic>> storeBooking({
@@ -371,7 +422,6 @@ class ApiProvider {
     int? usePackageId,
   }) async {
     final Map<String, dynamic> body = {
-      'user_id': userId,
       'branch_id': branchId,
       'notes': notes?.isEmpty ?? true ? null : notes,
       'appointments': [
@@ -396,11 +446,7 @@ class ApiProvider {
 
   /// GET /user-memberships — returns memberships for the current user.
   Future<List<UserMembership>> getMyMemberships() async {
-    final userId = ref.read(userSessionProvider).user?.id;
-    final endpoint = userId != null
-        ? '${ApiRoutes.userMemberships}?user_id=$userId'
-        : ApiRoutes.userMemberships;
-    final response = await baseGet(endpoint);
+    final response = await baseGet(ApiRoutes.userMemberships);
     final decoded = _handleResponse(response);
     final raw = decoded['data'];
     final List<dynamic> list;
@@ -438,16 +484,22 @@ class ApiProvider {
   Future<ApiBooking> getBooking(int id) async {
     final response = await baseGet('${ApiRoutes.booking}/$id');
     final decoded = _handleResponse(response);
-    return ApiBooking.fromJson(decoded['data'] as Map<String, dynamic>);
+    final booking = ApiBooking.fromJson(decoded['data'] as Map<String, dynamic>);
+    final currentUserId = ref.read(userSessionProvider).user?.id;
+    if (currentUserId != null && booking.userId != currentUserId) {
+      throw Exception('Unauthorized booking access.');
+    }
+    return booking;
   }
 
-  /// GET /user-answers/{userId} — returns existing answers grouped by question_id.
+  /// GET /user-answers?user_id={userId} — returns existing answers grouped by question_id. Requires auth.
   Future<Map<int, List<Map<String, dynamic>>>> getUserAnswers(int userId) async {
-    final response = await baseGet('${ApiRoutes.userAnswers}/$userId');
+    final response = await baseGet('${ApiRoutes.userAnswers}?user_id=$userId');
     final decoded = _handleResponse(response);
-    final raw = decoded['data'] as Map<String, dynamic>? ?? {};
+    final raw = decoded['data'];
+    if (raw is! Map) return {};
     return raw.map((key, value) => MapEntry(
-          int.parse(key),
+          int.parse(key.toString()),
           (value as List).cast<Map<String, dynamic>>(),
         ));
   }
@@ -494,7 +546,6 @@ class ApiProvider {
   }) async {
     final response = await basePost(ApiRoutes.comboBooking, {
       'combo_id': comboId,
-      'user_id': userId,
       'branch_id': branchId,
       'scheduled_start': scheduledStart,
       'participant_count': participantCount,

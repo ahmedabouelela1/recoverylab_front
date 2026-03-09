@@ -66,6 +66,7 @@ class UserSession extends ChangeNotifier {
     String? email,
     DateTime? dateOfBirth,
     String? gender,
+    int? branchId,
   }) {
     user?.update(
       firstName: firstName,
@@ -74,6 +75,7 @@ class UserSession extends ChangeNotifier {
       email: email,
       dateOfBirth: dateOfBirth,
       gender: gender,
+      branchId: branchId,
     );
     _state = UserState.active;
     notifyListeners();

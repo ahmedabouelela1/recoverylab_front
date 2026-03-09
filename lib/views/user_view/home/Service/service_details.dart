@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recoverylab_front/components/branch_selector.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
@@ -43,6 +44,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   List<Branch> branches = [];
   List<ServiceDuration?> durations = [];
   List<Staff?> staffList = [];
+  /// Full list from branch-service (all qualified staff); restored when date/time/duration change.
+  List<Staff?> _allQualifiedStaff = [];
+  bool _staffAvailabilityFailed = false;
   int defaultCapacity = 2;
   List<UserPackage> _myPackages = [];
   UserPackage? _selectedPackage;
@@ -145,6 +149,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
       // Set staff from API
       staffList = response.staff;
+      _allQualifiedStaff = List<Staff?>.from(response.staff);
 
       // Set default capacity
       defaultCapacity = branchService.defaultCapacity;
@@ -157,6 +162,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       setState(() {
         hasError = false;
         errorMessage = null;
+        _staffAvailabilityFailed = false;
       });
     } catch (e) {
       setState(() {
@@ -169,10 +175,56 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   Future<void> _loadMyPackages() async {
     try {
       final packages = await ref.read(apiProvider).getMyPackages();
-      if (mounted) setState(() => _myPackages = packages);
+      if (!mounted) return;
+      final eligible = packages.where(_isPackageEligibleForBooking).toList();
+      setState(() {
+        _myPackages = eligible;
+        if (_selectedPackage != null &&
+            !eligible.any((pkg) => pkg.id == _selectedPackage!.id)) {
+          _selectedPackage = null;
+        }
+      });
     } catch (_) {
       // Non-critical — user may not have packages
     }
+  }
+
+  bool _isPackageEligibleForBooking(UserPackage pkg) {
+    final currentUserId = ref.read(userSessionProvider).user?.id;
+    if (currentUserId == null || pkg.userId != currentUserId) return false;
+    if (pkg.status != 'ACTIVE' || pkg.creditsRemaining <= 0) return false;
+    final offerPackage = pkg.package;
+    if (offerPackage == null || !offerPackage.isPackage || !offerPackage.isActive) {
+      return false;
+    }
+    final expiry = pkg.expiryDate;
+    if (expiry == null || expiry.isEmpty) return true;
+    final parsedExpiry = DateTime.tryParse(expiry);
+    if (parsedExpiry == null) return true;
+    final today = DateTime.now();
+    final expiryDate = DateTime(
+      parsedExpiry.year,
+      parsedExpiry.month,
+      parsedExpiry.day,
+    );
+    final currentDate = DateTime(today.year, today.month, today.day);
+    return !expiryDate.isBefore(currentDate);
+  }
+
+  UserMembership? _currentBookableMembership() {
+    final membership = ref.watch(activeMembershipProvider).value;
+    if (membership == null || !membership.isActive) return null;
+    final parsedEndDate = DateTime.tryParse(membership.endDate);
+    if (parsedEndDate == null) return membership;
+    final today = DateTime.now();
+    final currentDate = DateTime(today.year, today.month, today.day);
+    final endDate = DateTime(
+      parsedEndDate.year,
+      parsedEndDate.month,
+      parsedEndDate.day,
+    );
+    if (endDate.isBefore(currentDate)) return null;
+    return membership;
   }
 
   Future<void> _loadSchedule() async {
@@ -192,7 +244,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       isLoading = true;
       // Reset selections
       selectedDuration = null;
+      selectedDate = null;
+      selectedTime = null;
       selectedStaff = null;
+      _selectedPackage = null;
+      _staffAvailabilityFailed = false;
     });
 
     await Future.wait([_fetchServiceDetails(), _loadSchedule()]);
@@ -212,6 +268,44 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
 
     return dateTime.toIso8601String().replaceFirst('T', ' ').substring(0, 19);
+  }
+
+  /// Fetch staff who are actually available at the selected slot and update staffList.
+  Future<void> _fetchAvailableStaffForSelectedSlot() async {
+    if (selectedDate == null || selectedTime == null || selectedDuration == null ||
+        selectedBranchIndex == null || selectedBranchIndex! >= branches.length) return;
+    final branchId = branches[selectedBranchIndex!].id;
+    final scheduledStart = _formatDateTimeForApi();
+    if (scheduledStart == null) return;
+    try {
+      final list = await ref.read(apiProvider).getAvailableStaff(
+        branchId: branchId,
+        serviceId: widget.service.id,
+        scheduledStart: scheduledStart,
+        durationMinutes: selectedDuration!,
+      );
+      if (!mounted) return;
+      final newList = list.map<Staff?>((s) => s).toList();
+      setState(() {
+        staffList = newList;
+        _staffAvailabilityFailed = false;
+        if (selectedStaff != null &&
+            !newList.any((s) => s?.user.id == selectedStaff?.user.id)) {
+          selectedStaff = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        staffList = [];
+        selectedStaff = null;
+        _staffAvailabilityFailed = true;
+      });
+      AppSnackBar.show(
+        context,
+        'Could not verify staff availability right now. You can still continue without selecting a staff member.',
+      );
+    }
   }
 
   // Validate booking
@@ -317,8 +411,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       (d) => d?.minutes == selectedDuration,
       orElse: () => durations[0],
     );
+    final eligiblePackages = _myPackages.where(_isPackageEligibleForBooking).toList();
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.82,
+      ),
       padding: EdgeInsets.only(
         left: 4.w,
         right: 4.w,
@@ -350,282 +448,278 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             ),
           ),
           SizedBox(height: 2.h),
-
-          Container(
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.dividerColor),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 8.w,
-                      height: 8.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        SolarIconsOutline.windowFrame,
-                        color: AppColors.info,
-                        size: 16.sp,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        widget.service.name,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+          Flexible(
+            child: SingleChildScrollView(
+              child: Container(
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.dividerColor),
                 ),
-                SizedBox(height: 2.h),
-
-                Container(height: 0.5, color: AppColors.dividerColor),
-                SizedBox(height: 2.h),
-
-                Column(
+                child: Column(
                   children: [
-                    _buildConfirmationDetail(
-                      icon: SolarIconsOutline.calendar,
-                      label: 'Date',
-                      value:
-                          '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
-                    ),
-                    SizedBox(height: 1.5.h),
-                    _buildConfirmationDetail(
-                      icon: SolarIconsOutline.clockCircle,
-                      label: 'Time',
-                      value: _formatHour(selectedTime!.hour),
-                    ),
-                    SizedBox(height: 1.5.h),
-                    _buildConfirmationDetail(
-                      icon: Icons.schedule,
-                      label: 'Duration',
-                      value: '${selectedDuration} minutes',
-                    ),
-                    SizedBox(height: 1.5.h),
-                    _buildConfirmationDetail(
-                      icon: Icons.people,
-                      label: 'People',
-                      value:
-                          '${selectedPeopleCount} ${selectedPeopleCount == 1 ? 'person' : 'people'}',
-                    ),
-                    SizedBox(height: 1.5.h),
-                    if (selectedStaff != null)
-                      _buildConfirmationDetail(
-                        icon: Icons.person,
-                        label: 'Staff Member',
-                        value:
-                            '${selectedStaff!.user.firstName} ${selectedStaff!.user.lastName}',
-                      ),
-                    if (selectedStaff != null) SizedBox(height: 1.5.h),
-                    _buildConfirmationDetail(
-                      icon: Icons.location_on,
-                      label: 'Branch',
-                      value: branches[selectedBranchIndex!].name,
-                    ),
-                    if (notes.isNotEmpty) SizedBox(height: 1.5.h),
-                    if (notes.isNotEmpty)
-                      _buildConfirmationDetail(
-                        icon: Icons.note,
-                        label: 'Notes',
-                        value: notes.length > 30
-                            ? '${notes.substring(0, 30)}...'
-                            : notes,
-                      ),
-                  ],
-                ),
-                SizedBox(height: 2.h),
-
-                // Package credit selector
-                if (_myPackages.isNotEmpty) ...[
-                  Container(height: 0.5, color: AppColors.dividerColor),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Apply Package Credit',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
-                  // None option
-                  StatefulBuilder(
-                    builder: (ctx, setInner) => Column(
+                    Row(
                       children: [
-                        GestureDetector(
-                          onTap: () => setInner(() => _selectedPackage = null),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 3.w,
-                              vertical: 1.2.h,
-                            ),
-                            margin: EdgeInsets.only(bottom: 1.h),
-                            decoration: BoxDecoration(
-                              color: _selectedPackage == null
-                                  ? AppColors.primary.withOpacity(0.2)
-                                  : AppColors.surfaceLight,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _selectedPackage == null
-                                    ? AppColors.primary
-                                    : AppColors.dividerColor,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.close,
-                                  size: 14.sp,
-                                  color: _selectedPackage == null
-                                      ? AppColors.primary
-                                      : AppColors.textTertiary,
-                                ),
-                                SizedBox(width: 2.w),
-                                Text(
-                                  'No package credit',
-                                  style: TextStyle(
-                                    color: _selectedPackage == null
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                    fontSize: 13.sp,
-                                  ),
-                                ),
-                              ],
+                        Container(
+                          width: 8.w,
+                          height: 8.w,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            SolarIconsOutline.windowFrame,
+                            color: AppColors.info,
+                            size: 16.sp,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            widget.service.name,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        ..._myPackages.map((pkg) {
-                          final isSelected = _selectedPackage?.id == pkg.id;
-                          return GestureDetector(
-                            onTap: () => setInner(() => _selectedPackage = pkg),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 3.w,
-                                vertical: 1.2.h,
-                              ),
-                              margin: EdgeInsets.only(bottom: 1.h),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primary.withOpacity(0.12)
-                                    : AppColors.surfaceLight,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.dividerColor,
+                      ],
+                    ),
+                    SizedBox(height: 2.h),
+                    Container(height: 0.5, color: AppColors.dividerColor),
+                    SizedBox(height: 2.h),
+                    Column(
+                      children: [
+                        _buildConfirmationDetail(
+                          icon: SolarIconsOutline.calendar,
+                          label: 'Date',
+                          value:
+                              '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                        ),
+                        SizedBox(height: 1.5.h),
+                        _buildConfirmationDetail(
+                          icon: SolarIconsOutline.clockCircle,
+                          label: 'Time',
+                          value: _formatHour(selectedTime!.hour),
+                        ),
+                        SizedBox(height: 1.5.h),
+                        _buildConfirmationDetail(
+                          icon: Icons.schedule,
+                          label: 'Duration',
+                          value: '$selectedDuration minutes',
+                        ),
+                        SizedBox(height: 1.5.h),
+                        _buildConfirmationDetail(
+                          icon: Icons.people,
+                          label: 'People',
+                          value:
+                              '$selectedPeopleCount ${selectedPeopleCount == 1 ? 'person' : 'people'}',
+                        ),
+                        SizedBox(height: 1.5.h),
+                        if (selectedStaff != null)
+                          _buildConfirmationDetail(
+                            icon: Icons.person,
+                            label: 'Staff Member',
+                            value:
+                                '${selectedStaff!.user.firstName} ${selectedStaff!.user.lastName}',
+                          ),
+                        if (selectedStaff != null) SizedBox(height: 1.5.h),
+                        _buildConfirmationDetail(
+                          icon: Icons.location_on,
+                          label: 'Branch',
+                          value: branches[selectedBranchIndex!].name,
+                        ),
+                        if (notes.isNotEmpty) SizedBox(height: 1.5.h),
+                        if (notes.isNotEmpty)
+                          _buildConfirmationDetail(
+                            icon: Icons.note,
+                            label: 'Notes',
+                            value: notes.length > 30
+                                ? '${notes.substring(0, 30)}...'
+                                : notes,
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 2.h),
+                    if (eligiblePackages.isNotEmpty) ...[
+                      Container(height: 0.5, color: AppColors.dividerColor),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'Apply Package Credit',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      StatefulBuilder(
+                        builder: (ctx, setInner) => Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () => setInner(() => _selectedPackage = null),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 3.w,
+                                  vertical: 1.2.h,
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.card_giftcard,
-                                    size: 14.sp,
-                                    color: isSelected
+                                margin: EdgeInsets.only(bottom: 1.h),
+                                decoration: BoxDecoration(
+                                  color: _selectedPackage == null
+                                      ? AppColors.primary.withOpacity(0.2)
+                                      : AppColors.surfaceLight,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _selectedPackage == null
                                         ? AppColors.primary
-                                        : AppColors.textTertiary,
+                                        : AppColors.dividerColor,
                                   ),
-                                  SizedBox(width: 2.w),
-                                  Expanded(
-                                    child: Text(
-                                      '${pkg.package?.name ?? 'Package'} · ${pkg.creditsRemaining} credit${pkg.creditsRemaining == 1 ? '' : 's'} left',
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.close,
+                                      size: 14.sp,
+                                      color: _selectedPackage == null
+                                          ? AppColors.info
+                                          : AppColors.textTertiary,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      'No package credit',
                                       style: TextStyle(
-                                        color: isSelected
-                                            ? AppColors.primary
+                                        color: _selectedPackage == null
+                                            ? AppColors.info
                                             : AppColors.textSecondary,
                                         fontSize: 13.sp,
                                       ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            ...eligiblePackages.map((pkg) {
+                              final isSelected = _selectedPackage?.id == pkg.id;
+                              return GestureDetector(
+                                onTap: () => setInner(() => _selectedPackage = pkg),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 3.w,
+                                    vertical: 1.2.h,
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
-                ],
-
-                Container(height: 0.5, color: AppColors.dividerColor),
-                SizedBox(height: 2.h),
-
-                Builder(
-                  builder: (_) {
-                    final totalInfo = _getDisplayTotalWithMembership(
-                      selectedDurationData?.price,
-                      selectedPeopleCount ?? 1,
-                    );
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                                  margin: EdgeInsets.only(bottom: 1.h),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary.withOpacity(0.12)
+                                        : AppColors.surfaceLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.dividerColor,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.card_giftcard,
+                                        size: 14.sp,
+                                        color: isSelected
+                                            ? AppColors.info
+                                            : AppColors.textTertiary,
+                                      ),
+                                      SizedBox(width: 2.w),
+                                      Expanded(
+                                        child: Text(
+                                          '${pkg.package?.name ?? 'Package'} · ${pkg.creditsRemaining} credit${pkg.creditsRemaining == 1 ? '' : 's'} left',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? AppColors.info
+                                                : AppColors.textSecondary,
+                                            fontSize: 13.sp,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                    ],
+                    Container(height: 0.5, color: AppColors.dividerColor),
+                    SizedBox(height: 2.h),
+                    Builder(
+                      builder: (_) {
+                        final totalInfo = _getDisplayTotalWithMembershipAndPackage(
+                          selectedDurationData?.price,
+                          selectedPeopleCount ?? 1,
+                        );
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Total Amount',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14.sp,
-                              ),
-                            ),
-                            if (totalInfo.$3 != null)
-                              Padding(
-                                padding: EdgeInsets.only(top: 0.3.h),
-                                child: Text(
-                                  totalInfo.$3!,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total Amount',
                                   style: TextStyle(
-                                    color: AppColors.success,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14.sp,
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (totalInfo.$2 != null)
-                              Text(
-                                totalInfo.$2!,
-                                style: TextStyle(
-                                  color: AppColors.textTertiary,
-                                  fontSize: 12.sp,
-                                  decoration: TextDecoration.lineThrough,
+                                if (totalInfo.$3 != null)
+                                  Padding(
+                                    padding: EdgeInsets.only(top: 0.3.h),
+                                    child: Text(
+                                      totalInfo.$3!,
+                                      style: TextStyle(
+                                        color: AppColors.success,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (totalInfo.$2 != null)
+                                  Text(
+                                    totalInfo.$2!,
+                                    style: TextStyle(
+                                      color: AppColors.textTertiary,
+                                      fontSize: 12.sp,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                Text(
+                                  totalInfo.$1,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            Text(
-                              totalInfo.$1,
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-          SizedBox(height: 3.h),
+          SizedBox(height: 2.h),
 
           Row(
             children: [
@@ -1092,7 +1186,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             : 'Unable to Load Service',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                           height: 1.2,
@@ -1184,7 +1278,27 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     SizedBox(width: 3.w),
                     Expanded(
                       child: GestureDetector(
-                        onTap: _showBranchSelectionModal,
+                        onTap: () {
+                          final selectedBranch =
+                              selectedBranchIndex != null &&
+                                  selectedBranchIndex! < branches.length
+                              ? branches[selectedBranchIndex!]
+                              : null;
+                          if (selectedBranch == null) return;
+                          BranchSelector.showSelectionModal(
+                            context: context,
+                            branches: branches,
+                            selectedBranch: selectedBranch,
+                            onSelected: (branch) async {
+                              final newBranchIndex = branches.indexWhere(
+                                (b) => b.id == branch.id,
+                              );
+                              if (newBranchIndex != -1) {
+                                await _onBranchChanged(newBranchIndex);
+                              }
+                            },
+                          );
+                        },
                         child: Container(
                           padding: EdgeInsets.symmetric(vertical: 2.h),
                           decoration: BoxDecoration(
@@ -1258,6 +1372,38 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 SizedBox(height: 2.h),
                 _buildDurationSelector(),
                 if (staffList.isNotEmpty) _buildStaffSelector(),
+                if (selectedDate != null &&
+                    selectedTime != null &&
+                    selectedDuration != null &&
+                    staffList.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 2.h),
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: _staffAvailabilityFailed
+                            ? AppColors.warning.withOpacity(0.08)
+                            : AppColors.info.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _staffAvailabilityFailed
+                              ? AppColors.warning.withOpacity(0.25)
+                              : AppColors.info.withOpacity(0.25),
+                        ),
+                      ),
+                      child: Text(
+                        _staffAvailabilityFailed
+                            ? 'Staff availability could not be verified for this slot. Continue without selecting a staff member if you want the branch to handle assignment.'
+                            : 'No specific staff are currently available for this slot. If the branch fallback is enabled, booking can still continue without selecting a staff member.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
                 _buildNotesField(),
                 SizedBox(height: 14.h),
               ],
@@ -1360,69 +1506,21 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   Widget _buildBranchSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'SELECTED BRANCH',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12.sp,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        ),
-        SizedBox(height: 1.h),
-        GestureDetector(
-          onTap: _showBranchSelectionModal,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.info),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  SolarIconsBold.pointOnMap,
-                  color: AppColors.strokeBorder,
-                  size: 20.sp,
-                ),
-                SizedBox(width: 4.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        branches[selectedBranchIndex ?? 0].name,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                      SizedBox(height: 0.5.h),
-                      Text(
-                        branches[selectedBranchIndex ?? 0].address,
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.expand_more,
-                  color: AppColors.strokeBorder,
-                  size: 20.sp,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    final selectedBranch =
+        selectedBranchIndex != null && selectedBranchIndex! < branches.length
+        ? branches[selectedBranchIndex!]
+        : null;
+
+    return BranchSelector(
+      title: 'SELECTED BRANCH',
+      branches: branches,
+      selectedBranch: selectedBranch,
+      onSelected: (branch) async {
+        final newBranchIndex = branches.indexWhere((b) => b.id == branch.id);
+        if (newBranchIndex != -1) {
+          await _onBranchChanged(newBranchIndex);
+        }
+      },
     );
   }
 
@@ -1657,6 +1755,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               setState(() {
                 selectedDate = pickedDate;
                 selectedTime = null; // reset time when date changes
+                selectedStaff = null;
+                staffList = List<Staff?>.from(_allQualifiedStaff);
+                _staffAvailabilityFailed = false;
               });
             }
           },
@@ -1739,15 +1840,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     return '$p EGP';
   }
 
-  /// Best membership discount % (0–100) for a service. Matches backend logic: ALL, SERVICE, CATEGORY.
+  /// Best membership discount % (0–100) for a service using relation targets.
   num _bestMembershipDiscountForService(UserMembership? membership, int serviceId, int categoryId) {
     if (membership == null || membership.plan == null) return 0;
     num best = 0;
     for (final b in membership.plan!.benefits) {
-      final applies = b.targetType == 'ALL' ||
-          (b.targetType == 'SERVICE' && b.targetId == serviceId) ||
-          (b.targetType == 'CATEGORY' && b.targetId == categoryId);
-      if (!applies) continue;
+      if (!b.appliesTo(serviceId: serviceId, categoryId: categoryId)) continue;
       if (b.benefitType == 'UNLIMITED_ACCESS') return 100;
       if (b.benefitType == 'DISCOUNT' && b.value != null && b.value! > best) best = b.value!;
     }
@@ -1760,7 +1858,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     int participantCount,
   ) {
     final baseTotal = (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
-    final membership = ref.watch(activeMembershipProvider).value;
+    final membership = _currentBookableMembership();
     final discountPct = _bestMembershipDiscountForService(
       membership,
       widget.service.id,
@@ -1772,6 +1870,42 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     if (discountPct > 0) {
       final discounted = baseTotal * (1 - discountPct / 100);
       return ('EGP ${discounted.toStringAsFixed(0)}', 'EGP ${baseTotal.toStringAsFixed(0)}', null);
+    }
+    return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
+  }
+
+  /// Best of membership vs selected package (matches backend: no stacking, higher % wins).
+  /// Package only applies if user selected one and it has credits.
+  (String display, String? original, String? label) _getDisplayTotalWithMembershipAndPackage(
+    String? priceStr,
+    int participantCount,
+  ) {
+    final baseTotal = (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
+    final membership = _currentBookableMembership();
+    final membershipPct = _bestMembershipDiscountForService(
+      membership,
+      widget.service.id,
+      widget.service.category.id,
+    );
+    final packagePct = _selectedPackage != null &&
+            _selectedPackage!.creditsRemaining > 0 &&
+            _selectedPackage!.package != null
+        ? (_selectedPackage!.package!.discountPercentage ?? 0).toDouble()
+        : 0.0;
+
+    // Backend rule: UNLIMITED_ACCESS (100%) wins; else best of membership % vs package %
+    if (membershipPct >= 100) {
+      return ('Free', baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null, 'Included in your membership');
+    }
+    final bool packageWins = packagePct > membershipPct;
+    final num bestPct = packageWins ? packagePct : membershipPct;
+    if (bestPct > 0) {
+      final discounted = baseTotal * (1 - bestPct / 100);
+      final originalStr = 'EGP ${baseTotal.toStringAsFixed(0)}';
+      final label = packageWins
+          ? '${packagePct.toInt()}% off with package'
+          : (membershipPct > 0 ? '${membershipPct.toInt()}% off with membership' : null);
+      return ('EGP ${discounted.toStringAsFixed(0)}', originalStr, label);
     }
     return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
   }
@@ -1925,6 +2059,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                           () => selectedTime = TimeOfDay(hour: hour, minute: 0),
                         );
                         Navigator.pop(sheetContext);
+                        _fetchAvailableStaffForSelectedSlot();
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -2107,7 +2242,13 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           children: durations.where((d) => d != null).map((duration) {
             final isSelected = selectedDuration == duration!.minutes;
             return GestureDetector(
-              onTap: () => setState(() => selectedDuration = duration.minutes),
+                onTap: () => setState(() {
+                  selectedDuration = duration.minutes;
+                  selectedTime = null; // Re-pick time so it stays within branch hours for new duration
+                  selectedStaff = null;
+                  staffList = List<Staff?>.from(_allQualifiedStaff);
+                  _staffAvailabilityFailed = false;
+                }),
               child: Container(
                 margin: EdgeInsets.only(bottom: 2.h),
                 padding: EdgeInsets.all(4.w),
@@ -2528,109 +2669,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showBranchSelectionModal() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(4.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 12.w,
-                  height: 0.5.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.dividerColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                'Select Branch',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 2.h),
-              ...List.generate(branches.length, (index) {
-                final branch = branches[index];
-                return GestureDetector(
-                  onTap: () async {
-                    Navigator.pop(context);
-                    if (index != selectedBranchIndex) {
-                      await _onBranchChanged(index);
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 2.h),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.dividerColor,
-                          width: 0.5,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: index == selectedBranchIndex
-                              ? AppColors.info
-                              : AppColors.textSecondary,
-                          size: 18.sp,
-                        ),
-                        SizedBox(width: 3.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                branch.name,
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 14.sp,
-                                  fontWeight: index == selectedBranchIndex
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                              SizedBox(height: 0.5.h),
-                              Text(
-                                branch.address,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (index == selectedBranchIndex)
-                          Icon(Icons.check, color: AppColors.info, size: 20.sp),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              SizedBox(height: 4.h),
-            ],
-          ),
-        );
-      },
     );
   }
 

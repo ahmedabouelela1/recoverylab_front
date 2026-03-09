@@ -1,35 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:recoverylab_front/components/shimmer_box.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/services/service_category.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 class AllCategoriesPage extends ConsumerStatefulWidget {
-  final List<ServiceCategory> categories;
-  const AllCategoriesPage({super.key, required this.categories});
+  /// Pre-loaded categories from home, or null to load from API (shows shimmer).
+  final List<ServiceCategory?>? categories;
+  const AllCategoriesPage({super.key, this.categories});
 
   @override
   ConsumerState<AllCategoriesPage> createState() => _AllCategoriesPageState();
 }
 
-class _AllCategoriesPageState extends ConsumerState<AllCategoriesPage> {
+class _AllCategoriesPageState extends ConsumerState<AllCategoriesPage>
+    with TickerProviderStateMixin {
+  List<ServiceCategory> _categories = [];
   late List<ServiceCategory> filteredCategories;
   String searchQuery = '';
+  bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  AnimationController? _shimmerController;
+  Animation<double>? _shimmerAnim;
 
   @override
   void initState() {
     super.initState();
-    filteredCategories = widget.categories;
+    final raw = widget.categories;
+    if (raw != null && raw.isNotEmpty) {
+      _categories = raw.whereType<ServiceCategory>().toList();
+      filteredCategories = List.from(_categories);
+    } else {
+      filteredCategories = [];
+      _isLoading = true;
+      _shimmerController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1600),
+      )..repeat();
+      _shimmerAnim = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOut),
+      );
+      _loadCategories();
+    }
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final home = await ref.read(apiProvider).gethome();
+      if (!mounted) return;
+      final categories =
+          (home['data']['categories'] as List<dynamic>?)
+              ?.map((e) => e as ServiceCategory)
+              .toList() ??
+          [];
+      setState(() {
+        _categories = categories;
+        filteredCategories = List.from(categories);
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _categories = [];
+        filteredCategories = [];
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _shimmerController?.dispose();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -46,9 +94,9 @@ class _AllCategoriesPageState extends ConsumerState<AllCategoriesPage> {
     setState(() {
       searchQuery = query;
       if (query.isEmpty) {
-        filteredCategories = widget.categories;
+        filteredCategories = List.from(_categories);
       } else {
-        filteredCategories = widget.categories
+        filteredCategories = _categories
             .where(
               (category) =>
                   category.name.toLowerCase().contains(query.toLowerCase()),
@@ -85,7 +133,12 @@ class _AllCategoriesPageState extends ConsumerState<AllCategoriesPage> {
           ),
         ),
       ),
-      body: CustomScrollView(
+      body: _isLoading ? _buildShimmerBody() : _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return CustomScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -192,7 +245,76 @@ class _AllCategoriesPageState extends ConsumerState<AllCategoriesPage> {
             ),
           ),
         ],
-      ),
+      );
+  }
+
+  Widget _buildShimmerBody() {
+    final anim = _shimmerAnim;
+    if (anim == null) return const SizedBox.shrink();
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(5.w, 2.h, 5.w, 2.h),
+            child: ShimmerBox(
+              animation: anim,
+              child: Container(
+                height: 6.h,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: 5.w),
+          sliver: SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 1.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 28.w, height: 2.h),
+                  ),
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(
+                        width: 22.w, height: 2.5.h, radius: 20),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: 5.w),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 3.w,
+              mainAxisSpacing: 3.w,
+              childAspectRatio: 1,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => ShimmerBox(
+                animation: anim,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              childCount: 6,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

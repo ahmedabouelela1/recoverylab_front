@@ -116,19 +116,19 @@ class _EditHealthSurveyPageState extends ConsumerState<EditHealthSurveyPage>
     final userId = ref.read(userSessionProvider).user?.id;
     try {
       final api = ref.read(apiProvider);
-      final results = await Future.wait([
-        api.getQuestions(),
-        if (userId != null) api.getUserAnswers(userId),
-      ]);
-
-      final questions = (results[0] as List<Map<String, dynamic>>)
+      final questionsRaw = await api.getQuestions();
+      final questions = questionsRaw
           .map((j) => _Question.fromJson(j))
           .toList();
 
-      final Map<int, List<Map<String, dynamic>>> existing =
-          (results.length > 1 && results[1] != null)
-              ? results[1] as Map<int, List<Map<String, dynamic>>>
-              : {};
+      Map<int, List<Map<String, dynamic>>> existing = {};
+      if (userId != null) {
+        try {
+          existing = await api.getUserAnswers(userId);
+        } catch (_) {
+          // Use empty existing if user-answers fails (e.g. 401 or no data)
+        }
+      }
 
       // Pre-fill _answers from existing server data.
       final Map<int, dynamic> prefilled = {};

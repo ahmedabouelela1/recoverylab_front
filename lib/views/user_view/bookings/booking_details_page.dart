@@ -695,7 +695,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                 ),
 
                 // Staff
-                if (apt.staffId != null) ...[
+                ...[
                   SizedBox(height: 2.h),
                   Container(height: 0.5, color: AppColors.dividerColor),
                   SizedBox(height: 2.h),
@@ -778,6 +778,17 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+                        if (apt.basePrice > apt.finalPrice && apt.basePrice > 0)
+                          Text(
+                            'EGP ${(apt.basePrice * apt.participantCount).toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.textTertiary,
+                              fontSize: 12.sp,
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: AppColors.textTertiary,
+                            ),
+                          ),
+                        if (apt.basePrice > apt.finalPrice && apt.basePrice > 0) SizedBox(height: 0.2.h),
                         Text(
                           booking.formatChargedAmount(apt.finalPrice * apt.participantCount),
                           style: TextStyle(
@@ -852,7 +863,27 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         border: Border.all(color: AppColors.dividerColor, width: 0.8),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (booking.isCombo) ...[
+            Row(
+              children: [
+                Icon(SolarIconsOutline.widget, size: 16.sp, color: AppColors.info),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Text(
+                    'Combo booking — one fixed price for all sessions',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 1.5.h),
+          ],
           _priceRow(
             icon: SolarIconsOutline.wallet,
             label: 'Subtotal',
@@ -914,6 +945,17 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                         booking.freeReasonLabel!,
                         style: TextStyle(
                           color: AppColors.success,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (booking.isCombo && booking.freeReasonLabel == null) ...[
+                      SizedBox(height: 0.3.h),
+                      Text(
+                        'Paid as combo',
+                        style: TextStyle(
+                          color: AppColors.info,
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                         ),

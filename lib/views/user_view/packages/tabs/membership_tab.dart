@@ -6,6 +6,8 @@ import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:sizer/sizer.dart';
 import '../widgets/package_card.dart';
+import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/components/shimmer_box.dart';
 
 class MembershipTab extends ConsumerStatefulWidget {
   const MembershipTab({super.key});
@@ -14,14 +16,30 @@ class MembershipTab extends ConsumerStatefulWidget {
   ConsumerState<MembershipTab> createState() => _MembershipTabState();
 }
 
-class _MembershipTabState extends ConsumerState<MembershipTab> {
+class _MembershipTabState extends ConsumerState<MembershipTab>
+    with TickerProviderStateMixin {
   List<MembershipPlan> _plans = [];
   bool _loading = true;
+  AnimationController? _shimmerController;
+  Animation<double>? _shimmerAnim;
 
   @override
   void initState() {
     super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmerAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOut),
+    );
     _fetch();
+  }
+
+  @override
+  void dispose() {
+    _shimmerController?.dispose();
+    super.dispose();
   }
 
   Future<void> _fetch() async {
@@ -43,13 +61,13 @@ class _MembershipTabState extends ConsumerState<MembershipTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildShimmerList();
     }
     if (_plans.isEmpty) {
       return Center(
         child: Text(
           'No memberships available',
-          style: TextStyle(color: Colors.grey, fontSize: 14.sp),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
         ),
       );
     }
@@ -118,6 +136,68 @@ class _MembershipTabState extends ConsumerState<MembershipTab> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildShimmerList() {
+    final anim = _shimmerAnim;
+    if (anim == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.w),
+      itemCount: 3,
+      physics: const NeverScrollableScrollPhysics(),
+      itemBuilder: (_, __) => _shimmerCard(anim),
+    );
+  }
+
+  Widget _shimmerCard(Animation<double> anim) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 4.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShimmerBox(
+              animation: anim,
+              child: Container(
+                height: 20.h,
+                width: double.infinity,
+                color: AppColors.surfaceLight,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 50.w, height: 1.2.h),
+                  ),
+                  SizedBox(height: 0.8.h),
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 70.w, height: 1.h),
+                  ),
+                  SizedBox(height: 0.8.h),
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 30.w, height: 2.h, radius: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
 
@@ -15,19 +16,6 @@ class BookingCard extends StatelessWidget {
     if (booking.isUpcoming) return AppColors.info;
     if (booking.isCompleted) return AppColors.success;
     return AppColors.error;
-  }
-
-  Color get _paymentColor {
-    switch (booking.paymentStatus) {
-      case 'PAID':
-        return AppColors.success;
-      case 'PENDING':
-        return AppColors.warning;
-      case 'REFUNDED':
-        return AppColors.info;
-      default:
-        return AppColors.textTertiary;
-    }
   }
 
   IconData get _statusIcon {
@@ -120,7 +108,7 @@ class BookingCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Top: Booking ID + status + payment
+                    // Top: Booking ID + booking status only
                     Positioned(
                       top: 12,
                       left: 14,
@@ -128,15 +116,17 @@ class BookingCard extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _glassChip('#BK${booking.id}', AppColors.info),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _statusPill(),
-                              SizedBox(width: 1.5.w),
-                              _paymentPill(),
+                              _glassChip('#BK${booking.id}', AppColors.primary),
+                              if (booking.isCombo) ...[
+                                SizedBox(width: 2.w),
+                                _glassChip('COMBO', AppColors.info),
+                              ],
                             ],
                           ),
+                          _statusPill(),
                         ],
                       ),
                     ),
@@ -284,80 +274,110 @@ class BookingCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Price (left)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'TOTAL PRICE',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        SizedBox(height: 0.4.h),
-                        if (hasDiscount)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            'EGP ${booking.originalTotal.toStringAsFixed(0)}',
+                            'TOTAL PRICE',
                             style: TextStyle(
-                              color: AppColors.textTertiary,
+                              color: AppColors.textSecondary,
                               fontSize: 11.sp,
-                              decoration: TextDecoration.lineThrough,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+                          SizedBox(height: 0.4.h),
+                          if (hasDiscount)
                             Text(
-                              booking.displayFinalTotal,
+                              'EGP ${booking.originalTotal.toStringAsFixed(0)}',
                               style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 21.sp,
-                                fontWeight: FontWeight.bold,
-                                height: 1,
+                                color: AppColors.textTertiary,
+                                fontSize: 13.sp,
+                                decoration: TextDecoration.lineThrough,
+                                decorationThickness: 2.2,
+                                decorationColor: AppColors.textTertiary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (hasDiscount) SizedBox(height: 0.2.h),
+                          Text(
+                            booking.displayFinalTotal,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (booking.freeReasonLabel != null) ...[
+                            SizedBox(height: 0.3.h),
+                            Text(
+                              booking.freeReasonLabel!,
+                              style: TextStyle(
+                                color: AppColors.success,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (booking.isCombo && booking.freeReasonLabel == null) ...[
+                            SizedBox(height: 0.3.h),
+                            Text(
+                              'Combo — fixed price for all sessions',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (onCancelPressed != null) ...[
+                            Expanded(
+                              child: AppButton(
+                                label: 'Cancel',
+                                variant: AppButtonVariant.stroke,
+                                size: AppButtonSize.medium,
+                                color: AppColors.surfaceLight,
+                                textColor: AppColors.error,
+                                borderColor: AppColors.error.withOpacity(0.5),
+                                borderRadius: 16,
+                                onPressed: onCancelPressed,
                               ),
                             ),
-                            if (hasDiscount) ...[
-                              SizedBox(width: 2.w),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'SAVED',
-                                  style: TextStyle(
-                                    color: AppColors.success,
-                                    fontSize: 9.sp,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
+                            SizedBox(width: 2.w),
+                          ],
+                          Expanded(
+                            child: AppButton(
+                              label: 'Details',
+                              variant: AppButtonVariant.stroke,
+                              size: AppButtonSize.medium,
+                              color: AppColors.surfaceLight,
+                              textColor: AppColors.info,
+                              borderColor: AppColors.info.withOpacity(0.5),
+                              borderRadius: 16,
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      BookingDetailsPage(booking: booking),
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Buttons (far right)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (onCancelPressed != null) ...[
-                          _cancelBtn(),
-                          SizedBox(width: 2.w),
+                            ),
+                          ),
                         ],
-                        _detailsBtn(context),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -375,7 +395,7 @@ class BookingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
+        color: AppColors.primary.withOpacity(0.45),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withOpacity(0.4), width: 0.8),
       ),
@@ -383,7 +403,7 @@ class BookingCard extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 10.sp,
+          fontSize: 12.sp,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.3,
         ),
@@ -417,25 +437,6 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  Widget _paymentPill() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: _paymentColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _paymentColor.withOpacity(0.4), width: 0.8),
-      ),
-      child: Text(
-        booking.paymentStatus,
-        style: TextStyle(
-          color: _paymentColor,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _infoItem({required IconData icon, required String label}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -461,66 +462,6 @@ class BookingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.textTertiary.withOpacity(0.4),
         shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  Widget _detailsBtn(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BookingDetailsPage(booking: booking)),
-      ),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.4.h),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Details',
-              style: TextStyle(
-                color: AppColors.secondary,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(width: 1.5.w),
-            Icon(Icons.arrow_forward, color: AppColors.secondary, size: 14.sp),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _cancelBtn() {
-    return GestureDetector(
-      onTap: onCancelPressed,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.4.h),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.error.withOpacity(0.5), width: 1),
-        ),
-        child: Text(
-          'Cancel',
-          style: TextStyle(
-            color: AppColors.error,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ),
     );
   }

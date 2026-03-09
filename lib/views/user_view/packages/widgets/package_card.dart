@@ -173,35 +173,45 @@ class PackageCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'FROM',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'FROM',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 0.3.h),
-                          Text(
-                            'EGP $price',
-                            style: TextStyle(
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                            SizedBox(height: 0.3.h),
+                            Text(
+                              'EGP $price',
+                              style: TextStyle(
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      AppButton(
-                        label: 'Book Now',
-                        onPressed: onBookNow,
-                        size: AppButtonSize.medium,
-                        borderRadius: 100,
-                        width: 32.w,
+                      SizedBox(width: 2.w),
+                      Flexible(
+                        child: AppButton(
+                          label: 'Book Now',
+                          variant: AppButtonVariant.stroke,
+                          size: AppButtonSize.medium,
+                          color: AppColors.info.withOpacity(0.12),
+                          textColor: AppColors.info,
+                          borderColor: AppColors.info.withOpacity(0.5),
+                          borderRadius: 16,
+                          onPressed: onBookNow,
+                        ),
                       ),
                     ],
                   ),
@@ -218,14 +228,14 @@ class PackageCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
+        color: AppColors.info.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.dividerColor, width: 0.8),
+        border: Border.all(color: AppColors.info.withOpacity(0.25), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.textTertiary, size: 12.sp),
+          Icon(icon, color: AppColors.info.withOpacity(0.9), size: 12.sp),
           SizedBox(width: 1.5.w),
           Text(
             label,

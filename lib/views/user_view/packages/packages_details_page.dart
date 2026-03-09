@@ -120,16 +120,7 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
 
   // ── Type-driven values ───────────────────────────────────────────────────
 
-  Color get _accentColor {
-    switch (widget.type) {
-      case PackageType.combo:
-        return AppColors.info;
-      case PackageType.membership:
-        return AppColors.success;
-      case PackageType.package:
-        return AppColors.primary;
-    }
-  }
+  Color get _accentColor => AppColors.info;
 
   String get _badgeLabel {
     switch (widget.type) {

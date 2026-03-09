@@ -59,7 +59,7 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          'My Wallet',
+          'My Subscriptions',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18.sp,
@@ -123,12 +123,12 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
                 margin: EdgeInsets.all(0.7.w),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.14)
+                      ? AppColors.info.withOpacity(0.14)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   border: isSelected
                       ? Border.all(
-                          color: AppColors.primary.withOpacity(0.35), width: 1)
+                          color: AppColors.info.withOpacity(0.35), width: 1)
                       : null,
                 ),
                 child: Center(
@@ -139,7 +139,7 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
-                          ? AppColors.primary
+                          ? AppColors.info
                           : AppColors.textSecondary,
                     ),
                   ),
@@ -162,7 +162,7 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
       );
     }
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: AppColors.info,
       onRefresh: _fetch,
       child: ListView.builder(
         padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
@@ -185,7 +185,7 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
       );
     }
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: AppColors.info,
       onRefresh: _fetch,
       child: ListView.builder(
         padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
@@ -247,7 +247,7 @@ class _MembershipCardState extends ConsumerState<_MembershipCard> {
   Color get _statusColor {
     switch (widget.membership.status) {
       case 'ACTIVE':
-        return AppColors.success;
+        return AppColors.info;
       case 'FROZEN':
         return AppColors.info;
       case 'EXPIRED':
@@ -306,7 +306,7 @@ class _MembershipCardState extends ConsumerState<_MembershipCard> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dividerColor),
+        border: Border.all(color: AppColors.info.withOpacity(0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,13 +366,13 @@ class _MembershipCardState extends ConsumerState<_MembershipCard> {
                   padding: EdgeInsets.symmetric(
                       horizontal: 2.5.w, vertical: 0.6.h),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.info.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     b.displayLabel,
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: AppColors.info,
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w600,
                     ),
@@ -392,10 +392,10 @@ class _MembershipCardState extends ConsumerState<_MembershipCard> {
                     : (m.isFrozen ? _unfreeze : _freeze),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: m.isFrozen
-                      ? AppColors.success
-                      : AppColors.primary.withOpacity(0.15),
+                      ? AppColors.info
+                      : AppColors.info.withOpacity(0.15),
                   foregroundColor:
-                      m.isFrozen ? Colors.white : AppColors.primary,
+                      m.isFrozen ? Colors.white : AppColors.info,
                   elevation: 0,
                   padding: EdgeInsets.symmetric(vertical: 1.5.h),
                   shape: RoundedRectangleBorder(
@@ -525,8 +525,8 @@ class _FreezeSheetState extends State<_FreezeSheet> {
             child: ElevatedButton(
               onPressed: () => widget.onConfirm(_weeks),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.secondary,
+                backgroundColor: AppColors.info,
+                foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 2.h),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
@@ -552,14 +552,14 @@ class _FreezeSheetState extends State<_FreezeSheet> {
         height: 10.w,
         decoration: BoxDecoration(
           color: onTap != null
-              ? AppColors.primary.withOpacity(0.15)
+              ? AppColors.info.withOpacity(0.15)
               : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           icon,
           size: 16.sp,
-          color: onTap != null ? AppColors.primary : AppColors.textTertiary,
+          color: onTap != null ? AppColors.info : AppColors.textTertiary,
         ),
       ),
     );
@@ -577,13 +577,18 @@ class _PackageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pkg = package.package;
     final pct = pkg?.discountPercentage;
+    final isUsedUp = package.status == 'USED_UP' || package.creditsRemaining <= 0;
+    final borderColor = isUsedUp
+        ? AppColors.textTertiary.withOpacity(0.4)
+        : AppColors.info.withOpacity(0.25);
+    final statusColor = isUsedUp ? AppColors.textTertiary : AppColors.info;
     return Container(
       margin: EdgeInsets.only(bottom: 2.h),
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dividerColor),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,15 +609,14 @@ class _PackageCard extends StatelessWidget {
                 padding:
                     EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: statusColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: AppColors.success.withOpacity(0.3)),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
                 ),
                 child: Text(
                   package.status,
                   style: TextStyle(
-                    color: AppColors.success,
+                    color: statusColor,
                     fontSize: 10.sp,
                     fontWeight: FontWeight.bold,
                   ),
@@ -625,7 +629,7 @@ class _PackageCard extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.confirmation_number_outlined,
-                  size: 14.sp, color: AppColors.primary),
+                  size: 14.sp, color: statusColor),
               SizedBox(width: 2.w),
               Text(
                 '${package.creditsRemaining} credit${package.creditsRemaining == 1 ? '' : 's'} remaining',

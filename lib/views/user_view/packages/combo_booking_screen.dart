@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
@@ -37,6 +38,31 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   int _participantCount = 1;
   String _notes = '';
   bool _isLoading = false;
+  BranchSchedule? _schedule;
+
+  /// Parse totalDuration string (e.g. "150 min" or "2h 30min") to total minutes.
+  int get _totalDurationMinutes {
+    final s = widget.totalDuration.trim();
+    // "150 min" or "90 min"
+    final minMatch = RegExp(r'(\d+)\s*min').firstMatch(s);
+    if (minMatch != null) return int.tryParse(minMatch.group(1) ?? '') ?? 90;
+    // "2h 30min" style
+    final hMatch = RegExp(r'(\d+)\s*h').firstMatch(s);
+    final mMatch = RegExp(r'(\d+)\s*m').firstMatch(s);
+    final h = hMatch != null ? int.tryParse(hMatch.group(1) ?? '') ?? 0 : 0;
+    final m = mMatch != null ? int.tryParse(mMatch.group(1) ?? '') ?? 0 : 0;
+    return h * 60 + m;
+  }
+
+  Future<void> _loadSchedule() async {
+    if (_selectedBranch == null || _selectedDate == null) return;
+    try {
+      final schedule = await ref.read(apiProvider).getBranchSchedule(_selectedBranch!.id);
+      if (mounted) setState(() => _schedule = schedule);
+    } catch (_) {
+      if (mounted) setState(() => _schedule = null);
+    }
+  }
 
   @override
   void initState() {
@@ -45,8 +71,8 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
     final user = ref.read(userSessionProvider).user;
     if (branches.isNotEmpty) {
       _selectedBranch = branches.firstWhere(
-        (b) => b?.id == user?.branchId,
-        orElse: () => branches.first!,
+        (b) => b.id == user?.branchId,
+        orElse: () => branches.first,
       );
     }
   }
@@ -70,28 +96,152 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       initialDate: now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 90)),
-      builder: (ctx, child) => Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: ColorScheme.light(
-            primary: AppColors.primary,
-            onPrimary: AppColors.secondary,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.info,
+              onPrimary: AppColors.background,
+            ),
+            dialogBackgroundColor: AppColors.background,
           ),
-          dialogBackgroundColor: AppColors.background,
-        ),
-        child: child!,
-      ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      _loadSchedule();
+    }
   }
 
   Future<void> _pickTime() async {
+    final date = _selectedDate;
+    final branch = _selectedBranch;
+    if (date == null || branch == null) {
+      AppSnackBar.show(context, 'Please select date and branch first.');
+      return;
+    }
+    await _loadSchedule();
+    if (!mounted) return;
+    final schedule = _schedule;
+    final slots = schedule?.slotsFor(date);
+    final totalMin = _totalDurationMinutes;
+    final durationHours = (totalMin / 60).ceil();
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+
+    if (schedule != null) {
+      if (slots == null || slots.isEmpty) {
+        AppSnackBar.show(
+          context,
+          schedule.specialDateFor(date)?.reason ?? 'Branch is closed on this date.',
+        );
+        return;
+      }
+      final closeHour = slots.last + 1;
+      final validStartHours = slots
+          .where((hour) => hour + durationHours <= closeHour)
+          .where((hour) => !isToday || hour > now.hour)
+          .toList();
+      if (validStartHours.isEmpty) {
+        AppSnackBar.show(
+          context,
+          schedule.specialDateFor(date)?.reason ?? 'No time slots available for this date (combo would end after branch closing).',
+        );
+        return;
+      }
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: AppColors.cardBackground,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(
+            left: 4.w,
+            right: 4.w,
+            top: 3.w,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 4.w,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 12.w,
+                  height: 0.5.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              SizedBox(height: 2.h),
+              Text(
+                'SELECT START TIME',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              SizedBox(height: 0.5.h),
+              Text(
+                'Combo must end by branch closing time',
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 11.sp),
+              ),
+              SizedBox(height: 2.h),
+              Wrap(
+                spacing: 2.w,
+                runSpacing: 1.5.h,
+                children: validStartHours.map((hour) {
+                  final isSelected = _selectedTime?.hour == hour;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedTime = TimeOfDay(hour: hour, minute: 0));
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.info.withOpacity(0.15) : AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? AppColors.info : AppColors.dividerColor,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Text(
+                        _formatHour(hour),
+                        style: TextStyle(
+                          color: isSelected ? AppColors.info : AppColors.textPrimary,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: 3.h),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    // No schedule: use system time picker (backend will validate)
     final picked = await showTimePicker(
       context: context,
-      initialTime: const TimeOfDay(hour: 10, minute: 0),
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 10, minute: 0),
       builder: (ctx, child) => Theme(
         data: ThemeData.light().copyWith(
           colorScheme: ColorScheme.light(
-            primary: AppColors.primary,
+            primary: AppColors.info,
             onPrimary: AppColors.secondary,
           ),
           dialogBackgroundColor: AppColors.background,
@@ -100,6 +250,12 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       ),
     );
     if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  String _formatHour(int hour) {
+    final period = hour < 12 ? 'AM' : 'PM';
+    final h = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    return '$h:00 $period';
   }
 
   Future<void> _book() async {
@@ -148,8 +304,8 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
     if (_selectedBranch == null && branches.isNotEmpty) {
       final user = ref.read(userSessionProvider).user;
       _selectedBranch = branches.firstWhere(
-        (b) => b?.id == user?.branchId,
-        orElse: () => branches.first!,
+        (b) => b.id == user?.branchId,
+        orElse: () => branches.first,
       );
     }
 
@@ -372,7 +528,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
         child: ElevatedButton(
           onPressed: _isLoading ? null : _book,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.info,
             foregroundColor: AppColors.secondary,
             padding: EdgeInsets.symmetric(vertical: 2.h),
             elevation: 0,
@@ -465,7 +621,10 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
             color: AppColors.textPrimary,
           ),
           onChanged: (Branch? val) {
-            if (val != null) setState(() => _selectedBranch = val);
+            if (val != null) {
+              setState(() => _selectedBranch = val);
+              _loadSchedule();
+            }
           },
           items: branches.whereType<Branch>().map((branch) {
             return DropdownMenuItem<Branch>(

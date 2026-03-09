@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:recoverylab_front/components/shimmer_box.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
@@ -21,40 +22,68 @@ class ServicesPage extends ConsumerStatefulWidget {
   ConsumerState<ServicesPage> createState() => _ServicesPageState();
 }
 
-class _ServicesPageState extends ConsumerState<ServicesPage> {
+class _ServicesPageState extends ConsumerState<ServicesPage>
+    with TickerProviderStateMixin {
   List<Branch> branches = [];
   Branch? selectedBranch;
   User? user;
   List<Service?> services = [];
+  bool _isLoading = true;
+  AnimationController? _shimmerController;
+  Animation<double>? _shimmerAnim;
+
   @override
   void initState() {
     super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmerAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOut),
+    );
     _loadPage();
+  }
+
+  @override
+  void dispose() {
+    _shimmerController?.dispose();
+    super.dispose();
   }
 
   void _loadPage() async {
     final branchList = ref.read(branchesProvider);
     user = ref.read(userSessionProvider).user;
 
-    final response = await ref
-        .read(apiProvider)
-        .getServicesByCategory(widget.category.id);
+    try {
+      final response = await ref
+          .read(apiProvider)
+          .getServicesByCategory(widget.category.id);
 
-    setState(() {
-      branches = branchList;
-      services = response;
-      if (user?.branchId != null && branches.isNotEmpty) {
-        try {
-          selectedBranch = branches.firstWhere(
-            (branch) => branch.id.toString() == user!.branchId,
-          );
-        } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        branches = branchList;
+        services = response;
+        _isLoading = false;
+        if (user?.branchId != null && branches.isNotEmpty) {
+          try {
+            selectedBranch = branches.firstWhere(
+              (branch) => branch.id.toString() == user!.branchId,
+            );
+          } catch (e) {
+            selectedBranch = branches.first;
+          }
+        } else if (branches.isNotEmpty) {
           selectedBranch = branches.first;
         }
-      } else if (branches.isNotEmpty) {
-        selectedBranch = branches.first;
-      }
-    });
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        services = [];
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -91,8 +120,10 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
 
           // Services list
           Expanded(
-            child: services.isNotEmpty
-                ? ListView.builder(
+            child: _isLoading
+                ? _buildShimmerBody()
+                : services.isNotEmpty
+                    ? ListView.builder(
                     padding: EdgeInsets.all(4.w),
                     itemCount: services.length,
                     itemBuilder: (context, index) {
@@ -106,17 +137,57 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                       );
                     },
                   )
-                : Center(
-                    child: Text(
-                      'No services available in this category.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        color: AppColors.textSecondary,
+                    : Center(
+                        child: Text(
+                          'No services available in this category.',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerBody() {
+    final anim = _shimmerAnim;
+    if (anim == null) return const SizedBox.shrink();
+    return ListView(
+      padding: EdgeInsets.all(4.w),
+      children: List.generate(
+        5,
+        (_) => Padding(
+          padding: EdgeInsets.only(bottom: 2.h),
+          child: ShimmerBox(
+            animation: anim,
+            child: Container(
+              height: 22.h,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: EdgeInsets.all(4.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 60.w, height: 2.2.h),
+                  ),
+                  SizedBox(height: 1.h),
+                  ShimmerBox(
+                    animation: anim,
+                    child: shimmerSkeletonBar(width: 80.w, height: 1.8.h),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

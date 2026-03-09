@@ -56,9 +56,9 @@ class _AppButtonState extends State<AppButton> {
       case AppButtonSize.small:
         return 10.sp;
       case AppButtonSize.medium:
-        return 14.sp;
+        return 13.sp;
       case AppButtonSize.large:
-        return 16.sp;
+        return 15.sp;
     }
   }
 
@@ -95,7 +95,7 @@ class _AppButtonState extends State<AppButton> {
   Widget build(BuildContext context) {
     final buttonColor = widget.variant == AppButtonVariant.solid
         ? (widget.color ?? AppColors.primary)
-        : Colors.transparent;
+        : (widget.color ?? Colors.transparent);
 
     final effectiveBorderColor = widget.borderColor ?? AppColors.primary;
 
@@ -114,7 +114,7 @@ class _AppButtonState extends State<AppButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: isDisabled
               ? Colors.grey.shade400
-              : buttonColor, // 👈 disabled color
+              : buttonColor,
           foregroundColor: labelColor,
           padding: _getPadding(),
           shape: RoundedRectangleBorder(
@@ -125,7 +125,7 @@ class _AppButtonState extends State<AppButton> {
                   color: isDisabled
                       ? Colors.grey.shade500
                       : effectiveBorderColor,
-                  width: 1.5,
+                  width: 1,
                 )
               : BorderSide.none,
           elevation: 0,

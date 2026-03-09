@@ -16,6 +16,7 @@ import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
+import 'package:recoverylab_front/components/shimmer_box.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -24,13 +25,17 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends ConsumerState<HomePage>
+    with TickerProviderStateMixin {
   List<Branch> branches = [];
   List<Offers?> offers = [];
   List<ServiceCategory?> serviceCategories = [];
   List<Recommended?> recommendedServices = [];
   Branch? selectedBranch;
   late User user;
+  bool _isLoading = true;
+  AnimationController? _shimmerController;
+  Animation<double>? _shimmerAnim;
 
   final PageController _offersPageController = PageController(
     viewportFraction: 1,
@@ -51,25 +56,34 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
+    user = ref.read(userSessionProvider).user!;
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmerAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOut),
+    );
     _loadHome();
   }
 
   Future<void> _loadHome() async {
+    final api = ref.read(apiProvider);
     try {
-      final home = await ref.read(apiProvider).gethome();
+      final home = await api.gethome();
+      if (!mounted) return;
       final branchProvider = ref.read(branchesProvider);
-      final user = ref.read(userSessionProvider).user;
-
+      final userVal = ref.read(userSessionProvider).user;
       setState(() {
         branches = branchProvider;
         offers = home['data']['offers'] ?? [];
         serviceCategories = home['data']['categories'] ?? [];
         recommendedServices = home['data']['recommended'] ?? [];
-
-        // Set selected branch based on user's branch_id
-        if (user?.branchId != null) {
+        _isLoading = false;
+        if (userVal != null) user = userVal;
+        if (userVal?.branchId != null) {
           selectedBranch = branches.firstWhere(
-            (branch) => branch.id == user!.branchId,
+            (branch) => branch.id == userVal!.branchId,
             orElse: () => branches.isNotEmpty
                 ? branches.first
                 : Branch(
@@ -85,10 +99,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           selectedBranch = branches.first;
         }
       });
-
+      if (!mounted) return;
       _startOffersAutoScroll();
     } catch (e, s) {
       print('e: $e, s: $s');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       AppSnackBar.show(context, e.toString());
     }
   }
@@ -118,6 +134,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
+    _shimmerController?.dispose();
     _offersTimer?.cancel();
     _offersPageController.dispose();
     _recommendedPageController.dispose();
@@ -128,6 +145,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     user = ref.watch(userSessionProvider).user!;
     final membershipAsync = ref.watch(activeMembershipProvider);
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(child: _buildShimmerBody()),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -153,6 +176,92 @@ class _HomePageState extends ConsumerState<HomePage> {
                 _buildRecommendedPageView(),
                 SizedBox(height: 2.h),
               ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerBody() {
+    final anim = _shimmerAnim;
+    if (anim == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Padding(
+        padding: EdgeInsets.only(left: 5.w, right: 5.w, top: 2.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ShimmerBox(
+              animation: anim,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  shimmerSkeletonBar(width: 24.w, height: 1.2.h),
+                  SizedBox(height: 0.5.h),
+                  shimmerSkeletonBar(width: 50.w, height: 2.h),
+                  SizedBox(height: 1.h),
+                  shimmerSkeletonBar(width: 28.w, height: 2.5.h, radius: 12),
+                ],
+              ),
+            ),
+            SizedBox(height: 3.h),
+            ShimmerBox(
+              animation: anim,
+              child: Container(
+                height: 26.h,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+            SizedBox(height: 2.h),
+            ShimmerBox(
+              animation: anim,
+              child: shimmerSkeletonBar(width: 35.w, height: 1.8.h),
+            ),
+            SizedBox(height: 1.5.h),
+            Row(
+              children: List.generate(
+                3,
+                (i) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i < 2 ? 2.w : 0),
+                    child: ShimmerBox(
+                      animation: anim,
+                      child: Container(
+                        height: 12.h,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 2.h),
+            ShimmerBox(
+              animation: anim,
+              child: shimmerSkeletonBar(width: 40.w, height: 1.8.h),
+            ),
+            SizedBox(height: 1.5.h),
+            ShimmerBox(
+              animation: anim,
+              child: Container(
+                height: 22.h,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
             ),
           ],
         ),
@@ -454,33 +563,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              offer.title,
-                              style: GoogleFonts.inter(
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                height: 1.1,
-                                letterSpacing: -0.3,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 1.h),
-                            Text(
-                              offer.description,
-                              style: GoogleFonts.inter(
-                                fontSize: 12.sp,
-                                color: Colors.white.withOpacity(0.9),
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                        child: Text(
+                          offer.title,
+                          style: GoogleFonts.inter(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1.1,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       (offer.discount == null || offer.discount!.isEmpty)
@@ -518,6 +611,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ),
                     ],
+                  ),
+                  Text(
+                    offer.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.sp,
+                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
 
                   // Align(
@@ -628,11 +731,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             ],
           ),
           SizedBox(height: 2.h),
-          serviceCategories.isEmpty || serviceCategories == null
-              ? const SizedBox.shrink()
-              : SizedBox(
-                  height: 16.h,
-                  child: ListView.separated(
+          SizedBox(
+            height: 16.h,
+            child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
                     // padding: EdgeInsets.symmetric(horizontal: .w),
@@ -644,7 +745,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       return _buildModernCategory(category);
                     },
                   ),
-                ),
+          ),
         ],
       ),
     );

@@ -10,8 +10,16 @@ final activeMembershipProvider = FutureProvider<UserMembership?>((ref) async {
   if (user == null) return null;
 
   final list = await ref.read(apiProvider).getMyMemberships();
+  final today = DateTime.now();
+  final currentDate = DateTime(today.year, today.month, today.day);
   for (final m in list) {
-    if (m.isActive || m.isFrozen) return m;
+    if (!m.isActive) continue;
+    final endDate = DateTime.tryParse(m.endDate);
+    if (endDate == null) return m;
+    final normalizedEndDate = DateTime(endDate.year, endDate.month, endDate.day);
+    if (!normalizedEndDate.isBefore(currentDate)) {
+      return m;
+    }
   }
   return null;
 });

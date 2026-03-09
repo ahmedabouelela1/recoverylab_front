@@ -22,6 +22,7 @@ class SignupPage extends ConsumerStatefulWidget {
 
 class _SignupPageState extends ConsumerState<SignupPage> {
   final PageController _pageController = PageController();
+  final Map<int, ImageProvider> _branchImageProviders = {};
   int _currentPage = 0;
   final TextEditingController firstNameController = TextEditingController();
   final TextEditingController lastNameController = TextEditingController();
@@ -744,6 +745,110 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     );
   }
 
+  Future<void> _cacheBranchImages(List<Branch> branchList) async {
+    final futures = <Future<void>>[];
+
+    for (final branch in branchList) {
+      if (branch.image.isEmpty || _branchImageProviders.containsKey(branch.id)) {
+        continue;
+      }
+
+      final provider = NetworkImage(branch.image);
+      _branchImageProviders[branch.id] = provider;
+      futures.add(precacheImage(provider, context).catchError((_) {}));
+    }
+
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+    }
+  }
+
+  Widget _buildLocationCard(Branch loc) {
+    final isSelected = selectedBranch?.id == loc.id;
+    final imageProvider =
+        _branchImageProviders[loc.id] ?? NetworkImage(loc.image);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedBranch = loc;
+          locationError = null;
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.info : AppColors.textFieldBorder,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image(
+                image: imageProvider,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(color: AppColors.surfaceLight);
+                },
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isSelected
+                        ? [
+                            Colors.black.withOpacity(0.18),
+                            Colors.black.withOpacity(0.45),
+                          ]
+                        : [
+                            Colors.black.withOpacity(0.2),
+                            Colors.black.withOpacity(0.3),
+                          ],
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  loc.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 24.sp,
+                    height: 24.sp,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 16.sp,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLocationGrid() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,66 +876,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           itemCount: branches.length,
           itemBuilder: (context, index) {
             final loc = branches[index];
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedBranch = loc;
-                  locationError = null;
-                });
-              },
-
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: selectedBranch?.name == loc.name
-                        ? AppColors.primary
-                        : AppColors.textFieldBorder,
-                    width: selectedBranch?.name == loc.name ? 2 : 1,
-                  ),
-                  image: DecorationImage(
-                    image: NetworkImage(loc.image),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.3),
-                      BlendMode.darken,
-                    ),
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Text(
-                        loc.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (selectedBranch?.id == loc.id)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          width: 24.sp,
-                          height: 24.sp,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.check_rounded,
-                            size: 16.sp,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
+            return _buildLocationCard(loc);
           },
         ),
         if (locationError != null)
@@ -947,6 +993,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final branchprovider = ref.read(branchesProvider);
+        await _cacheBranchImages(branchprovider);
+        if (!mounted) return;
         setState(() {
           branches = branchprovider;
         });
@@ -1343,6 +1391,18 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                 ),
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: ThemeData.light().copyWith(
+                      colorScheme: ColorScheme.dark(
+                        primary: AppColors.info,
+                        onPrimary: AppColors.background,
+                      ),
+                      dialogBackgroundColor: AppColors.background,
+                    ),
+                    child: child!,
+                  );
+                },
               );
               if (picked != null) {
                 setState(() {

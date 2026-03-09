@@ -90,7 +90,7 @@ class _PackagesPageState extends State<PackagesPage> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.dividerColor, width: 1),
+        border: Border.all(color: AppColors.info.withOpacity(0.25), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recoverylab_front/components/branch_selector.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
@@ -204,6 +205,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           SizedBox(height: 3.h),
 
           // ── Branch selector ────────────────────────────────────────────
+          Text(
+            'Here you can change your default branch for bookings and services.',
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 1.2.h),
           _sectionLabel('YOUR BRANCH'),
           SizedBox(height: 1.2.h),
           _buildBranchSelector(branches),
@@ -230,7 +240,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             _SettingItem(
               icon: SolarIconsOutline.crown,
-              label: 'Upgrade Membership',
+              label: (membershipAsync.value?.plan?.name != null &&
+                      membershipAsync.value!.plan!.name.isNotEmpty)
+                  ? membershipAsync.value!.plan!.name
+                  : 'Memberships',
               route: Routes.upgradeMembership,
             ),
             _SettingItem(
@@ -239,6 +252,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               route: Routes.coupons,
             ),
           ], context),
+          SizedBox(height: 2.h),
+
+          // ── Delete account ────────────────────────────────────────────
+          _sectionLabel('DELETE ACCOUNT'),
+          SizedBox(height: 1.2.h),
+          _buildDeleteAccountRow(context),
           SizedBox(height: 3.h),
 
           // ── Support ────────────────────────────────────────────────────
@@ -295,65 +314,65 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              // Initials avatar
-              Container(
-                width: 14.w,
-                height: 14.w,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withOpacity(0.8),
-                      AppColors.primary,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _showEditProfile,
+            child: Row(
+              children: [
+                // Initials avatar
+                Container(
+                  width: 14.w,
+                  height: 14.w,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.8),
+                        AppColors.primary,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials.isNotEmpty ? initials : '?',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 0.3.h),
+                      Text(
+                        user?.email ?? '',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    initials.isNotEmpty ? initials : '?',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 4.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 0.3.h),
-                    Text(
-                      user?.email ?? '',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: AppColors.textSecondary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // Membership shown in the green row below; no duplicate badge here
-                  ],
-                ),
-              ),
-              // Edit button
-              GestureDetector(
-                onTap: _showEditProfile,
-                child: Container(
+                // Edit button (visual only; tap handled by row)
+                Container(
                   padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceLight,
@@ -383,14 +402,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: 2.h),
           Container(height: 0.5, color: AppColors.dividerColor),
           SizedBox(height: 2.h),
-          // Membership row: current plan name if member, else "Upgrade Membership"
+          // Membership row: current plan name if member, else "Memberships"
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () =>
                 Navigator.of(context).pushNamed(Routes.upgradeMembership),
             child: Container(
@@ -425,7 +445,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         Text(
                           membershipAsync.isLoading
                               ? '...'
-                              : (isMember ? planName! : 'Upgrade Membership'),
+                              : (isMember ? planName! : 'View all memberships'),
                           style: TextStyle(
                             color: AppColors.success,
                             fontSize: 14.sp,
@@ -433,7 +453,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                         ),
                         Text(
-                          isMember ? 'View benefits' : 'Tap to upgrade',
+                          isMember ? 'View benefits' : 'Tap to view plans & subscribe',
                           style: TextStyle(
                             color: AppColors.textTertiary,
                             fontSize: 11.sp,
@@ -458,109 +478,136 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ── Branch selector — ported from HomePage ────────────────────────────────
 
-  Widget _buildBranchSelector(List<Branch?> branches) {
-    if (branches.isEmpty) {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+  Widget _buildBranchSelector(List<Branch> branches) {
+    return BranchSelector(
+      branches: branches,
+      selectedBranch: _selectedBranch,
+      onSelected: (branch) async {
+        setState(() => _selectedBranch = branch);
+        final u = ref.read(userSessionProvider).user;
+        if (u == null) return;
+        try {
+          await ref.read(apiProvider).updateUserProfile(
+            firstName: u.firstName,
+            lastName: u.lastName,
+            phone: u.phone,
+            email: u.email,
+            branchId: branch.id,
+          );
+          if (!mounted) return;
+          AppSnackbar.show(context, 'Branch updated');
+        } catch (e) {
+          if (!mounted) return;
+          final message = e is ApiException
+              ? e.message
+              : 'Failed to update branch';
+          AppSnackbar.show(context, message);
+          setState(() {
+            _selectedBranch = branches.isEmpty
+                ? _selectedBranch
+                : branches.firstWhere(
+                    (b) => b.id == u.branchId,
+                    orElse: () => branches.first,
+                  );
+          });
+        }
+      },
+    );
+  }
+
+  // ── Delete account row + confirmation ─────────────────────────────────────
+
+  Widget _buildDeleteAccountRow(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _showDeleteAccountConfirmation(context),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.dividerColor, width: 0.8),
+          border: Border.all(color: AppColors.error.withOpacity(0.4), width: 0.8),
         ),
         child: Row(
           children: [
-            Icon(
-              SolarIconsOutline.mapPoint,
-              color: AppColors.textTertiary,
-              size: 16.sp,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                SolarIconsOutline.trashBinTrash,
+                size: 16.sp,
+                color: AppColors.error,
+              ),
             ),
-            SizedBox(width: 3.w),
-            Text(
-              'Loading branches...',
-              style: TextStyle(color: AppColors.textTertiary, fontSize: 13.sp),
+            SizedBox(width: 4.w),
+            Expanded(
+              child: Text(
+                'Delete account',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: AppColors.error.withOpacity(0.6),
             ),
           ],
         ),
-      );
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0.5.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.info, width: 1),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Branch>(
-          value: _selectedBranch,
-          isExpanded: true,
-          dropdownColor: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          icon: Icon(
-            SolarIconsOutline.altArrowDown,
-            color: AppColors.strokeBorder,
-            size: 20.sp,
-          ),
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-          onChanged: (Branch? val) {
-            if (val != null) setState(() => _selectedBranch = val);
-          },
-          items: branches.whereType<Branch>().map((branch) {
-            return DropdownMenuItem<Branch>(
-              value: branch,
-              child: Row(
-                children: [
-                  Container(
-                    width: 8.w,
-                    height: 8.w,
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      SolarIconsOutline.mapPoint,
-                      size: 14.sp,
-                      color: AppColors.info,
-                    ),
-                  ),
-                  SizedBox(width: 3.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          branch.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          branch.address,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
       ),
     );
+  }
+
+  Future<void> _showDeleteAccountConfirmation(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete account?',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
+        ),
+        content: Text(
+          'This will permanently delete your account and all associated data. You will need to sign up again to use the app. This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.info)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    try {
+      await ref.read(apiProvider).deleteAccount();
+      if (!mounted) return;
+      await ref.read(userSessionProvider.notifier).logout();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        Routes.loginPage,
+        (route) => false,
+      );
+      AppSnackbar.show(context, 'Account deleted');
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is ApiException ? e.message : 'Failed to delete account';
+      AppSnackbar.show(context, message);
+    }
   }
 
   // ── Section helpers ───────────────────────────────────────────────────────
@@ -601,8 +648,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     bool isLast = false,
   }) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => Navigator.of(context).pushNamed(item.route),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),

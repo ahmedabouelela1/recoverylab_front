@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
@@ -25,25 +26,27 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
   bool _hasError = false;
   bool _isCancelling = false;
 
-  late AnimationController _animController;
-  late Animation<double> _fadeAnim;
+  AnimationController? _shimmerController;
+  Animation<double>? _shimmerAnim;
 
   final List<String> _tabs = ['Upcoming', 'Completed', 'Cancelled'];
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+    _shimmerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmerAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shimmerController!, curve: Curves.easeInOut),
     );
-    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _fetchBookings();
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _shimmerController?.dispose();
     super.dispose();
   }
 
@@ -52,7 +55,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
       _isLoading = true;
       _hasError = false;
     });
-    _animController.reset();
     try {
       final bookings = await ref.read(apiProvider).getBookings();
       if (!mounted) return;
@@ -60,7 +62,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
         _bookings = bookings;
         _isLoading = false;
       });
-      _animController.forward();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -196,59 +197,27 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
               Row(
                 children: [
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 1.8.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceLight,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: AppColors.dividerColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Keep It',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
+                    child: AppButton(
+                      label: 'Keep It',
+                      variant: AppButtonVariant.stroke,
+                      size: AppButtonSize.large,
+                      color: AppColors.surfaceLight,
+                      textColor: AppColors.textPrimary,
+                      borderColor: AppColors.dividerColor,
+                      borderRadius: 18,
+                      onPressed: () => Navigator.pop(ctx),
                     ),
                   ),
                   SizedBox(width: 3.w),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => _cancelBooking(booking),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 1.8.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.error.withOpacity(0.35),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Yes, Cancel',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+                    child: AppButton(
+                      label: 'Yes, Cancel',
+                      variant: AppButtonVariant.solid,
+                      size: AppButtonSize.large,
+                      color: AppColors.error,
+                      textColor: Colors.white,
+                      borderRadius: 18,
+                      onPressed: () => _cancelBooking(booking),
                     ),
                   ),
                 ],
@@ -573,10 +542,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
+                        Expanded(
                           child: Text(
                             tab,
                             overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                             style: GoogleFonts.dmSans(
                               fontSize: 13.sp,
                               fontWeight: isSelected
@@ -589,22 +559,22 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                           ),
                         ),
                         if (count != null && count > 0) ...[
-                          SizedBox(width: 1.5.w),
+                          SizedBox(width: 2.5.w),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 1,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? tabColor.withOpacity(0.25)
                                   : AppColors.surfaceLight,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               '$count',
                               style: GoogleFonts.dmSans(
-                                fontSize: 9.sp,
+                                fontSize: 11.sp,
                                 fontWeight: FontWeight.w800,
                                 color: isSelected
                                     ? tabColor
@@ -612,6 +582,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                               ),
                             ),
                           ),
+                          SizedBox(width: 2.w),
                         ],
                       ],
                     ),
@@ -674,40 +645,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
               ),
             ),
             SizedBox(height: 3.5.h),
-            GestureDetector(
-              onTap: _fetchBookings,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.6.h),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      SolarIconsOutline.restart,
-                      color: Colors.white,
-                      size: 15.sp,
-                    ),
-                    SizedBox(width: 2.w),
-                    Text(
-                      'Try Again',
-                      style: GoogleFonts.dmSans(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.sp,
-                      ),
-                    ),
-                  ],
-                ),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: 'Try Again',
+                variant: AppButtonVariant.solid,
+                size: AppButtonSize.medium,
+                icon: SolarIconsOutline.restart,
+                borderRadius: 20,
+                onPressed: _fetchBookings,
               ),
             ),
           ],
@@ -729,7 +675,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
   Widget _skeletonCard() {
     return Container(
       margin: EdgeInsets.only(bottom: 3.w),
-      // No fixed height — let content determine size
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(22),
@@ -741,29 +686,30 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Image area
-            Container(
-              height: 19.h,
-              width: double.infinity,
-              color: AppColors.surfaceLight,
+            _shimmerBox(
+              child: Container(
+                height: 19.h,
+                width: double.infinity,
+                color: AppColors.surfaceLight,
+              ),
             ),
-            // Info strip
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.3.h),
-              color: AppColors.surfaceLight.withOpacity(0.4),
-              child: Row(
-                children: [
-                  _skeletonBar(width: 18.w, height: 1.1.h),
-                  SizedBox(width: 3.w),
-                  _skeletonBar(width: 14.w, height: 1.1.h),
-                  SizedBox(width: 3.w),
-                  _skeletonBar(width: 12.w, height: 1.1.h),
-                ],
+            _shimmerBox(
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.3.h),
+                color: AppColors.surfaceLight.withOpacity(0.4),
+                child: Row(
+                  children: [
+                    _skeletonBar(width: 18.w, height: 1.1.h),
+                    SizedBox(width: 3.w),
+                    _skeletonBar(width: 14.w, height: 1.1.h),
+                    SizedBox(width: 3.w),
+                    _skeletonBar(width: 12.w, height: 1.1.h),
+                  ],
+                ),
               ),
             ),
             Container(height: 0.5, color: AppColors.dividerColor),
-            // Price + button row
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.6.h),
               child: Row(
@@ -773,18 +719,55 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _skeletonBar(width: 24.w, height: 1.h),
+                      _shimmerBox(child: _skeletonBar(width: 24.w, height: 1.h)),
                       SizedBox(height: 0.6.h),
-                      _skeletonBar(width: 32.w, height: 2.2.h),
+                      _shimmerBox(child: _skeletonBar(width: 32.w, height: 2.2.h)),
                     ],
                   ),
-                  _skeletonBar(width: 26.w, height: 4.h, radius: 20),
+                  _shimmerBox(child: _skeletonBar(width: 26.w, height: 4.h, radius: 20)),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _shimmerBox({required Widget child}) {
+    final anim = _shimmerAnim;
+    if (anim == null) return child;
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, _) {
+        final value = anim.value;
+        return Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            child,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(value * 2 - 1.0, 0),
+                      end: Alignment(value * 2 - 0.5, 0),
+                      colors: [
+                        Colors.white.withOpacity(0),
+                        Colors.white.withOpacity(0.12),
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.12),
+                        Colors.white.withOpacity(0),
+                      ],
+                      stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -898,43 +881,16 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
             ),
             if (tab == 'Upcoming') ...[
               SizedBox(height: 4.h),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, Routes.navbar),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 9.w,
-                    vertical: 1.8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.35),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        SolarIconsOutline.calendarAdd,
-                        color: Colors.white,
-                        size: 15.sp,
-                      ),
-                      SizedBox(width: 2.w),
-                      Text(
-                        'Browse Services',
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5.sp,
-                        ),
-                      ),
-                    ],
-                  ),
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  label: 'Browse Services',
+                  variant: AppButtonVariant.solid,
+                  size: AppButtonSize.medium,
+                  icon: SolarIconsOutline.calendarAdd,
+                  iconPosition: AppButtonIconPosition.left,
+                  borderRadius: 30,
+                  onPressed: () => Navigator.pushNamed(context, Routes.navbar),
                 ),
               ),
             ],

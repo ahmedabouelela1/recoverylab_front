@@ -2,8 +2,8 @@ class MembershipBenefit {
   final int id;
   final int membershipPlanId;
   final String benefitType; // 'UNLIMITED_ACCESS' | 'DISCOUNT' | 'FREE_SESSIONS'
-  final String targetType; // 'SERVICE' | 'CATEGORY' | 'ALL'
-  final int? targetId;
+  final int? targetServiceId;
+  final int? targetCategoryId;
   final num? value; // discount percentage for DISCOUNT type
   final int? freeSessionsPerMonth;
   final bool requiresBooking;
@@ -12,8 +12,8 @@ class MembershipBenefit {
     required this.id,
     required this.membershipPlanId,
     required this.benefitType,
-    required this.targetType,
-    this.targetId,
+    this.targetServiceId,
+    this.targetCategoryId,
     this.value,
     this.freeSessionsPerMonth,
     required this.requiresBooking,
@@ -34,12 +34,24 @@ class MembershipBenefit {
         id: parseInt(json['id']) ?? 0,
         membershipPlanId: parseInt(json['membership_plan_id']) ?? 0,
         benefitType: (json['benefit_type']?.toString()) ?? 'DISCOUNT',
-        targetType: (json['target_type']?.toString()) ?? 'GLOBAL',
-        targetId: parseInt(json['target_id']),
+        targetServiceId: parseInt(json['target_service_id']),
+        targetCategoryId: parseInt(json['target_category_id']),
         value: parseNum(json['value']),
         freeSessionsPerMonth: parseInt(json['free_sessions_per_month']),
         requiresBooking: json['requires_booking'] == true || json['requires_booking'] == 1,
       );
+  }
+
+  bool get isGlobal =>
+      targetServiceId == null && targetCategoryId == null;
+
+  bool appliesTo({
+    required int serviceId,
+    required int categoryId,
+  }) {
+    return isGlobal ||
+        targetServiceId == serviceId ||
+        targetCategoryId == categoryId;
   }
 
   String get displayLabel {

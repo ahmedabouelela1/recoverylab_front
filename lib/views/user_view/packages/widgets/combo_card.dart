@@ -161,33 +161,42 @@ class ComboCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "from",
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            color: AppColors.textSecondary,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "from",
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                        Text(
-                          price,
-                          style: GoogleFonts.inter(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                          Text(
+                            price,
+                            style: GoogleFonts.inter(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    // Book Now Button
-                    AppButton(
-                      label: "Book now",
-                      onPressed: onBookNow,
-                      size: AppButtonSize.medium,
-                      borderRadius: 100,
-                      width: 30.w, // let the button itself control width
+                    SizedBox(width: 2.w),
+                    Flexible(
+                      child: AppButton(
+                        label: "Book now",
+                        variant: AppButtonVariant.stroke,
+                        size: AppButtonSize.medium,
+                        color: AppColors.surfaceLight,
+                        textColor: AppColors.primary,
+                        borderColor: AppColors.primary.withOpacity(0.5),
+                        borderRadius: 16,
+                        onPressed: onBookNow,
+                      ),
                     ),
                   ],
                 ),
