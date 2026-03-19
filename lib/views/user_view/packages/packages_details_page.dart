@@ -6,6 +6,7 @@ import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/models/Offer/offer_package.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
@@ -28,6 +29,9 @@ class PackageDetailsPage extends ConsumerStatefulWidget {
   /// Backend ID — used when calling purchase/membership APIs.
   final int? itemId;
 
+  /// Full combo when type is combo — used for category-based service choices in booking.
+  final OfferPackage? combo;
+
   const PackageDetailsPage({
     super.key,
     required this.title,
@@ -38,6 +42,7 @@ class PackageDetailsPage extends ConsumerStatefulWidget {
     required this.inclusions,
     this.type = PackageType.combo,
     this.itemId,
+    this.combo,
   });
 
   @override
@@ -70,6 +75,7 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
               price: widget.price,
               totalDuration: widget.totalDuration,
               inclusions: widget.inclusions,
+              combo: widget.combo,
             ),
           ),
         );
@@ -241,6 +247,7 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
                       _sectionLabel('ABOUT THIS ${_badgeLabel}'),
                       SizedBox(height: 1.2.h),
                       Container(
+                        width: double.infinity,
                         padding: EdgeInsets.all(4.w),
                         decoration: BoxDecoration(
                           color: AppColors.cardBackground,
@@ -457,19 +464,7 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              widget.imagePath,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: AppColors.surfaceLight,
-                alignment: Alignment.center,
-                child: Icon(
-                  SolarIconsOutline.health,
-                  color: AppColors.textTertiary,
-                  size: 44.sp,
-                ),
-              ),
-            ),
+            _buildDetailImage(widget.imagePath),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -515,6 +510,31 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _buildDetailImage(String path) {
+    final isUrl = path.startsWith('http://') || path.startsWith('https://');
+    final placeholder = Container(
+      color: AppColors.surfaceLight,
+      alignment: Alignment.center,
+      child: Icon(
+        SolarIconsOutline.health,
+        color: AppColors.textTertiary,
+        size: 44.sp,
+      ),
+    );
+    if (isUrl) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+    return Image.asset(
+      path,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => placeholder,
+    );
+  }
 
   Widget _sectionLabel(String text) {
     return Text(

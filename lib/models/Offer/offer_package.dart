@@ -4,6 +4,7 @@ class OfferPackage {
   final int id;
   final String name;
   final String? description;
+  final String? image;
   final String type; // 'PACKAGE' | 'COMBO'
   final num price;
   final num? discountPercentage;
@@ -16,6 +17,7 @@ class OfferPackage {
     required this.id,
     required this.name,
     this.description,
+    this.image,
     required this.type,
     required this.price,
     this.discountPercentage,
@@ -36,6 +38,7 @@ class OfferPackage {
         id: json['id'] as int,
         name: json['name'] as String,
         description: json['description'] as String?,
+        image: json['image'] as String?,
         type: json['type'] as String,
         price: json['price'] as num,
         discountPercentage: json['discount_percentage'] as num?,

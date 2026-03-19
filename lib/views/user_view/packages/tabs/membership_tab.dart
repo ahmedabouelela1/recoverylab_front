@@ -10,7 +10,9 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/shimmer_box.dart';
 
 class MembershipTab extends ConsumerStatefulWidget {
-  const MembershipTab({super.key});
+  const MembershipTab({super.key, this.branchId});
+
+  final int? branchId;
 
   @override
   ConsumerState<MembershipTab> createState() => _MembershipTabState();
@@ -37,14 +39,23 @@ class _MembershipTabState extends ConsumerState<MembershipTab>
   }
 
   @override
+  void didUpdateWidget(covariant MembershipTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.branchId != widget.branchId) _fetch();
+  }
+
+  @override
   void dispose() {
     _shimmerController?.dispose();
     super.dispose();
   }
 
   Future<void> _fetch() async {
+    setState(() => _loading = true);
     try {
-      final result = await ref.read(apiProvider).getMembershipPlans();
+      final result = await ref.read(apiProvider).getMembershipPlans(
+        branchId: widget.branchId,
+      );
       if (mounted)
         setState(() {
           _plans = result;
@@ -63,10 +74,18 @@ class _MembershipTabState extends ConsumerState<MembershipTab>
     if (_loading) {
       return _buildShimmerList();
     }
+    if (widget.branchId == null) {
+      return Center(
+        child: Text(
+          'Select a branch to see memberships',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
+        ),
+      );
+    }
     if (_plans.isEmpty) {
       return Center(
         child: Text(
-          'No memberships available',
+          'No memberships available for this branch',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
         ),
       );
@@ -117,7 +136,7 @@ class _MembershipTabState extends ConsumerState<MembershipTab>
           durationOrDetail: freezeStr,
           detailLine: detailLine,
           price: p.price.toStringAsFixed(0),
-          imagePath: 'lib/assets/images/haven.jpg',
+          imagePath: p.image?.isNotEmpty == true ? p.image! : 'lib/assets/images/haven.jpg',
           onBookNow: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -126,7 +145,7 @@ class _MembershipTabState extends ConsumerState<MembershipTab>
                 type: PackageType.membership,
                 title: p.name,
                 description: p.description ?? '',
-                imagePath: 'lib/assets/images/haven.jpg',
+                imagePath: p.image?.isNotEmpty == true ? p.image! : 'lib/assets/images/haven.jpg',
                 totalDuration:
                     '${p.durationMonths} Month${p.durationMonths > 1 ? 's' : ''}',
                 price: p.price.toStringAsFixed(0),

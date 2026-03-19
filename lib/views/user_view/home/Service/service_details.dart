@@ -44,6 +44,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   List<Branch> branches = [];
   List<ServiceDuration?> durations = [];
   List<Staff?> staffList = [];
+
   /// Full list from branch-service (all qualified staff); restored when date/time/duration change.
   List<Staff?> _allQualifiedStaff = [];
   bool _staffAvailabilityFailed = false;
@@ -83,7 +84,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         setState(() {
           isLoading = false;
           hasError = true;
-          errorMessage = 'No branches available. Please select a branch in Settings and try again.';
+          errorMessage =
+              'No branches available. Please select a branch in Settings and try again.';
         });
         return;
       }
@@ -102,10 +104,13 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   Future<void> _fetchServiceDetails() async {
     try {
-      if (branches.isEmpty || selectedBranchIndex == null || selectedBranchIndex! >= branches.length) {
+      if (branches.isEmpty ||
+          selectedBranchIndex == null ||
+          selectedBranchIndex! >= branches.length) {
         setState(() {
           hasError = true;
-          errorMessage = 'No branch selected. Please select a branch in Settings.';
+          errorMessage =
+              'No branch selected. Please select a branch in Settings.';
         });
         return;
       }
@@ -147,9 +152,16 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       // Set durations from API
       durations = branchService.branchPricing;
 
-      // Set staff from API
-      staffList = response.staff;
-      _allQualifiedStaff = List<Staff?>.from(response.staff);
+      // Set staff from API, but hide internal fallback "All Staff" records
+      final filteredStaff = response.staff.where((staff) {
+        if (staff == null) return false;
+        final id = staff.employeeId;
+        if (id.isEmpty) return true;
+        return !id.toUpperCase().startsWith('ALL-STAF');
+      }).toList();
+
+      staffList = filteredStaff;
+      _allQualifiedStaff = List<Staff?>.from(filteredStaff);
 
       // Set default capacity
       defaultCapacity = branchService.defaultCapacity;
@@ -194,7 +206,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     if (currentUserId == null || pkg.userId != currentUserId) return false;
     if (pkg.status != 'ACTIVE' || pkg.creditsRemaining <= 0) return false;
     final offerPackage = pkg.package;
-    if (offerPackage == null || !offerPackage.isPackage || !offerPackage.isActive) {
+    if (offerPackage == null ||
+        !offerPackage.isPackage ||
+        !offerPackage.isActive) {
       return false;
     }
     final expiry = pkg.expiryDate;
@@ -272,20 +286,34 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   /// Fetch staff who are actually available at the selected slot and update staffList.
   Future<void> _fetchAvailableStaffForSelectedSlot() async {
-    if (selectedDate == null || selectedTime == null || selectedDuration == null ||
-        selectedBranchIndex == null || selectedBranchIndex! >= branches.length) return;
+    if (selectedDate == null ||
+        selectedTime == null ||
+        selectedDuration == null ||
+        selectedBranchIndex == null ||
+        selectedBranchIndex! >= branches.length)
+      return;
     final branchId = branches[selectedBranchIndex!].id;
     final scheduledStart = _formatDateTimeForApi();
     if (scheduledStart == null) return;
     try {
-      final list = await ref.read(apiProvider).getAvailableStaff(
-        branchId: branchId,
-        serviceId: widget.service.id,
-        scheduledStart: scheduledStart,
-        durationMinutes: selectedDuration!,
-      );
+      final list = await ref
+          .read(apiProvider)
+          .getAvailableStaff(
+            branchId: branchId,
+            serviceId: widget.service.id,
+            scheduledStart: scheduledStart,
+            durationMinutes: selectedDuration!,
+          );
       if (!mounted) return;
-      final newList = list.map<Staff?>((s) => s).toList();
+      // Hide internal fallback "All Staff" records from the selectable staff list
+      final newList = list
+          .where((staff) {
+            final id = staff.employeeId;
+            if (id.isEmpty) return true;
+            return !id.toUpperCase().startsWith('ALL-STAF');
+          })
+          .map<Staff?>((s) => s)
+          .toList();
       setState(() {
         staffList = newList;
         _staffAvailabilityFailed = false;
@@ -294,7 +322,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           selectedStaff = null;
         }
       });
-    } catch (_) {
+    } catch (e, s) {
+      print('Error fetching available staff: $e');
+      print('Stack trace: $s');
       if (!mounted) return;
       setState(() {
         staffList = [];
@@ -333,7 +363,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     }
 
     if (selectedType == 'group' && selectedPeopleCount == null) {
-      AppSnackBar.show(context, 'Please select number of people for group booking');
+      AppSnackBar.show(
+        context,
+        'Please select number of people for group booking',
+      );
       return false;
     }
 
@@ -354,6 +387,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       builder: (context) => _buildBookingConfirmationModal(),
     );
   }
+
+  String _friendlyBookingError(String raw) {
+    var msg = raw;
+    const prefixes = [
+      'Failed to create booking: ',
+      'Appointment validation failed: ',
+      'Failed to create combo booking: ',
+    ];
+    for (final prefix in prefixes) {
+      if (msg.startsWith(prefix)) {
+        msg = msg.substring(prefix.length);
+      }
+    }
+    return msg.trim();
+  }
+
   void _processPayment() async {
     final formattedDateTime = _formatDateTimeForApi();
     final user = ref.read(userSessionProvider).user;
@@ -399,10 +448,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       if (!mounted) return;
 
       Navigator.pop(context); // Close loading dialog
-      final message = e is ApiException
+      final raw = e is ApiException
           ? e.message
           : e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
-      AppSnackBar.show(context, 'Booking failed: $message');
+      final message = _friendlyBookingError(raw);
+      AppSnackBar.show(context, message);
     }
   }
 
@@ -411,7 +461,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       (d) => d?.minutes == selectedDuration,
       orElse: () => durations[0],
     );
-    final eligiblePackages = _myPackages.where(_isPackageEligibleForBooking).toList();
+    final eligiblePackages = _myPackages
+        .where(_isPackageEligibleForBooking)
+        .toList();
 
     return Container(
       constraints: BoxConstraints(
@@ -560,7 +612,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         builder: (ctx, setInner) => Column(
                           children: [
                             GestureDetector(
-                              onTap: () => setInner(() => _selectedPackage = null),
+                              onTap: () =>
+                                  setInner(() => _selectedPackage = null),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 3.w,
@@ -604,7 +657,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             ...eligiblePackages.map((pkg) {
                               final isSelected = _selectedPackage?.id == pkg.id;
                               return GestureDetector(
-                                onTap: () => setInner(() => _selectedPackage = pkg),
+                                onTap: () =>
+                                    setInner(() => _selectedPackage = pkg),
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 3.w,
@@ -657,10 +711,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     SizedBox(height: 2.h),
                     Builder(
                       builder: (_) {
-                        final totalInfo = _getDisplayTotalWithMembershipAndPackage(
-                          selectedDurationData?.price,
-                          selectedPeopleCount ?? 1,
-                        );
+                        final totalInfo =
+                            _getDisplayTotalWithMembershipAndPackage(
+                              selectedDurationData?.price,
+                              selectedPeopleCount ?? 1,
+                            );
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -751,7 +806,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context); // Close confirmation sheet
-                    _processPayment();       // Call API directly (default payment)
+                    _processPayment(); // Call API directly (default payment)
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -1726,7 +1781,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                   data: ThemeData.light().copyWith(
                     colorScheme: ColorScheme.dark(
                       primary: AppColors.info,
-                      onPrimary: AppColors.background
+                      onPrimary: AppColors.background,
                     ),
                     dialogBackgroundColor: AppColors.background,
                   ),
@@ -1750,7 +1805,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 final note = special.reason != null
                     ? ' · ${special.reason}'
                     : '';
-                AppSnackBar.show(context, 'Special hours on this day: $open – $close$note');
+                AppSnackBar.show(
+                  context,
+                  'Special hours on this day: $open – $close$note',
+                );
               }
               setState(() {
                 selectedDate = pickedDate;
@@ -1841,23 +1899,27 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   }
 
   /// Best membership discount % (0–100) for a service using relation targets.
-  num _bestMembershipDiscountForService(UserMembership? membership, int serviceId, int categoryId) {
+  num _bestMembershipDiscountForService(
+    UserMembership? membership,
+    int serviceId,
+    int categoryId,
+  ) {
     if (membership == null || membership.plan == null) return 0;
     num best = 0;
     for (final b in membership.plan!.benefits) {
       if (!b.appliesTo(serviceId: serviceId, categoryId: categoryId)) continue;
       if (b.benefitType == 'UNLIMITED_ACCESS') return 100;
-      if (b.benefitType == 'DISCOUNT' && b.value != null && b.value! > best) best = b.value!;
+      if (b.benefitType == 'DISCOUNT' && b.value != null && b.value! > best)
+        best = b.value!;
     }
     return best;
   }
 
   /// Membership-aware total for display. Returns (displayString, originalTotalForStrikethrough or null).
-  (String display, String? original, String? membershipLabel) _getDisplayTotalWithMembership(
-    String? priceStr,
-    int participantCount,
-  ) {
-    final baseTotal = (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
+  (String display, String? original, String? membershipLabel)
+  _getDisplayTotalWithMembership(String? priceStr, int participantCount) {
+    final baseTotal =
+        (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
     final membership = _currentBookableMembership();
     final discountPct = _bestMembershipDiscountForService(
       membership,
@@ -1865,29 +1927,40 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       widget.service.category.id,
     );
     if (discountPct >= 100) {
-      return ('Free', baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null, 'Included in your membership');
+      return (
+        'Free',
+        baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null,
+        'Included in your membership',
+      );
     }
     if (discountPct > 0) {
       final discounted = baseTotal * (1 - discountPct / 100);
-      return ('EGP ${discounted.toStringAsFixed(0)}', 'EGP ${baseTotal.toStringAsFixed(0)}', null);
+      return (
+        'EGP ${discounted.toStringAsFixed(0)}',
+        'EGP ${baseTotal.toStringAsFixed(0)}',
+        null,
+      );
     }
     return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
   }
 
   /// Best of membership vs selected package (matches backend: no stacking, higher % wins).
   /// Package only applies if user selected one and it has credits.
-  (String display, String? original, String? label) _getDisplayTotalWithMembershipAndPackage(
+  (String display, String? original, String? label)
+  _getDisplayTotalWithMembershipAndPackage(
     String? priceStr,
     int participantCount,
   ) {
-    final baseTotal = (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
+    final baseTotal =
+        (double.tryParse(priceStr ?? '0') ?? 0) * participantCount;
     final membership = _currentBookableMembership();
     final membershipPct = _bestMembershipDiscountForService(
       membership,
       widget.service.id,
       widget.service.category.id,
     );
-    final packagePct = _selectedPackage != null &&
+    final packagePct =
+        _selectedPackage != null &&
             _selectedPackage!.creditsRemaining > 0 &&
             _selectedPackage!.package != null
         ? (_selectedPackage!.package!.discountPercentage ?? 0).toDouble()
@@ -1895,7 +1968,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
     // Backend rule: UNLIMITED_ACCESS (100%) wins; else best of membership % vs package %
     if (membershipPct >= 100) {
-      return ('Free', baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null, 'Included in your membership');
+      return (
+        'Free',
+        baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null,
+        'Included in your membership',
+      );
     }
     final bool packageWins = packagePct > membershipPct;
     final num bestPct = packageWins ? packagePct : membershipPct;
@@ -1904,7 +1981,9 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       final originalStr = 'EGP ${baseTotal.toStringAsFixed(0)}';
       final label = packageWins
           ? '${packagePct.toInt()}% off with package'
-          : (membershipPct > 0 ? '${membershipPct.toInt()}% off with membership' : null);
+          : (membershipPct > 0
+                ? '${membershipPct.toInt()}% off with membership'
+                : null);
       return ('EGP ${discounted.toStringAsFixed(0)}', originalStr, label);
     }
     return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
@@ -2242,13 +2321,14 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           children: durations.where((d) => d != null).map((duration) {
             final isSelected = selectedDuration == duration!.minutes;
             return GestureDetector(
-                onTap: () => setState(() {
-                  selectedDuration = duration.minutes;
-                  selectedTime = null; // Re-pick time so it stays within branch hours for new duration
-                  selectedStaff = null;
-                  staffList = List<Staff?>.from(_allQualifiedStaff);
-                  _staffAvailabilityFailed = false;
-                }),
+              onTap: () => setState(() {
+                selectedDuration = duration.minutes;
+                selectedTime =
+                    null; // Re-pick time so it stays within branch hours for new duration
+                selectedStaff = null;
+                staffList = List<Staff?>.from(_allQualifiedStaff);
+                _staffAvailabilityFailed = false;
+              }),
               child: Container(
                 margin: EdgeInsets.only(bottom: 2.h),
                 padding: EdgeInsets.all(4.w),
@@ -2410,7 +2490,11 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             : null),
                         backgroundColor: AppColors.surfaceLight,
                         child: staff.profilePicture.isEmpty
-                            ? Icon(Icons.person, color: AppColors.textTertiary, size: 20.sp)
+                            ? Icon(
+                                Icons.person,
+                                color: AppColors.textTertiary,
+                                size: 20.sp,
+                              )
                             : null,
                       ),
                     ),

@@ -10,7 +10,9 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/shimmer_box.dart';
 
 class PackagesTab extends ConsumerStatefulWidget {
-  const PackagesTab({super.key});
+  const PackagesTab({super.key, this.branchId});
+
+  final int? branchId;
 
   @override
   ConsumerState<PackagesTab> createState() => _PackagesTabState();
@@ -37,14 +39,24 @@ class _PackagesTabState extends ConsumerState<PackagesTab>
   }
 
   @override
+  void didUpdateWidget(covariant PackagesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.branchId != widget.branchId) _fetch();
+  }
+
+  @override
   void dispose() {
     _shimmerController?.dispose();
     super.dispose();
   }
 
   Future<void> _fetch() async {
+    setState(() => _loading = true);
     try {
-      final result = await ref.read(apiProvider).getPackages(type: 'PACKAGE');
+      final result = await ref.read(apiProvider).getPackages(
+        type: 'PACKAGE',
+        branchId: widget.branchId,
+      );
       if (mounted)
         setState(() {
           _packages = result;
@@ -63,10 +75,18 @@ class _PackagesTabState extends ConsumerState<PackagesTab>
     if (_loading) {
       return _buildShimmerList();
     }
+    if (widget.branchId == null) {
+      return Center(
+        child: Text(
+          'Select a branch to see packages',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
+        ),
+      );
+    }
     if (_packages.isEmpty) {
       return Center(
         child: Text(
-          'No packages available',
+          'No packages available for this branch',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
         ),
       );
@@ -92,7 +112,7 @@ class _PackagesTabState extends ConsumerState<PackagesTab>
           durationOrDetail: durationOrDetail,
           detailLine: credits != null ? '$credits Credits' : '',
           price: p.price.toStringAsFixed(0),
-          imagePath: 'lib/assets/images/haven.jpg',
+          imagePath: p.image?.isNotEmpty == true ? p.image! : 'lib/assets/images/haven.jpg',
           onBookNow: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -101,7 +121,7 @@ class _PackagesTabState extends ConsumerState<PackagesTab>
                 type: PackageType.package,
                 title: p.name,
                 description: p.description ?? '',
-                imagePath: 'lib/assets/images/haven.jpg',
+                imagePath: p.image?.isNotEmpty == true ? p.image! : 'lib/assets/images/haven.jpg',
                 totalDuration: credits != null ? '$credits Sessions' : '',
                 price: p.price.toStringAsFixed(0),
                 inclusions: [

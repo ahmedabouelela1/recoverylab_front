@@ -3,6 +3,8 @@ import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 
 class ApiRoutes {
   static const String login = '/login';
+  static const String loginGoogle = '/login/google';
+  static const String loginApple = '/login/apple';
   static const String users = '/users';
   static const String tokenValidation = '/validate-token';
   static const String branch = '/branches';
@@ -23,6 +25,19 @@ class ApiRoutes {
 
 const apiUrl = 'https://recoverylab.thecodehaus.co/api';
 // const apiUrl = 'http://localhost:8000/api';
+
+/// Google OAuth client ID (same as backend GOOGLE_CLIENT_ID) for server-side token verification.
+/// Set in your app or via environment.
+const String googleClientId = String.fromEnvironment(
+  'GOOGLE_CLIENT_ID',
+  defaultValue: '',
+);
+
+/// Apple Services ID or Bundle ID (same as backend APPLE_CLIENT_ID). Required for Sign in with Apple.
+const String appleClientId = String.fromEnvironment(
+  'APPLE_CLIENT_ID',
+  defaultValue: '',
+);
 
 enum UserState { none, loading, active }
 

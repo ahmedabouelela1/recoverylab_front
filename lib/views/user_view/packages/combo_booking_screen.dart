@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/models/Branch/services/service.dart';
+import 'package:recoverylab_front/models/Offer/offer_package.dart';
+import 'package:recoverylab_front/models/Offer/package_rule.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
@@ -18,12 +21,16 @@ class ComboBookingScreen extends ConsumerStatefulWidget {
   final String totalDuration;
   final List<Map<String, String>> inclusions;
 
+  /// When provided, category-based rules will show a service picker per slot.
+  final OfferPackage? combo;
+
   const ComboBookingScreen({
     required this.comboId,
     required this.comboName,
     required this.price,
     required this.totalDuration,
     required this.inclusions,
+    this.combo,
     super.key,
   });
 
@@ -39,6 +46,12 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   String _notes = '';
   bool _isLoading = false;
   BranchSchedule? _schedule;
+
+  /// For category-based rules: ruleId -> chosen serviceId.
+  final Map<int, int> _serviceChoices = {};
+  /// categoryId -> list of services (loaded once per category).
+  final Map<int, List<Service>> _servicesByCategory = {};
+  bool _loadingServices = false;
 
   /// Parse totalDuration string (e.g. "150 min" or "2h 30min") to total minutes.
   int get _totalDurationMinutes {
@@ -64,6 +77,25 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
     }
   }
 
+  List<PackageRule> get _categoryChoiceRules =>
+      widget.combo?.rules.where((r) => r.isCategoryChoice).toList() ?? [];
+
+  Future<void> _loadServicesForCategory(int categoryId) async {
+    if (_servicesByCategory.containsKey(categoryId)) return;
+    setState(() => _loadingServices = true);
+    try {
+      final list = await ref.read(apiProvider).getServicesByCategory(categoryId);
+      if (mounted) {
+        setState(() {
+          _servicesByCategory[categoryId] = list.whereType<Service>().toList();
+          _loadingServices = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingServices = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +106,11 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
         (b) => b.id == user?.branchId,
         orElse: () => branches.first,
       );
+    }
+    for (final rule in _categoryChoiceRules) {
+      if (rule.serviceCategoryId != null) {
+        _loadServicesForCategory(rule.serviceCategoryId!);
+      }
     }
   }
 
@@ -272,6 +309,18 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       AppSnackBar.show(context, 'Please log in to continue.');
       return;
     }
+    final categoryRules = _categoryChoiceRules;
+    if (categoryRules.isNotEmpty) {
+      for (final rule in categoryRules) {
+        if (!_serviceChoices.containsKey(rule.id) || _serviceChoices[rule.id]! == 0) {
+          AppSnackBar.show(
+            context,
+            'Please choose a service for "${rule.serviceCategoryName ?? 'category'}"',
+          );
+          return;
+        }
+      }
+    }
 
     final scheduled = _formatDateTime()!;
     setState(() => _isLoading = true);
@@ -284,6 +333,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
             scheduledStart: scheduled,
             participantCount: _participantCount,
             notes: _notes.isEmpty ? null : _notes,
+            serviceChoices: _serviceChoices.isEmpty ? null : _serviceChoices,
           );
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(
@@ -512,6 +562,94 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                   ),
                 ),
               ),
+            ],
+
+            // Category-based service pickers
+            if (_categoryChoiceRules.isNotEmpty) ...[
+              SizedBox(height: 2.h),
+              _label('CHOOSE SERVICES'),
+              SizedBox(height: 1.h),
+              Text(
+                'Select one service per slot from the category.',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 1.h),
+              ..._categoryChoiceRules.map((rule) {
+                final catId = rule.serviceCategoryId!;
+                final services = _servicesByCategory[catId] ?? [];
+                final selectedId = _serviceChoices[rule.id];
+                return Container(
+                  margin: EdgeInsets.only(bottom: 1.5.h),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.dividerColor, width: 0.8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${rule.serviceCategoryName ?? "Category"} — ${rule.durationMinutes} min',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 0.8.h),
+                      if (_loadingServices && services.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 1.h),
+                          child: SizedBox(
+                            width: 20.w,
+                            height: 2.h,
+                            child: const LinearProgressIndicator(),
+                          ),
+                        )
+                      else
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: selectedId,
+                            isExpanded: true,
+                            hint: Text(
+                              'Select service',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                            dropdownColor: AppColors.cardBackground,
+                            borderRadius: BorderRadius.circular(12),
+                            icon: Icon(
+                              SolarIconsOutline.altArrowDown,
+                              color: AppColors.textTertiary,
+                              size: 18.sp,
+                            ),
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: AppColors.textPrimary,
+                            ),
+                            onChanged: (int? id) {
+                              if (id != null) {
+                                setState(() => _serviceChoices[rule.id] = id);
+                              }
+                            },
+                            items: services
+                                .map((s) => DropdownMenuItem<int>(
+                                      value: s.id,
+                                      child: Text(s.name),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
             ],
 
             SizedBox(height: 10.h),

@@ -56,26 +56,14 @@ class PackageCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Hero image ─────────────────────────────────────────────
+            // ── Hero image (network URL or asset; fallback to placeholder) ─────────────────────────────────────────────
             SizedBox(
               height: 20.h,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.surfaceLight,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        SolarIconsOutline.health,
-                        color: AppColors.textTertiary,
-                        size: 40.sp,
-                      ),
-                    ),
-                  ),
+                  _buildPackageImage(imagePath),
                   // Gradient
                   Container(
                     decoration: BoxDecoration(
@@ -221,6 +209,31 @@ class PackageCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPackageImage(String path) {
+    final isUrl = path.startsWith('http://') || path.startsWith('https://');
+    final placeholder = Container(
+      color: AppColors.surfaceLight,
+      alignment: Alignment.center,
+      child: Icon(
+        SolarIconsOutline.health,
+        color: AppColors.textTertiary,
+        size: 40.sp,
+      ),
+    );
+    if (isUrl) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+    return Image.asset(
+      path,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => placeholder,
     );
   }
 

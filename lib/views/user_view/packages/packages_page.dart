@@ -1,27 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/models/Branch/branch/branch.dart';
+import 'package:recoverylab_front/providers/session/branch_provider.dart';
+import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/components/branch_selector.dart';
 import 'tabs/combos_tab.dart';
 import 'tabs/membership_tab.dart';
 import 'tabs/packages_tab.dart';
 
-class PackagesPage extends StatefulWidget {
+class PackagesPage extends ConsumerStatefulWidget {
   const PackagesPage({super.key});
 
   @override
-  State<PackagesPage> createState() => _PackagesPageState();
+  ConsumerState<PackagesPage> createState() => _PackagesPageState();
 }
 
-class _PackagesPageState extends State<PackagesPage> {
+class _PackagesPageState extends ConsumerState<PackagesPage> {
   String selectedTab = 'Combos';
+  Branch? _selectedBranch;
 
-  final Map<String, Widget> tabViews = {
-    'Combos': const CombosTab(),
-    'Membership': const MembershipTab(),
-    'Packages': const PackagesTab(),
-  };
+  List<Widget> _tabViews(List<Branch> branches, Branch? selectedBranch) => [
+        CombosTab(branchId: selectedBranch?.id),
+        MembershipTab(branchId: selectedBranch?.id),
+        PackagesTab(branchId: selectedBranch?.id),
+      ];
 
   final List<String> _tabs = ['Combos', 'Membership', 'Packages'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(branchesProvider.notifier).ensureBranchesFetched();
+    });
+  }
 
   Color _tabColor(String tab) {
     if (tab == 'Combos') return AppColors.info;
@@ -31,6 +45,23 @@ class _PackagesPageState extends State<PackagesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final branches = ref.watch(branchesProvider);
+    final user = ref.watch(userSessionProvider).user;
+    Branch? selectedBranch = _selectedBranch;
+    if (selectedBranch == null && branches.isNotEmpty) {
+      if (user?.branchId != null && branches.any((b) => b.id == user!.branchId)) {
+        selectedBranch = branches.firstWhere((b) => b.id == user!.branchId);
+      } else {
+        selectedBranch = branches.first;
+      }
+    }
+
+    final tabWidgets = _tabViews(branches, selectedBranch);
+    final currentTabIndex = _tabs.indexOf(selectedTab);
+    final currentChild = currentTabIndex >= 0 && currentTabIndex < tabWidgets.length
+        ? tabWidgets[currentTabIndex]
+        : tabWidgets.first;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -49,15 +80,23 @@ class _PackagesPageState extends State<PackagesPage> {
       ),
       body: Column(
         children: [
-          // ── Tab selector — exact same as booking screen ─────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 5.w),
+            child: BranchSelector(
+              title: 'BRANCH',
+              branches: branches,
+              selectedBranch: selectedBranch,
+              onSelected: (branch) async {
+                setState(() => _selectedBranch = branch);
+              },
+            ),
+          ),
+          SizedBox(height: 1.5.h),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 5.w),
             child: _buildTabSelector(),
           ),
-
           SizedBox(height: 2.h),
-
-          // ── Content ─────────────────────────────────────────────────────
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -74,8 +113,8 @@ class _PackagesPageState extends State<PackagesPage> {
                 ),
               ),
               child: KeyedSubtree(
-                key: ValueKey(selectedTab),
-                child: tabViews[selectedTab]!,
+                key: ValueKey('$selectedTab-${selectedBranch?.id}'),
+                child: currentChild,
               ),
             ),
           ),

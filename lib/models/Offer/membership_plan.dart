@@ -4,6 +4,7 @@ class MembershipPlan {
   final int id;
   final String name;
   final String? description;
+  final String? image;
   final int durationMonths;
   final num price;
   final bool isActive;
@@ -14,6 +15,7 @@ class MembershipPlan {
     required this.id,
     required this.name,
     this.description,
+    this.image,
     required this.durationMonths,
     required this.price,
     required this.isActive,
@@ -48,6 +50,7 @@ class MembershipPlan {
         id: parseInt(json['id'], 0),
         name: (json['name']?.toString()) ?? '',
         description: json['description']?.toString(),
+        image: json['image']?.toString(),
         durationMonths: parseInt(json['duration_months'], 12),
         price: parseNum(json['price']) ?? 0,
         isActive: json['is_active'] == true || json['is_active'] == 1,

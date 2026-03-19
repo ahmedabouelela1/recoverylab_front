@@ -306,7 +306,9 @@ class _HomePageState extends ConsumerState<HomePage>
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
                 decoration: BoxDecoration(
-                  color: isMember ? tagBgColor : AppColors.textTertiary.withOpacity(0.15),
+                  color: isMember
+                      ? tagBgColor
+                      : AppColors.textTertiary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -324,7 +326,9 @@ class _HomePageState extends ConsumerState<HomePage>
                           : (isMember ? planName! : 'Not a member'),
                       style: GoogleFonts.inter(
                         fontSize: 12.sp,
-                        color: isMember ? AppColors.info : AppColors.textSecondary,
+                        color: isMember
+                            ? AppColors.info
+                            : AppColors.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -602,7 +606,7 @@ class _HomePageState extends ConsumerState<HomePage>
                                 ],
                               ),
                               child: Text(
-                                '${offer.discount!}%',
+                                offer.discount!,
                                 style: GoogleFonts.inter(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w900,
@@ -734,17 +738,17 @@ class _HomePageState extends ConsumerState<HomePage>
           SizedBox(
             height: 16.h,
             child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    // padding: EdgeInsets.symmetric(horizontal: .w),
-                    itemCount: serviceCategories.length,
-                    separatorBuilder: (_, __) => SizedBox(width: 3.w),
-                    itemBuilder: (context, index) {
-                      final category = serviceCategories[index];
-                      if (category == null) return SizedBox.shrink();
-                      return _buildModernCategory(category);
-                    },
-                  ),
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              // padding: EdgeInsets.symmetric(horizontal: .w),
+              itemCount: serviceCategories.length,
+              separatorBuilder: (_, __) => SizedBox(width: 3.w),
+              itemBuilder: (context, index) {
+                final category = serviceCategories[index];
+                if (category == null) return SizedBox.shrink();
+                return _buildModernCategory(category);
+              },
+            ),
           ),
         ],
       ),

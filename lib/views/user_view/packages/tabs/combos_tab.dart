@@ -10,7 +10,9 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/shimmer_box.dart';
 
 class CombosTab extends ConsumerStatefulWidget {
-  const CombosTab({super.key});
+  const CombosTab({super.key, this.branchId});
+
+  final int? branchId;
 
   @override
   ConsumerState<CombosTab> createState() => _CombosTabState();
@@ -37,14 +39,24 @@ class _CombosTabState extends ConsumerState<CombosTab>
   }
 
   @override
+  void didUpdateWidget(covariant CombosTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.branchId != widget.branchId) _fetch();
+  }
+
+  @override
   void dispose() {
     _shimmerController?.dispose();
     super.dispose();
   }
 
   Future<void> _fetch() async {
+    setState(() => _loading = true);
     try {
-      final result = await ref.read(apiProvider).getPackages(type: 'COMBO');
+      final result = await ref.read(apiProvider).getPackages(
+        type: 'COMBO',
+        branchId: widget.branchId,
+      );
       if (mounted)
         setState(() {
           _combos = result;
@@ -63,10 +75,18 @@ class _CombosTabState extends ConsumerState<CombosTab>
     if (_loading) {
       return _buildShimmerList();
     }
+    if (widget.branchId == null) {
+      return Center(
+        child: Text(
+          'Select a branch to see combos',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
+        ),
+      );
+    }
     if (_combos.isEmpty) {
       return Center(
         child: Text(
-          'No combos available',
+          'No combos available for this branch',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
         ),
       );
@@ -77,7 +97,7 @@ class _CombosTabState extends ConsumerState<CombosTab>
       itemBuilder: (context, index) {
         final p = _combos[index];
         final subtitle = p.rules
-            .map((r) => r.serviceName ?? 'Service ${r.serviceId}')
+            .map((r) => r.serviceName ?? r.serviceCategoryName ?? 'Choose service')
             .join(' · ');
         final totalMin = p.totalDurationMinutes;
         final durationStr = totalMin > 0 ? '$totalMin min' : '';
@@ -96,16 +116,17 @@ class _CombosTabState extends ConsumerState<CombosTab>
               builder: (_) => PackageDetailsPage(
                 itemId: p.id,
                 type: PackageType.combo,
+                combo: p,
                 title: p.name,
                 description: p.description ?? '',
-                imagePath: 'lib/assets/images/haven.jpg',
+                imagePath: p.image?.isNotEmpty == true ? p.image! : 'lib/assets/images/haven.jpg',
                 totalDuration: durationStr,
                 price: p.price.toStringAsFixed(0),
                 inclusions: p.rules
                     .map(
                       (r) => {
                         'icon': 'icon_massage',
-                        'name': r.serviceName ?? 'Service ${r.serviceId}',
+                        'name': r.serviceName ?? r.serviceCategoryName ?? 'Choose service',
                         'duration': '${r.durationMinutes} min',
                       },
                     )

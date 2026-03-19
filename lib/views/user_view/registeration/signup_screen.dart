@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
+import 'package:recoverylab_front/configurations/constants.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
 import 'package:recoverylab_front/models/User/country.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
@@ -10,6 +12,7 @@ import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -38,6 +41,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   bool obscureConfirmPassword = true;
   bool acceptTerms = false;
   bool isLoading = false;
+  bool _isSocialLoading = false;
   String selectedCountryCode = '+20';
   DateTime? selectedDob;
 
@@ -458,9 +462,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
               child: _buildSocialButton(
                 icon: FontAwesomeIcons.google,
                 label: "Google",
-                onPressed: () {
-                  print("Google login");
-                },
+                onPressed: _isSocialLoading ? null : _signUpWithGoogle,
               ),
             ),
             SizedBox(width: 3.w),
@@ -468,9 +470,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
               child: _buildSocialButton(
                 icon: FontAwesomeIcons.apple,
                 label: "Apple",
-                onPressed: () {
-                  print("Apple login");
-                },
+                onPressed: _isSocialLoading ? null : _signUpWithApple,
               ),
             ),
           ],
@@ -488,34 +488,114 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     );
   }
 
+  Future<void> _signUpWithGoogle() async {
+    if (googleClientId.isEmpty) {
+      AppSnackBar.show(context, 'Google sign-in is not configured.');
+      return;
+    }
+    setState(() => _isSocialLoading = true);
+    try {
+      final googleSignIn = GoogleSignIn(serverClientId: googleClientId);
+      final account = await googleSignIn.signIn();
+      if (account == null || !mounted) return;
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        if (mounted) AppSnackBar.show(context, 'Could not get Google ID token.');
+        return;
+      }
+      await ref.read(apiProvider).loginWithGoogle(idToken);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, Routes.navbar);
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.show(
+          context,
+          e is ApiException ? e.message : 'Google sign-in failed',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSocialLoading = false);
+    }
+  }
+
+  Future<void> _signUpWithApple() async {
+    if (appleClientId.isEmpty) {
+      AppSnackBar.show(context, 'Apple sign-in is not configured.');
+      return;
+    }
+    setState(() => _isSocialLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final identityToken = credential.identityToken;
+      if (identityToken == null || identityToken.isEmpty) {
+        if (mounted) AppSnackBar.show(context, 'Could not get Apple identity token.');
+        return;
+      }
+      await ref.read(apiProvider).loginWithApple(
+            identityToken,
+            firstName: credential.givenName,
+            lastName: credential.familyName,
+          );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, Routes.navbar);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code != AuthorizationErrorCode.canceled && mounted) {
+        AppSnackBar.show(context, e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.show(
+          context,
+          e is ApiException ? e.message : 'Apple sign-in failed',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSocialLoading = false);
+    }
+  }
+
   Widget _buildSocialButton({
     required IconData icon,
     required String label,
-    required VoidCallback onPressed,
+    VoidCallback? onPressed,
   }) {
+    final isDisabled = onPressed == null;
     return GestureDetector(
       onTap: onPressed,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 2.h),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.dividerColor, width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FaIcon(icon, size: 16.sp, color: AppColors.textPrimary),
-            SizedBox(width: 2.w),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+      child: Opacity(
+        opacity: isDisabled ? 0.6 : 1,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 2.h),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.dividerColor, width: 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FaIcon(
+                icon,
+                size: 16.sp,
+                color: isDisabled ? AppColors.textTertiary : AppColors.textPrimary,
               ),
-            ),
-          ],
+              SizedBox(width: 2.w),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: isDisabled ? AppColors.textTertiary : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

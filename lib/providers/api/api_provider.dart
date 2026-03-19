@@ -108,6 +108,38 @@ class ApiProvider {
     return authResponse;
   }
 
+  /// Sign in with Google: exchange [idToken] for app token. Call after GoogleSignIn returns credentials.
+  Future<AuthResponse> loginWithGoogle(String idToken) async {
+    final response = await basePost(ApiRoutes.loginGoogle, {
+      'id_token': idToken,
+    });
+
+    final decoded = _handleResponse(response);
+    final authResponse = AuthResponse.fromJson(decoded);
+    ref.read(userSessionProvider.notifier).login(authResponse);
+    return authResponse;
+  }
+
+  /// Sign in with Apple: exchange [identityToken] for app token. [firstName] and [lastName] optional (only on first sign-in).
+  Future<AuthResponse> loginWithApple(
+    String identityToken, {
+    String? firstName,
+    String? lastName,
+  }) async {
+    final body = <String, dynamic>{'identity_token': identityToken};
+    if (firstName != null || lastName != null) {
+      body['user'] = {
+        if (firstName != null) 'firstName': firstName,
+        if (lastName != null) 'lastName': lastName,
+      };
+    }
+    final response = await basePost(ApiRoutes.loginApple, body);
+    final decoded = _handleResponse(response);
+    final authResponse = AuthResponse.fromJson(decoded);
+    ref.read(userSessionProvider.notifier).login(authResponse);
+    return authResponse;
+  }
+
   Future<Map<String, dynamic>> validateToken(String token) async {
     final url = Uri.parse('$apiUrl${ApiRoutes.tokenValidation}');
     final headers = {'Authorization': 'Bearer $token'};
@@ -315,11 +347,14 @@ class ApiProvider {
     _handleResponse(response);
   }
 
-  /// GET /packages — optionally filter by type ('PACKAGE' or 'COMBO').
-  Future<List<OfferPackage>> getPackages({String? type}) async {
-    final endpoint = type != null
-        ? '${ApiRoutes.packages}?type=$type'
-        : ApiRoutes.packages;
+  /// GET /packages — optionally filter by type ('PACKAGE' or 'COMBO') and branch_id.
+  Future<List<OfferPackage>> getPackages({String? type, int? branchId}) async {
+    final query = <String>[];
+    if (type != null) query.add('type=$type');
+    if (branchId != null) query.add('branch_id=$branchId');
+    final endpoint = query.isEmpty
+        ? ApiRoutes.packages
+        : '${ApiRoutes.packages}?${query.join('&')}';
     final response = await baseGet(endpoint);
     final decoded = _handleResponse(response);
 
@@ -338,9 +373,12 @@ class ApiProvider {
         .toList();
   }
 
-  /// GET /membership-plans
-  Future<List<MembershipPlan>> getMembershipPlans() async {
-    final response = await baseGet(ApiRoutes.membershipPlans);
+  /// GET /membership-plans — optionally filter by branch_id.
+  Future<List<MembershipPlan>> getMembershipPlans({int? branchId}) async {
+    final endpoint = branchId != null
+        ? '${ApiRoutes.membershipPlans}?branch_id=$branchId'
+        : ApiRoutes.membershipPlans;
+    final response = await baseGet(endpoint);
     final decoded = _handleResponse(response);
 
     final raw = decoded['data'];
@@ -543,14 +581,19 @@ class ApiProvider {
     required String scheduledStart,
     int participantCount = 1,
     String? notes,
+    Map<int, int>? serviceChoices,
   }) async {
-    final response = await basePost(ApiRoutes.comboBooking, {
+    final payload = <String, dynamic>{
       'combo_id': comboId,
       'branch_id': branchId,
       'scheduled_start': scheduledStart,
       'participant_count': participantCount,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-    });
+    };
+    if (serviceChoices != null && serviceChoices.isNotEmpty) {
+      payload['service_choices'] = serviceChoices.map((k, v) => MapEntry(k.toString(), v));
+    }
+    final response = await basePost(ApiRoutes.comboBooking, payload);
     return _handleResponse(response);
   }
 }
