@@ -19,11 +19,11 @@ class Service {
 
   factory Service.fromJson(Map<String, dynamic> json) {
     return Service(
-      id: json['id'],
-      category: ServiceCategory.fromJson(json['category']),
-      name: json['name'],
-      description: json['description'],
-      image: json['image'],
+      id: json['id'] as int,
+      category: ServiceCategory.fromJson(json['category'] as Map<String, dynamic>),
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      image: json['image']?.toString() ?? '',
       includedIn:
           (json['included_in'] as List<dynamic>?)
               ?.map((item) => item as String?)

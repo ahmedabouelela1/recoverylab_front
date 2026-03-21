@@ -9,6 +9,7 @@ class ApiRoutes {
   static const String tokenValidation = '/validate-token';
   static const String branch = '/branches';
   static const String home = '/home';
+  static const String offers = '/offers';
   static const String categoryServices = '/category-services';
   static const String branchServices = '/branch-services';
   static const String booking = '/bookings';

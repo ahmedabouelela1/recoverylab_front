@@ -406,16 +406,27 @@ class _HomePageState extends ConsumerState<HomePage>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Special Offers",
-                style: GoogleFonts.inter(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.3,
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  Routes.specialOffersPage,
+                ),
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  "Special Offers",
+                  style: GoogleFonts.inter(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
                 ),
               ),
               GestureDetector(
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  Routes.specialOffersPage,
+                ),
                 child: Container(
                   width: 24.w,
                   padding: EdgeInsets.symmetric(
@@ -519,21 +530,32 @@ class _HomePageState extends ConsumerState<HomePage>
 
   // 🎴 Premium Offer Card
   Widget _buildPremiumOfferCard(Offers offer) {
-    return Container(
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            Routes.specialOfferDetail,
+            arguments: {'id': offer.id},
+          );
+        },
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              children: [
             // Background Image
             Positioned.fill(
               child: Image.network(offer.image, fit: BoxFit.cover),
@@ -664,6 +686,8 @@ class _HomePageState extends ConsumerState<HomePage>
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

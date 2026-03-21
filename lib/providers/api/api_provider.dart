@@ -236,6 +236,38 @@ class ApiProvider {
     return decoded;
   }
 
+  /// GET /offers — active offers; optional [branchId].
+  Future<List<Offers>> getOffersList({int? branchId}) async {
+    final endpoint = branchId != null
+        ? '${ApiRoutes.offers}?branch_id=$branchId'
+        : ApiRoutes.offers;
+    final response = await baseGet(endpoint);
+    final decoded = _handleResponse(response);
+    final raw = decoded['data'];
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw.containsKey('data')) {
+      list = raw['data'] as List<dynamic>;
+    } else {
+      list = [];
+    }
+    return list
+        .map((j) => Offers.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /offers/{id} — full offer including [big_description].
+  Future<Offers> getOfferDetail(int id) async {
+    final response = await baseGet('${ApiRoutes.offers}/$id');
+    final decoded = _handleResponse(response);
+    final data = decoded['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      throw ApiException('Offer not found');
+    }
+    return Offers.fromJson(data);
+  }
+
   Future<List<Service?>> getServicesByCategory(int categoryId) async {
     final response = await baseGet('${ApiRoutes.categoryServices}/$categoryId');
     final decoded = _handleResponse(response);
@@ -347,11 +379,18 @@ class ApiProvider {
     _handleResponse(response);
   }
 
-  /// GET /packages — optionally filter by type ('PACKAGE' or 'COMBO') and branch_id.
-  Future<List<OfferPackage>> getPackages({String? type, int? branchId}) async {
+  /// GET /packages — [serviceId] + [durationMinutes] required with type PACKAGE (public API).
+  Future<List<OfferPackage>> getPackages({
+    String? type,
+    int? branchId,
+    int? serviceId,
+    int? durationMinutes,
+  }) async {
     final query = <String>[];
     if (type != null) query.add('type=$type');
     if (branchId != null) query.add('branch_id=$branchId');
+    if (serviceId != null) query.add('service_id=$serviceId');
+    if (durationMinutes != null) query.add('duration_minutes=$durationMinutes');
     final endpoint = query.isEmpty
         ? ApiRoutes.packages
         : '${ApiRoutes.packages}?${query.join('&')}';

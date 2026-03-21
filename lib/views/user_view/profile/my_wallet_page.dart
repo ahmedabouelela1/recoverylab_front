@@ -181,7 +181,7 @@ class _MyWalletPageState extends ConsumerState<MyWalletPage> {
     if (_packages.isEmpty) {
       return _emptyState(
         'No Active Packages',
-        'Browse our packages to purchase session credits.',
+        'Open a service, pick your session length, then buy a session package there.',
       );
     }
     return RefreshIndicator(

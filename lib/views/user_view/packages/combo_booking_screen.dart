@@ -80,6 +80,12 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   List<PackageRule> get _categoryChoiceRules =>
       widget.combo?.rules.where((r) => r.isCategoryChoice).toList() ?? [];
 
+  Set<int> get _excludedServiceIds =>
+      widget.combo?.excludedServiceIds.toSet() ?? {};
+
+  List<Service> _allowedServices(List<Service> all) =>
+      all.where((s) => !_excludedServiceIds.contains(s.id)).toList();
+
   Future<void> _loadServicesForCategory(int categoryId) async {
     if (_servicesByCategory.containsKey(categoryId)) return;
     setState(() => _loadingServices = true);
@@ -88,6 +94,14 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
       if (mounted) {
         setState(() {
           _servicesByCategory[categoryId] = list.whereType<Service>().toList();
+          for (final rule in _categoryChoiceRules) {
+            if (rule.serviceCategoryId == categoryId) {
+              final chosen = _serviceChoices[rule.id];
+              if (chosen != null && _excludedServiceIds.contains(chosen)) {
+                _serviceChoices.remove(rule.id);
+              }
+            }
+          }
           _loadingServices = false;
         });
       }
@@ -576,11 +590,26 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                   fontSize: 12.sp,
                 ),
               ),
+              if (_excludedServiceIds.isNotEmpty) ...[
+                SizedBox(height: 0.8.h),
+                Text(
+                  'Some services are not available for this combo.',
+                  style: TextStyle(
+                    color: AppColors.textTertiary,
+                    fontSize: 11.sp,
+                  ),
+                ),
+              ],
               SizedBox(height: 1.h),
               ..._categoryChoiceRules.map((rule) {
                 final catId = rule.serviceCategoryId!;
                 final services = _servicesByCategory[catId] ?? [];
+                final allowed = _allowedServices(services);
                 final selectedId = _serviceChoices[rule.id];
+                final validSelected = selectedId != null &&
+                        allowed.any((s) => s.id == selectedId)
+                    ? selectedId
+                    : null;
                 return Container(
                   margin: EdgeInsets.only(bottom: 1.5.h),
                   padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -613,7 +642,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                       else
                         DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
-                            value: selectedId,
+                            value: validSelected,
                             isExpanded: true,
                             hint: Text(
                               'Select service',
@@ -638,7 +667,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                                 setState(() => _serviceChoices[rule.id] = id);
                               }
                             },
-                            items: services
+                            items: allowed
                                 .map((s) => DropdownMenuItem<int>(
                                       value: s.id,
                                       child: Text(s.name),

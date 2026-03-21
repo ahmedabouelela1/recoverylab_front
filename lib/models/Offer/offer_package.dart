@@ -12,6 +12,12 @@ class OfferPackage {
   final int? validityDays;
   final bool isActive;
   final List<PackageRule> rules;
+  /// When set, this session-credit package only applies to this service + duration.
+  final int? serviceId;
+  final int? durationMinutes;
+  final String? serviceName;
+  /// COMBO only: services the user cannot choose for category-based slots.
+  final List<int> excludedServiceIds;
 
   OfferPackage({
     required this.id,
@@ -25,6 +31,10 @@ class OfferPackage {
     this.validityDays,
     required this.isActive,
     required this.rules,
+    this.serviceId,
+    this.durationMinutes,
+    this.serviceName,
+    this.excludedServiceIds = const [],
   });
 
   bool get isCombo => type == 'COMBO';
@@ -48,5 +58,12 @@ class OfferPackage {
         rules: (json['rules'] as List<dynamic>? ?? [])
             .map((r) => PackageRule.fromJson(r as Map<String, dynamic>))
             .toList(),
+        serviceId: json['service_id'] as int?,
+        durationMinutes: json['duration_minutes'] as int?,
+        serviceName: json['service_name'] as String?,
+        excludedServiceIds: (json['excluded_service_ids'] as List<dynamic>?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            const [],
       );
 }

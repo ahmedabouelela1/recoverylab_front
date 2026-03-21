@@ -7,6 +7,7 @@ import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
 import 'package:recoverylab_front/models/Branch/services/service.dart';
 import 'package:recoverylab_front/models/Branch/branchService/service_durations.dart';
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
+import 'package:recoverylab_front/models/Offer/offer_package.dart';
 import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
@@ -15,6 +16,7 @@ import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/models/Offer/user_membership.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -51,6 +53,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   int defaultCapacity = 2;
   List<UserPackage> _myPackages = [];
   UserPackage? _selectedPackage;
+  List<OfferPackage> _catalogPackages = [];
   BranchSchedule? _schedule;
 
   // Loading and error states
@@ -176,11 +179,35 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         errorMessage = null;
         _staffAvailabilityFailed = false;
       });
+      await _loadCatalogPackages();
     } catch (e) {
       setState(() {
         hasError = true;
         errorMessage = 'Failed to fetch service details';
       });
+    }
+  }
+
+  Future<void> _loadCatalogPackages() async {
+    if (!mounted) return;
+    if (branches.isEmpty ||
+        selectedBranchIndex == null ||
+        selectedBranchIndex! >= branches.length ||
+        selectedDuration == null) {
+      setState(() => _catalogPackages = []);
+      return;
+    }
+    final branchId = branches[selectedBranchIndex!].id;
+    try {
+      final list = await ref.read(apiProvider).getPackages(
+            type: 'PACKAGE',
+            branchId: branchId,
+            serviceId: widget.service.id,
+            durationMinutes: selectedDuration!,
+          );
+      if (mounted) setState(() => _catalogPackages = list);
+    } catch (_) {
+      if (mounted) setState(() => _catalogPackages = []);
     }
   }
 
@@ -210,6 +237,13 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         !offerPackage.isPackage ||
         !offerPackage.isActive) {
       return false;
+    }
+    if (offerPackage.serviceId != null && offerPackage.durationMinutes != null) {
+      if (offerPackage.serviceId != widget.service.id) return false;
+      if (selectedDuration == null ||
+          offerPackage.durationMinutes != selectedDuration) {
+        return false;
+      }
     }
     final expiry = pkg.expiryDate;
     if (expiry == null || expiry.isEmpty) return true;
@@ -318,7 +352,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         staffList = newList;
         _staffAvailabilityFailed = false;
         if (selectedStaff != null &&
-            !newList.any((s) => s?.user.id == selectedStaff?.user.id)) {
+            !newList.any((s) => s?.id == selectedStaff?.id)) {
           selectedStaff = null;
         }
       });
@@ -428,7 +462,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             formattedDateTime: formattedDateTime!,
             durationMinutes: selectedDuration!,
             participantCount: selectedPeopleCount!,
-            staffId: selectedStaff?.user.id,
+            staffId: selectedStaff?.id,
             notes: notes.isEmpty ? null : notes,
             paymentMethod: selectedPaymentMethod ?? 'CASH',
             usePackageId: _selectedPackage?.id,
@@ -609,11 +643,16 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                       SizedBox(height: 1.h),
                       StatefulBuilder(
-                        builder: (ctx, setInner) => Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () =>
-                                  setInner(() => _selectedPackage = null),
+                        builder: (ctx, setInner) {
+                          void updatePackage(UserPackage? pkg) {
+                            setState(() => _selectedPackage = pkg);
+                            setInner(() {});
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () => updatePackage(null),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 3.w,
@@ -657,8 +696,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             ...eligiblePackages.map((pkg) {
                               final isSelected = _selectedPackage?.id == pkg.id;
                               return GestureDetector(
-                                onTap: () =>
-                                    setInner(() => _selectedPackage = pkg),
+                                onTap: () => updatePackage(pkg),
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 3.w,
@@ -702,73 +740,138 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                                 ),
                               );
                             }),
-                          ],
-                        ),
+                              SizedBox(height: 1.h),
+                              Container(height: 0.5, color: AppColors.dividerColor),
+                              SizedBox(height: 2.h),
+                              Builder(
+                                builder: (_) {
+                                  final totalInfo =
+                                      _getDisplayTotalWithMembershipAndPackage(
+                                        selectedDurationData?.price,
+                                        selectedPeopleCount ?? 1,
+                                      );
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Total Amount',
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 14.sp,
+                                            ),
+                                          ),
+                                          if (totalInfo.$3 != null)
+                                            Padding(
+                                              padding: EdgeInsets.only(top: 0.3.h),
+                                              child: Text(
+                                                totalInfo.$3!,
+                                                style: TextStyle(
+                                                  color: AppColors.success,
+                                                  fontSize: 11.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          if (totalInfo.$2 != null)
+                                            Text(
+                                              totalInfo.$2!,
+                                              style: TextStyle(
+                                                color: AppColors.textTertiary,
+                                                fontSize: 12.sp,
+                                                decoration: TextDecoration.lineThrough,
+                                              ),
+                                            ),
+                                          Text(
+                                            totalInfo.$1,
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                      SizedBox(height: 1.h),
                     ],
-                    Container(height: 0.5, color: AppColors.dividerColor),
-                    SizedBox(height: 2.h),
-                    Builder(
-                      builder: (_) {
-                        final totalInfo =
-                            _getDisplayTotalWithMembershipAndPackage(
-                              selectedDurationData?.price,
-                              selectedPeopleCount ?? 1,
-                            );
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Total Amount',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 14.sp,
+                    if (eligiblePackages.isEmpty) ...[
+                      Container(height: 0.5, color: AppColors.dividerColor),
+                      SizedBox(height: 2.h),
+                      Builder(
+                        builder: (_) {
+                          final totalInfo =
+                              _getDisplayTotalWithMembershipAndPackage(
+                                selectedDurationData?.price,
+                                selectedPeopleCount ?? 1,
+                              );
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Amount',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 14.sp,
+                                    ),
                                   ),
-                                ),
-                                if (totalInfo.$3 != null)
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 0.3.h),
-                                    child: Text(
-                                      totalInfo.$3!,
-                                      style: TextStyle(
-                                        color: AppColors.success,
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w600,
+                                  if (totalInfo.$3 != null)
+                                    Padding(
+                                      padding: EdgeInsets.only(top: 0.3.h),
+                                      child: Text(
+                                        totalInfo.$3!,
+                                        style: TextStyle(
+                                          color: AppColors.success,
+                                          fontSize: 11.sp,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (totalInfo.$2 != null)
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (totalInfo.$2 != null)
+                                    Text(
+                                      totalInfo.$2!,
+                                      style: TextStyle(
+                                        color: AppColors.textTertiary,
+                                        fontSize: 12.sp,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
                                   Text(
-                                    totalInfo.$2!,
+                                    totalInfo.$1,
                                     style: TextStyle(
-                                      color: AppColors.textTertiary,
-                                      fontSize: 12.sp,
-                                      decoration: TextDecoration.lineThrough,
+                                      color: AppColors.textPrimary,
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                Text(
-                                  totalInfo.$1,
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1426,6 +1529,10 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                 _buildTimeSelector(),
                 SizedBox(height: 2.h),
                 _buildDurationSelector(),
+                if (_catalogPackages.isNotEmpty) ...[
+                  SizedBox(height: 2.h),
+                  _buildSessionPackagesCatalog(),
+                ],
                 if (staffList.isNotEmpty) _buildStaffSelector(),
                 if (selectedDate != null &&
                     selectedTime != null &&
@@ -1959,11 +2066,20 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       widget.service.id,
       widget.service.category.id,
     );
-    final packagePct =
-        _selectedPackage != null &&
-            _selectedPackage!.creditsRemaining > 0 &&
-            _selectedPackage!.package != null
-        ? (_selectedPackage!.package!.discountPercentage ?? 0).toDouble()
+    final offer = _selectedPackage?.package;
+    final legacyUnbound =
+        offer != null &&
+        offer.serviceId == null &&
+        offer.durationMinutes == null;
+    final boundMatches = offer != null &&
+        offer.serviceId == widget.service.id &&
+        offer.durationMinutes == selectedDuration;
+    final bool packageDiscountApplies = _selectedPackage != null &&
+        _selectedPackage!.creditsRemaining > 0 &&
+        offer != null &&
+        (legacyUnbound || boundMatches);
+    final packagePct = packageDiscountApplies && offer != null
+        ? (offer.discountPercentage ?? 0).toDouble()
         : 0.0;
 
     // Backend rule: UNLIMITED_ACCESS (100%) wins; else best of membership % vs package %
@@ -2296,6 +2412,143 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
+  Widget _buildSessionPackagesCatalog() {
+    if (selectedDuration == null) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.card_giftcard, color: AppColors.info, size: 18.sp),
+            SizedBox(width: 2.w),
+            Expanded(
+              child: Text(
+                'Session packages for ${widget.service.name} · $selectedDuration min',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 1.h),
+        Text(
+          'Credits apply only to this service and session length.',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11.sp,
+          ),
+        ),
+        SizedBox(height: 1.5.h),
+        ..._catalogPackages.map((p) {
+          final credits = p.totalCredits;
+          final discount = p.discountPercentage;
+          return Container(
+            width: double.infinity,
+            margin: EdgeInsets.only(bottom: 1.5.h),
+            padding: EdgeInsets.all(3.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.dividerColor),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                      if (credits != null)
+                        Text(
+                          '$credits credits${discount != null ? ' · ${discount.toInt()}% off per session' : ''}',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'EGP ${p.price.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.sp,
+                  ),
+                ),
+                SizedBox(width: 2.w),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PackageDetailsPage(
+                          itemId: p.id,
+                          type: PackageType.package,
+                          title: p.name,
+                          description: p.description ?? '',
+                          imagePath: p.image?.isNotEmpty == true
+                              ? p.image!
+                              : widget.service.image,
+                          totalDuration:
+                              credits != null ? '$credits sessions' : '',
+                          price: p.price.toStringAsFixed(0),
+                          inclusions: [
+                            {
+                              'icon': 'icon_massage',
+                              'name':
+                                  '${widget.service.name} · $selectedDuration min only',
+                              'duration': '',
+                            },
+                            if (credits != null)
+                              {
+                                'icon': 'icon_spa',
+                                'name': '$credits session credits',
+                                'duration': '',
+                              },
+                            if (discount != null)
+                              {
+                                'icon': 'icon_discount',
+                                'name': '${discount.toInt()}% off per booked session',
+                                'duration': '',
+                              },
+                            if (p.validityDays != null)
+                              {
+                                'icon': 'icon_spa',
+                                'name': 'Valid for ${p.validityDays} days after purchase',
+                                'duration': '',
+                              },
+                          ],
+                        ),
+                      ),
+                    ).then((_) {
+                      _loadMyPackages();
+                    });
+                  },
+                  child: Text(
+                    'Buy',
+                    style: TextStyle(color: AppColors.info, fontSize: 12.sp),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildDurationSelector() {
     if (durations.isEmpty) return const SizedBox.shrink();
 
@@ -2321,14 +2574,18 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           children: durations.where((d) => d != null).map((duration) {
             final isSelected = selectedDuration == duration!.minutes;
             return GestureDetector(
-              onTap: () => setState(() {
-                selectedDuration = duration.minutes;
-                selectedTime =
-                    null; // Re-pick time so it stays within branch hours for new duration
-                selectedStaff = null;
-                staffList = List<Staff?>.from(_allQualifiedStaff);
-                _staffAvailabilityFailed = false;
-              }),
+              onTap: () async {
+                setState(() {
+                  selectedDuration = duration.minutes;
+                  selectedTime =
+                      null; // Re-pick time so it stays within branch hours for new duration
+                  selectedStaff = null;
+                  staffList = List<Staff?>.from(_allQualifiedStaff);
+                  _staffAvailabilityFailed = false;
+                });
+                await _loadCatalogPackages();
+                await _loadMyPackages();
+              },
               child: Container(
                 margin: EdgeInsets.only(bottom: 2.h),
                 padding: EdgeInsets.all(4.w),
@@ -2461,7 +2718,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               final staff = staffList[index];
               if (staff == null) return const SizedBox.shrink();
 
-              final isSelected = selectedStaff?.user.id == staff.user.id;
+              final isSelected = selectedStaff?.id == staff.id;
 
               return GestureDetector(
                 onTap: () {

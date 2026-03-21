@@ -8,6 +8,8 @@ import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.
 import 'package:recoverylab_front/views/user_view/home/Service/service_categories.dart';
 import 'package:recoverylab_front/views/user_view/home/Service/services_screen.dart';
 import 'package:recoverylab_front/views/user_view/home/Service/service_details.dart';
+import 'package:recoverylab_front/views/user_view/home/special_offer_detail_page.dart';
+import 'package:recoverylab_front/views/user_view/home/special_offers_page.dart';
 import 'package:recoverylab_front/views/user_view/navbar/navbar.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/login/login_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/login/otp_verified_page.dart';
@@ -68,6 +70,8 @@ class Routes {
   static const String serviceCats = '/serviceCats';
   static const String comboBookingScreen = '/comboBookingScreen';
   static const String myWallet = '/myWallet';
+  static const String specialOffersPage = '/specialOffersPage';
+  static const String specialOfferDetail = '/specialOfferDetail';
 }
 
 class RoutesGenerator {
@@ -141,6 +145,18 @@ class RoutesGenerator {
         return _errorRoute();
       case Routes.packagesPage:
         return MaterialPageRoute(builder: (_) => const PackagesPage());
+
+      case Routes.specialOffersPage:
+        return MaterialPageRoute(builder: (_) => const SpecialOffersPage());
+
+      case Routes.specialOfferDetail:
+        if (args is Map<String, dynamic> && args['id'] is int) {
+          return MaterialPageRoute(
+            builder: (_) =>
+                SpecialOfferDetailPage(offerId: args['id'] as int),
+          );
+        }
+        return _errorRoute();
 
       case Routes.otpVerifiedSignup:
         return MaterialPageRoute(builder: (_) => OtpVerifiedPage());

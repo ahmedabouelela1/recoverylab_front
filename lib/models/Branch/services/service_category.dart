@@ -13,10 +13,10 @@ class ServiceCategory {
 
   factory ServiceCategory.fromJson(Map<String, dynamic> json) {
     return ServiceCategory(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      image: json['image'],
+      id: json['id'] as int,
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      image: json['image']?.toString() ?? '',
     );
   }
 

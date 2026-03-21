@@ -8,8 +8,6 @@ import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/components/branch_selector.dart';
 import 'tabs/combos_tab.dart';
 import 'tabs/membership_tab.dart';
-import 'tabs/packages_tab.dart';
-
 class PackagesPage extends ConsumerStatefulWidget {
   const PackagesPage({super.key});
 
@@ -24,10 +22,9 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
   List<Widget> _tabViews(List<Branch> branches, Branch? selectedBranch) => [
         CombosTab(branchId: selectedBranch?.id),
         MembershipTab(branchId: selectedBranch?.id),
-        PackagesTab(branchId: selectedBranch?.id),
       ];
 
-  final List<String> _tabs = ['Combos', 'Membership', 'Packages'];
+  final List<String> _tabs = ['Combos', 'Membership'];
 
   @override
   void initState() {
@@ -70,7 +67,7 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
-          'Packages',
+          'Offers',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18.sp,

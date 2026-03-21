@@ -1,5 +1,5 @@
 class BranchDayHours {
-  /// Backend: 1=Monday … 7=Sunday (ISO, matches Carbon dayOfWeekIso and Dart DateTime.weekday)
+  /// Backend: 0=Sunday, 1=Monday … 6=Saturday
   final int dayOfWeek;
   final String openTime; // "HH:MM:SS"
   final String closeTime; // "HH:MM:SS"
@@ -79,7 +79,8 @@ class BranchSchedule {
 
   /// Returns available hour slots (as ints, 0–23) for [date].
   /// Returns null when the branch is closed that day.
-  /// Backend uses day_of_week 1=Mon … 7=Sun (ISO); Dart [DateTime.weekday] is the same.
+  /// Backend uses day_of_week 0–6 (0=Sun, 1=Mon … 6=Sat).
+  /// Dart DateTime.weekday is 1=Mon … 7=Sun (ISO).
   List<int>? slotsFor(DateTime date) {
     final special = specialDateFor(date);
 
@@ -93,10 +94,11 @@ class BranchSchedule {
       }
     }
 
-    // Fall back to regular weekly hours. Backend day_of_week: 1=Mon … 7=Sun (ISO).
-    final dayOfWeek = date.weekday; // Dart: 1=Mon, 7=Sun
+    // Convert Dart weekday (1=Mon…7=Sun) → backend day_of_week (0=Sun, 1=Mon…6=Sat)
+    final dartWeekday = date.weekday; // 1=Mon, 7=Sun
+    final backendDay = dartWeekday == 7 ? 0 : dartWeekday; // Sun→0, Mon–Sat stay 1–6
     try {
-      final day = hours.firstWhere((h) => h.dayOfWeek == dayOfWeek);
+      final day = hours.firstWhere((h) => h.dayOfWeek == backendDay);
       if (day.isClosed) return null;
       return _slots(day.openHour, day.closeHour);
     } catch (_) {
