@@ -25,6 +25,7 @@ import 'package:recoverylab_front/views/user_view/profile/coupons.dart';
 import 'package:recoverylab_front/views/user_view/profile/edit_health_survey.dart';
 import 'package:recoverylab_front/views/user_view/profile/help.dart';
 import 'package:recoverylab_front/views/user_view/profile/reset_password.dart';
+import 'package:recoverylab_front/views/user_view/profile/branches_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/settings.dart';
 import 'package:recoverylab_front/views/user_view/profile/terms.dart';
 import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dart';
@@ -72,6 +73,7 @@ class Routes {
   static const String myWallet = '/myWallet';
   static const String specialOffersPage = '/specialOffersPage';
   static const String specialOfferDetail = '/specialOfferDetail';
+  static const String branches = '/branches';
 }
 
 class RoutesGenerator {
@@ -94,7 +96,15 @@ class RoutesGenerator {
       case Routes.signupPage:
         return MaterialPageRoute(builder: (_) => const SignupPage());
       case Routes.questionnaire:
-        return MaterialPageRoute(builder: (_) => const QuestionnairePage());
+        var mandatoryPostSignup = false;
+        if (args is Map && args['mandatoryPostSignup'] == true) {
+          mandatoryPostSignup = true;
+        }
+        return MaterialPageRoute(
+          builder: (_) => QuestionnairePage(
+            mandatoryPostSignup: mandatoryPostSignup,
+          ),
+        );
       case Routes.bookingSuccessPage:
         return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
       case Routes.serviceCats:
@@ -165,6 +175,8 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const ServicesSelectionPage());
       case Routes.settings:
         return MaterialPageRoute(builder: (_) => const SettingsPage());
+      case Routes.branches:
+        return MaterialPageRoute(builder: (_) => const BranchesPage());
       case Routes.helpAndSupport:
         return MaterialPageRoute(builder: (_) => const HelpSupportPage());
       case Routes.termsAndPolicies:

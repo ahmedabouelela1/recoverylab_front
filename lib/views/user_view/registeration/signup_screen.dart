@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:dropdown_flutter/custom_dropdown.dart';
+import 'package:recoverylab_front/configurations/app_dropdown_decorations.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/configurations/constants.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
@@ -250,8 +252,26 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           );
 
       if (!mounted) return;
-      // AppSnackBar.show(context, 'Account created successfully!');
-      Navigator.pushReplacementNamed(context, Routes.questionnaire);
+
+      final userId = registerResponse.data.user.id;
+      var surveyComplete = false;
+      try {
+        surveyComplete =
+            await ref.read(apiProvider).userHasCompletedAllQuestions(userId);
+      } catch (_) {
+        surveyComplete = false;
+      }
+      if (!mounted) return;
+
+      if (surveyComplete) {
+        Navigator.pushReplacementNamed(context, Routes.navbar);
+      } else {
+        Navigator.pushReplacementNamed(
+          context,
+          Routes.questionnaire,
+          arguments: {'mandatoryPostSignup': true},
+        );
+      }
     } catch (e) {
       if (e is ApiException) {
         AppSnackBar.show(context, e.message);
@@ -300,41 +320,76 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           ),
           child: Row(
             children: [
-              /// 🌍 Country Code Dropdown
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: selectedCountryCode,
-                  dropdownColor: AppColors.cardBackground,
-                  items: countryCodes.map((country) {
-                    return DropdownMenuItem<String>(
-                      value: country.code,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 2.w),
-                        child: Row(
-                          children: [
-                            Text(
-                              country.flag,
-                              style: TextStyle(fontSize: 16.sp),
-                            ),
-                            SizedBox(width: 1.w),
-                            Text(
-                              country.code,
+              /// 🌍 Country Code Dropdown (intrinsic width like native; same row height as phone field)
+              Flexible(
+                flex: 0,
+                fit: FlexFit.loose,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 34.w),
+                  child: DropdownFlutter<CountryCode>(
+                    key: ValueKey<String>(selectedCountryCode),
+                    items: countryCodes,
+                    initialItem: countryCodes.firstWhere(
+                      (c) => c.code == selectedCountryCode,
+                      orElse: () => countryCodes.first,
+                    ),
+                    excludeSelected: false,
+                    validateOnChange: false,
+                    closedHeaderPadding: EdgeInsets.symmetric(
+                      horizontal: 2.w,
+                      vertical: 2.2.h,
+                    ),
+                    decoration: AppDropdownDecorations.embeddedInField(),
+                  headerBuilder: (context, item, enabled) {
+                    return Row(
+                      children: [
+                        Text(item.flag, style: TextStyle(fontSize: 16.sp)),
+                        SizedBox(width: 1.w),
+                        Text(
+                          item.code,
+                          style: GoogleFonts.inter(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  listItemBuilder: (context, item, isSelected, onItemSelect) {
+                    return Padding(
+                      padding: EdgeInsets.symmetric(vertical: 0.5.h),
+                      child: Row(
+                        children: [
+                          Text(item.flag, style: TextStyle(fontSize: 16.sp)),
+                          SizedBox(width: 2.w),
+                          Expanded(
+                            child: Text(
+                              item.name,
                               style: GoogleFonts.inter(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w500,
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            item.code,
+                            style: GoogleFonts.inter(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCountryCode = value!;
-                    });
                   },
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selectedCountryCode = value.code);
+                    },
+                  ),
                 ),
               ),
 
@@ -501,7 +556,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       final auth = await account.authentication;
       final idToken = auth.idToken;
       if (idToken == null || idToken.isEmpty) {
-        if (mounted) AppSnackBar.show(context, 'Could not get Google ID token.');
+        if (mounted)
+          AppSnackBar.show(context, 'Could not get Google ID token.');
         return;
       }
       await ref.read(apiProvider).loginWithGoogle(idToken);
@@ -534,10 +590,13 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       );
       final identityToken = credential.identityToken;
       if (identityToken == null || identityToken.isEmpty) {
-        if (mounted) AppSnackBar.show(context, 'Could not get Apple identity token.');
+        if (mounted)
+          AppSnackBar.show(context, 'Could not get Apple identity token.');
         return;
       }
-      await ref.read(apiProvider).loginWithApple(
+      await ref
+          .read(apiProvider)
+          .loginWithApple(
             identityToken,
             firstName: credential.givenName,
             lastName: credential.familyName,
@@ -583,7 +642,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
               FaIcon(
                 icon,
                 size: 16.sp,
-                color: isDisabled ? AppColors.textTertiary : AppColors.textPrimary,
+                color: isDisabled
+                    ? AppColors.textTertiary
+                    : AppColors.textPrimary,
               ),
               SizedBox(width: 2.w),
               Text(
@@ -591,7 +652,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                 style: GoogleFonts.inter(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: isDisabled ? AppColors.textTertiary : AppColors.textPrimary,
+                  color: isDisabled
+                      ? AppColors.textTertiary
+                      : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -738,69 +801,28 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             ),
           ),
         ),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: hasError ? AppColors.error : AppColors.textFieldBorder,
-              width: hasError ? 1.5 : 1,
+        SizedBox(
+          width: double.infinity,
+          child: DropdownFlutter<String>(
+            key: ValueKey<String?>(gender),
+            items: genders,
+            initialItem: gender,
+            hintText: 'Select your gender',
+            excludeSelected: false,
+            validateOnChange: false,
+            closedHeaderPadding: EdgeInsets.symmetric(
+              horizontal: 4.w,
+              vertical: 2.2.h,
             ),
-            color: AppColors.textFieldBackground,
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: gender,
-              icon: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 3.w),
-                child: Icon(
-                  SolarIconsBold.altArrowDown,
-                  size: 20.sp,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              dropdownColor: AppColors.cardBackground,
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-              hint: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.w),
-                child: Text(
-                  "Select your gender",
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary.withOpacity(0.5),
-                  ),
-                ),
-              ),
-              items: genders.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4.w),
-                    child: Text(
-                      value,
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  gender = newValue;
-                  if (newValue != null) {
-                    genderError = null;
-                  }
-                });
-              },
-            ),
+            decoration: AppDropdownDecorations.field(hasError: hasError),
+            onChanged: (String? newValue) {
+              setState(() {
+                gender = newValue;
+                if (newValue != null) {
+                  genderError = null;
+                }
+              });
+            },
           ),
         ),
         if (genderError != null)
@@ -829,7 +851,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     final futures = <Future<void>>[];
 
     for (final branch in branchList) {
-      if (branch.image.isEmpty || _branchImageProviders.containsKey(branch.id)) {
+      if (branch.image.isEmpty ||
+          _branchImageProviders.containsKey(branch.id)) {
         continue;
       }
 
@@ -894,13 +917,26 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   ),
                 ),
               ),
-              Center(
-                child: Text(
-                  loc.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 2.w,
+                    right: isSelected ? 11.w : 3.w,
+                    top: isSelected ? 5.h : 1.5.h,
+                    bottom: 1.5.h,
+                  ),
+                  child: Center(
+                    child: Text(
+                      loc.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
@@ -1438,7 +1474,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           Text(
             "Additional Information",
             style: GoogleFonts.inter(
-              fontSize: 28.sp,
+              fontSize: 20.sp,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
               height: 1.2,

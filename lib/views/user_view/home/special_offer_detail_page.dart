@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
-import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
-/// Full-screen offer detail — shows [bigDescription] when present (not on home).
+/// Special offer detail — same fields as API (title, description, discount, image,
+/// big_description). Layout and typography aligned with [ServiceDetailsPage].
 class SpecialOfferDetailPage extends ConsumerStatefulWidget {
   const SpecialOfferDetailPage({required this.offerId, super.key});
 
@@ -24,6 +23,7 @@ class _SpecialOfferDetailPageState extends ConsumerState<SpecialOfferDetailPage>
   Offers? _offer;
   bool _loading = true;
   String? _error;
+  bool _showFullBigDescription = false;
 
   @override
   void initState() {
@@ -52,205 +52,383 @@ class _SpecialOfferDetailPageState extends ConsumerState<SpecialOfferDetailPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.info),
-            )
+          ? _buildLoadingState()
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            color: AppColors.textSecondary,
-                            fontSize: 14.sp,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        TextButton(
-                          onPressed: _load,
-                          child: Text(
-                            'Retry',
-                            style: TextStyle(color: AppColors.info, fontSize: 14.sp),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _buildContent(_offer!),
+              ? _buildErrorState()
+              : _buildBody(_offer!),
     );
   }
 
-  Widget _buildContent(Offers o) {
-    final img = o.image.isNotEmpty ? o.image : '';
-    final big = o.bigDescription?.trim();
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          expandedHeight: 32.h,
-          pinned: true,
-          backgroundColor: AppColors.background,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 18),
-            onPressed: () => Navigator.pop(context),
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppColors.primary),
+          SizedBox(height: 2.h),
+          Text(
+            'Loading offer...',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
           ),
-          flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (img.isNotEmpty)
-                  Image.network(
-                    img,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.cardBackground,
-                    ),
-                  )
-                else
-                  Container(color: AppColors.cardBackground),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.2),
-                        Colors.black.withValues(alpha: 0.65),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 5.w,
-                  right: 5.w,
-                  bottom: 3.h,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (o.discount != null && o.discount!.isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: 1.h),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 3.w,
-                              vertical: 0.8.h,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.primary,
-                                  const Color(0xFF7B61FF),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              o.discount!,
-                              style: GoogleFonts.inter(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      Text(
-                        o.title,
-                        style: GoogleFonts.inter(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          height: 1.15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(5.w, 2.5.h, 5.w, 4.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildHeaderPlaceholder(),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Overview',
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 1.5,
+                SizedBox(height: 2.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(5.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.dividerColor),
                   ),
-                ),
-                SizedBox(height: 1.h),
-                Text(
-                  o.description.isNotEmpty
-                      ? o.description
-                      : 'See details below.',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    height: 1.5,
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (big != null && big.isNotEmpty) ...[
-                  SizedBox(height: 3.h),
-                  Text(
-                    'Details',
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
-                  Text(
-                    big,
-                    style: GoogleFonts.inter(
-                      fontSize: 15.sp,
-                      height: 1.55,
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ] else ...[
-                  SizedBox(height: 2.h),
-                  Row(
+                  child: Column(
                     children: [
                       Icon(
-                        SolarIconsOutline.infoCircle,
-                        size: 16.sp,
-                        color: AppColors.textTertiary,
+                        SolarIconsOutline.dangerCircle,
+                        size: 28.sp,
+                        color: AppColors.warning,
                       ),
-                      SizedBox(width: 2.w),
-                      Expanded(
+                      SizedBox(height: 2.h),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      TextButton(
+                        onPressed: _load,
                         child: Text(
-                          'More information may be added by your branch soon.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12.sp,
-                            color: AppColors.textTertiary,
+                          'Retry',
+                          style: TextStyle(
+                            color: AppColors.info,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderPlaceholder() {
+    return Container(
+      height: 30.h,
+      width: double.infinity,
+      color: AppColors.cardBackground,
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppColors.background.withOpacity(0.3),
+                  AppColors.background.withOpacity(0.9),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8.h,
+            left: 8.w,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Icon(
+                Icons.arrow_back_ios_new,
+                color: AppColors.textPrimary,
+                size: 18.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(Offers o) {
+    final big = o.bigDescription?.trim();
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeaderImage(o),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 2.h),
+                _buildTitleRow(o),
+                SizedBox(height: 2.5.h),
+                Text(
+                  'OVERVIEW',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                SizedBox(height: 1.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    o.description.trim().isNotEmpty
+                        ? o.description
+                        : 'No short description for this offer.',
+                    style: TextStyle(
+                      color: o.description.trim().isNotEmpty
+                          ? AppColors.textSecondary
+                          : AppColors.textTertiary,
+                      fontSize: 13.sp,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 2.5.h),
+                Text(
+                  'DETAILS',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                SizedBox(height: 1.h),
+                if (big != null && big.isNotEmpty)
+                  _buildBigDescriptionCard(big)
+                else
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          SolarIconsOutline.infoCircle,
+                          color: AppColors.info,
+                          size: 18.sp,
+                        ),
+                        SizedBox(width: 3.w),
+                        Expanded(
+                          child: Text(
+                            'More information may be added by your branch soon.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12.sp,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                SizedBox(height: 6.h),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderImage(Offers o) {
+    final img = o.image.trim();
+    return SizedBox(
+      height: 30.h,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (img.isNotEmpty)
+            Image.network(
+              img,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => Container(
+                color: AppColors.cardBackground,
+                child: Center(
+                  child: Icon(
+                    SolarIconsOutline.gallery,
+                    size: 48.sp,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              color: AppColors.cardBackground,
+              child: Center(
+                child: Icon(
+                  SolarIconsOutline.gallery,
+                  size: 48.sp,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppColors.background.withOpacity(0.3),
+                  AppColors.background.withOpacity(0.9),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8.h,
+            left: 8.w,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Icon(
+                Icons.arrow_back_ios_new,
+                color: AppColors.textPrimary,
+                size: 18.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTitleRow(Offers o) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            o.title,
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              height: 1.1,
+            ),
+          ),
         ),
+        if (o.discount != null && o.discount!.trim().isNotEmpty) ...[
+          SizedBox(width: 2.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Text(
+              o.discount!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.info,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildBigDescriptionCard(String big) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            big,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13.sp,
+              height: 1.6,
+            ),
+            maxLines: _showFullBigDescription ? null : 5,
+            overflow: _showFullBigDescription
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
+          ),
+          if (big.length > 200 || big.split('\n').length > 5)
+            GestureDetector(
+              onTap: () => setState(
+                () => _showFullBigDescription = !_showFullBigDescription,
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(top: 1.h),
+                child: Row(
+                  children: [
+                    Text(
+                      _showFullBigDescription ? 'Read less' : 'Read more',
+                      style: TextStyle(
+                        color: AppColors.info,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 1.w),
+                    Icon(
+                      _showFullBigDescription
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: AppColors.info,
+                      size: 16.sp,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -19,13 +19,24 @@ class Offers {
   });
 
   factory Offers.fromJson(Map<String, dynamic> json) {
+    int parseId(dynamic v) {
+      if (v is int) return v;
+      return int.tryParse(v?.toString() ?? '0') ?? 0;
+    }
+
+    int? parseOpt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+
     return Offers(
-      id: json['id'] as int,
+      id: parseId(json['id']),
       title: json['title'] as String? ?? '',
       description: (json['description'] as String?) ?? '',
       image: (json['image'] as String?) ?? '',
       discount: json['discount'] as String?,
-      branchId: json['branch_id'] as int?,
+      branchId: parseOpt(json['branch_id']),
       bigDescription: json['big_description'] as String?,
     );
   }

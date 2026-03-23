@@ -29,6 +29,9 @@ class AppColors {
   static const textFieldBorder = Color(
     0xFF404040,
   ); // Darker grey for text field backgrounds
+
+  /// Custom dropdowns ([DropdownFlutter]) — same stroke as [textFieldBorder].
+  static const borderColor = textFieldBorder;
   static const textFieldBackground = Color(
     0xFF282828,
   ); // Background color for text fields

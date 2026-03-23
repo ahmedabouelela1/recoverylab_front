@@ -217,6 +217,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _sectionLabel('YOUR BRANCH'),
           SizedBox(height: 1.2.h),
           _buildBranchSelector(branches),
+          SizedBox(height: 2.h),
+          _sectionLabel('OUR BRANCHES'),
+          SizedBox(height: 1.2.h),
+          _buildSection([
+            _SettingItem(
+              icon: SolarIconsOutline.mapPoint,
+              label: 'View all branches & locations',
+              route: Routes.branches,
+            ),
+          ], context),
           SizedBox(height: 3.h),
 
           // ── Account ────────────────────────────────────────────────────

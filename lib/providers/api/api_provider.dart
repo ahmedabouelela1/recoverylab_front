@@ -581,6 +581,46 @@ class ApiProvider {
         ));
   }
 
+  /// True when [userId] has a stored answer for every question returned by [getQuestions].
+  /// Used after signup to skip the questionnaire when the account already has a full survey.
+  Future<bool> userHasCompletedAllQuestions(int userId) async {
+    final questionsRaw = await getQuestions();
+    if (questionsRaw.isEmpty) return true;
+
+    Map<int, List<Map<String, dynamic>>> existing;
+    try {
+      existing = await getUserAnswers(userId);
+    } catch (_) {
+      return false;
+    }
+
+    for (final q in questionsRaw) {
+      final dynamic rawId = q['id'];
+      final int? id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+      if (id == null) continue;
+
+      final type = (q['type'] as String?) ?? 'text';
+      final entries = existing[id];
+      if (entries == null || entries.isEmpty) return false;
+
+      switch (type) {
+        case 'single_choice':
+          if (entries.first['answer_id'] == null) return false;
+          break;
+        case 'multiple_choice':
+          if (!entries.any((e) => e['answer_id'] != null)) return false;
+          break;
+        case 'boolean':
+          if (entries.first['custom_answer'] == null) return false;
+          break;
+        default:
+          final v = entries.first['custom_answer'];
+          if (v == null || v.toString().trim().isEmpty) return false;
+      }
+    }
+    return true;
+  }
+
   /// PUT /user-answers/bulk — replace all answers (health survey edit).
   Future<void> replaceAnswersBulk(List<Map<String, dynamic>> answers) async {
     final url = Uri.parse('$apiUrl${ApiRoutes.userAnswersBulk}');

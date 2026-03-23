@@ -17,6 +17,9 @@ class Service {
     this.includedIn = const [],
   });
 
+  @override
+  String toString() => name;
+
   factory Service.fromJson(Map<String, dynamic> json) {
     return Service(
       id: json['id'] as int,

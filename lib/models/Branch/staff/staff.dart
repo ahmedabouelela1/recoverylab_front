@@ -1,50 +1,45 @@
-import 'package:recoverylab_front/models/User/user.dart';
-
 class Staff {
   /// Backend staff primary key (therapists are not linked to app users).
   final int id;
+  final String firstName;
+  final String lastName;
   final String employeeId;
   final String bio;
   final String profilePicture;
   final int branchId;
   final String createdAt;
   final String updatedAt;
-  final User user;
 
   Staff({
     required this.id,
+    required this.firstName,
+    required this.lastName,
     required this.employeeId,
     required this.bio,
     required this.profilePicture,
     required this.branchId,
     required this.createdAt,
     required this.updatedAt,
-    required this.user,
   });
+
+  String get displayName {
+    final f = firstName.trim();
+    final l = lastName.trim();
+    if (f.isEmpty && l.isEmpty) return '';
+    if (f.isEmpty) return l;
+    if (l.isEmpty) return f;
+    return '$f $l';
+  }
 
   factory Staff.fromJson(Map<String, dynamic> json) {
     final staffId = (json['id'] is int)
         ? json['id'] as int
         : int.tryParse(json['id']?.toString() ?? '0') ?? 0;
 
-    final userJson = json['user'];
-    User user;
-    if (userJson is Map<String, dynamic>) {
-      user = User.fromJson(userJson);
-    } else {
-      user = User(
-        id: staffId,
-        firstName: json['first_name']?.toString() ?? '',
-        lastName: json['last_name']?.toString() ?? '',
-        gender: json['gender']?.toString() ?? '',
-        email: json['email']?.toString() ?? '',
-        phone: json['phone']?.toString() ?? '',
-        dateOfBirth: DateTime(1990, 1, 1),
-      );
-    }
-
     return Staff(
       id: staffId,
+      firstName: json['first_name']?.toString() ?? '',
+      lastName: json['last_name']?.toString() ?? '',
       employeeId: json['employee_id']?.toString() ?? '',
       bio: json['bio']?.toString() ?? '',
       profilePicture: json['profile_picture']?.toString() ?? '',
@@ -53,7 +48,6 @@ class Staff {
           : int.tryParse(json['branch_id']?.toString() ?? '0') ?? 0,
       createdAt: json['created_at']?.toString() ?? '',
       updatedAt: json['updated_at']?.toString() ?? '',
-      user: user,
     );
   }
 }

@@ -70,7 +70,10 @@ class Question {
 // ─────────────────────────────────────────────
 
 class QuestionnairePage extends ConsumerStatefulWidget {
-  const QuestionnairePage({super.key});
+  const QuestionnairePage({super.key, this.mandatoryPostSignup = false});
+
+  /// When true (e.g. right after signup), hide exit/skip, block system back, and require completion.
+  final bool mandatoryPostSignup;
 
   @override
   ConsumerState<QuestionnairePage> createState() => _QuestionnairePageState();
@@ -131,6 +134,13 @@ class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
           _questions = questions;
           _loading = false;
         });
+        if (widget.mandatoryPostSignup && questions.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, Routes.navbar);
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -248,7 +258,8 @@ class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
 
   void _goBack() async {
     if (_currentIndex == 0) {
-      Navigator.pop(context);
+      if (widget.mandatoryPostSignup) return;
+      if (context.mounted) Navigator.pop(context);
       return;
     }
     await _slideController.reverse();
@@ -682,22 +693,27 @@ class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !widget.mandatoryPostSignup,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        leading: GestureDetector(
-          onTap: _loading ? null : _goBack,
-          child: Padding(
-            padding: EdgeInsets.only(left: 4.w),
-            child: Icon(
-              Icons.arrow_back_ios_new,
-              color: AppColors.textPrimary,
-              size: 18.sp,
-            ),
-          ),
-        ),
+        automaticallyImplyLeading: !widget.mandatoryPostSignup,
+        leading: widget.mandatoryPostSignup
+            ? null
+            : GestureDetector(
+                onTap: _loading ? null : _goBack,
+                child: Padding(
+                  padding: EdgeInsets.only(left: 4.w),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    color: AppColors.textPrimary,
+                    size: 18.sp,
+                  ),
+                ),
+              ),
         title: Text(
           'Wellness Profile',
           style: TextStyle(
@@ -707,18 +723,20 @@ class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
           ),
         ),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: _skip,
-            child: Text(
-              'Skip',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13.sp,
-              ),
-            ),
-          ),
-        ],
+        actions: widget.mandatoryPostSignup
+            ? null
+            : [
+                TextButton(
+                  onPressed: _skip,
+                  child: Text(
+                    'Skip',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                ),
+              ],
       ),
       body: _loading
           ? Center(
@@ -928,6 +946,7 @@ class _QuestionnairePageState extends ConsumerState<QuestionnairePage>
                         ],
                       ),
                     ),
+      ),
     );
   }
 }

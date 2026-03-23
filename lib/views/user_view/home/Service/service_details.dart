@@ -609,7 +609,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             icon: Icons.person,
                             label: 'Staff Member',
                             value:
-                                '${selectedStaff!.user.firstName} ${selectedStaff!.user.lastName}',
+                                selectedStaff!.displayName,
                           ),
                         if (selectedStaff != null) SizedBox(height: 1.5.h),
                         _buildConfirmationDetail(
@@ -2758,7 +2758,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
                     SizedBox(height: 1.h),
                     Text(
-                      '${staff.user.firstName} ${(staff.user.lastName).isNotEmpty ? staff.user.lastName.substring(0, 1) : ''}.',
+                      '${staff.firstName} ${staff.lastName.isNotEmpty ? staff.lastName.substring(0, 1) : ''}.',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 13.sp,
@@ -3013,8 +3013,46 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
   }
 
+  Widget _buildIncludedServiceItem(String? service) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.topLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: 0.15.h),
+            child: Icon(
+              SolarIconsOutline.startShine,
+              color: AppColors.info,
+              size: 18.sp,
+            ),
+          ),
+          SizedBox(width: 3.w),
+          Expanded(
+            child: Text(
+              service ?? 'Additional Service',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildIncludedServices() {
     final List<String?> services = [...widget.service.includedIn];
+    final horizontalGap = 3.w;
+    final rowSpacing = 2.h;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3027,44 +3065,39 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-
-        GridView.count(
+        Padding(
           padding: EdgeInsets.only(top: 2.h),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 3,
-          crossAxisSpacing: 3.w,
-          mainAxisSpacing: 2.h,
-          children: services.map((service) {
-            return Container(
-              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    SolarIconsOutline.startShine,
-                    color: AppColors.info,
-                    size: 18.sp,
-                  ),
-                  SizedBox(width: 3.w),
-                  Expanded(
-                    child: Text(
-                      service ?? 'Additional Service',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < services.length; i += 2)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: i + 2 >= services.length ? 0 : rowSpacing,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _buildIncludedServiceItem(services[i]),
+                          ),
+                          SizedBox(width: horizontalGap),
+                          Expanded(
+                            child: i + 1 < services.length
+                                ? _buildIncludedServiceItem(services[i + 1])
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            );
-          }).toList(),
+              ],
+            ),
+          ),
         ),
       ],
     );

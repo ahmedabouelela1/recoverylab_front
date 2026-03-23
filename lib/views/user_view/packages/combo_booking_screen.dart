@@ -1,5 +1,7 @@
+import 'package:dropdown_flutter/custom_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recoverylab_front/configurations/app_dropdown_decorations.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch_schedule.dart';
 import 'package:recoverylab_front/models/Branch/branch/branch.dart';
@@ -639,40 +641,41 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                             child: const LinearProgressIndicator(),
                           ),
                         )
+                      else if (allowed.isEmpty)
+                        Text(
+                          'No services in this category.',
+                          style: TextStyle(
+                            color: AppColors.textTertiary,
+                            fontSize: 12.sp,
+                          ),
+                        )
                       else
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: validSelected,
-                            isExpanded: true,
-                            hint: Text(
-                              'Select service',
-                              style: TextStyle(
-                                color: AppColors.textTertiary,
-                                fontSize: 13.sp,
-                              ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: DropdownFlutter<Service>(
+                            key: ValueKey<int>(rule.id),
+                            items: allowed,
+                            initialItem: validSelected == null
+                                ? null
+                                : () {
+                                    for (final s in allowed) {
+                                      if (s.id == validSelected) return s;
+                                    }
+                                    return null;
+                                  }(),
+                            hintText: 'Select service',
+                            excludeSelected: false,
+                            validateOnChange: false,
+                            closedHeaderPadding: EdgeInsets.symmetric(
+                              horizontal: 3.w,
+                              vertical: 1.2.h,
                             ),
-                            dropdownColor: AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
-                            icon: Icon(
-                              SolarIconsOutline.altArrowDown,
-                              color: AppColors.textTertiary,
-                              size: 18.sp,
-                            ),
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: AppColors.textPrimary,
-                            ),
-                            onChanged: (int? id) {
-                              if (id != null) {
-                                setState(() => _serviceChoices[rule.id] = id);
+                            decoration: AppDropdownDecorations.cardInline(),
+                            onChanged: (s) {
+                              if (s != null) {
+                                setState(() => _serviceChoices[rule.id] = s.id);
                               }
                             },
-                            items: allowed
-                                .map((s) => DropdownMenuItem<int>(
-                                      value: s.id,
-                                      child: Text(s.name),
-                                    ))
-                                .toList(),
                           ),
                         ),
                     ],
@@ -771,77 +774,128 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.info, width: 1),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Branch>(
-          value: _selectedBranch,
-          isExpanded: true,
-          dropdownColor: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          icon: Icon(
-            SolarIconsOutline.altArrowDown,
-            color: AppColors.strokeBorder,
-            size: 20.sp,
-          ),
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-          onChanged: (Branch? val) {
-            if (val != null) {
-              setState(() => _selectedBranch = val);
-              _loadSchedule();
-            }
-          },
-          items: branches.whereType<Branch>().map((branch) {
-            return DropdownMenuItem<Branch>(
-              value: branch,
-              child: Row(
-                children: [
-                  Container(
-                    width: 8.w,
-                    height: 8.w,
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      SolarIconsOutline.mapPoint,
-                      size: 14.sp,
-                      color: AppColors.info,
-                    ),
-                  ),
-                  SizedBox(width: 3.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          branch.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          branch.address,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      child: Builder(
+        builder: (context) {
+          final branchItems = branches.whereType<Branch>().toList();
+          final selected = _selectedBranch != null &&
+                  branchItems.any((b) => b.id == _selectedBranch!.id)
+              ? _selectedBranch
+              : null;
+          return SizedBox(
+            width: double.infinity,
+            child: DropdownFlutter<Branch>(
+              key: ValueKey<int?>(selected?.id),
+              items: branchItems,
+              initialItem: selected,
+              hintText: 'Select branch',
+              excludeSelected: false,
+              validateOnChange: false,
+              closedHeaderPadding: EdgeInsets.symmetric(
+                horizontal: 4.w,
+                vertical: 0.8.h,
               ),
-            );
-          }).toList(),
-        ),
+              decoration: AppDropdownDecorations.branchSelector(),
+              headerBuilder: (context, branch, enabled) {
+                return Row(
+                  children: [
+                    Container(
+                      width: 8.w,
+                      height: 8.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        SolarIconsOutline.mapPoint,
+                        size: 14.sp,
+                        color: AppColors.info,
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            branch.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            branch.address,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+              listItemBuilder: (context, branch, isSelected, onItemSelect) {
+                return Row(
+                  children: [
+                    Container(
+                      width: 8.w,
+                      height: 8.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        SolarIconsOutline.mapPoint,
+                        size: 14.sp,
+                        color: AppColors.info,
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            branch.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            branch.address,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+              onChanged: (Branch? val) {
+                if (val != null) {
+                  setState(() => _selectedBranch = val);
+                  _loadSchedule();
+                }
+              },
+            ),
+          );
+        },
       ),
     );
   }

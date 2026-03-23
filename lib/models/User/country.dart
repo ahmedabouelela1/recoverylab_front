@@ -4,6 +4,9 @@ class CountryCode {
   final String flag;
 
   CountryCode(this.name, this.code, this.flag);
+
+  @override
+  String toString() => '$flag $code';
 }
 
 final List<CountryCode> countryCodes = [
