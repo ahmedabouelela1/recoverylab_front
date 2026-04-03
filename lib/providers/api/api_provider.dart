@@ -16,6 +16,7 @@ import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
+import 'package:recoverylab_front/models/Coupon/user_coupon.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/models/User/user.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
@@ -373,6 +374,19 @@ class ApiProvider {
     }
   }
 
+  /// PATCH /users/password — change password for the authenticated user.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await basePatch(ApiRoutes.changePassword, {
+      'current_password': currentPassword,
+      'password': newPassword,
+      'password_confirmation': newPassword,
+    });
+    _handleResponse(response);
+  }
+
   /// DELETE /users — delete current user account. Caller should logout and navigate to login.
   Future<void> deleteAccount() async {
     final response = await baseDelete(ApiRoutes.users);
@@ -497,6 +511,7 @@ class ApiProvider {
     String? notes,
     required String paymentMethod,
     int? usePackageId,
+    int? useCouponId,
   }) async {
     final Map<String, dynamic> body = {
       'branch_id': branchId,
@@ -516,9 +531,28 @@ class ApiProvider {
     if (usePackageId != null) {
       body['use_package_id'] = usePackageId;
     }
+    if (useCouponId != null) {
+      body['use_coupon_id'] = useCouponId;
+    }
 
     final response = await basePost(ApiRoutes.booking, body);
     return _handleResponse(response);
+  }
+
+  /// GET /user-coupons — returns ACTIVE coupons for the current user.
+  Future<List<UserCoupon>> getUserCoupons() async {
+    final response = await baseGet(ApiRoutes.userCoupons);
+    final decoded = _handleResponse(response);
+    final raw = decoded['data'];
+    final List<dynamic> list = raw is List ? raw : (raw is Map && raw.containsKey('data') ? raw['data'] as List<dynamic> : []);
+    return list.map((e) => UserCoupon.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// POST /coupons/redeem — redeem a coupon code and add it to the user's wallet.
+  Future<UserCoupon> redeemCoupon(String code) async {
+    final response = await basePost(ApiRoutes.redeemCoupon, {'code': code});
+    final decoded = _handleResponse(response);
+    return UserCoupon.fromJson(decoded['data'] as Map<String, dynamic>);
   }
 
   /// GET /user-memberships — returns memberships for the current user.

@@ -989,6 +989,8 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         return 'Promo discount';
       case 'MANUAL':
         return 'Manual discount';
+      case 'COUPON':
+        return 'Coupon discount';
       default:
         return 'Discount';
     }

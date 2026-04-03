@@ -22,6 +22,9 @@ class ApiRoutes {
   static const String questions = '/questions';
   static const String userAnswers = '/user-answers';
   static const String userAnswersBulk = '/user-answers/bulk';
+  static const String changePassword = '/users/password';
+  static const String userCoupons = '/user-coupons';
+  static const String redeemCoupon = '/coupons/redeem';
 }
 
 const apiUrl = 'https://recoverylab.thecodehaus.co/api';

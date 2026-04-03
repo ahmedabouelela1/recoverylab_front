@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 
-class ChangePasswordPage extends StatefulWidget {
+class ChangePasswordPage extends ConsumerStatefulWidget {
   const ChangePasswordPage({super.key});
 
   @override
-  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
+  ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
+class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _currentCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -55,6 +58,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   Future<void> _save() async {
+    if (_currentCtrl.text.isEmpty) {
+      AppSnackBar.show(context, 'Please enter your current password');
+      return;
+    }
     if (_newCtrl.text != _confirmCtrl.text) {
       AppSnackBar.show(context, 'Passwords do not match');
       return;
@@ -64,11 +71,23 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       return;
     }
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(milliseconds: 800)); // TODO: API
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    AppSnackBar.show(context, 'Password updated successfully');
-    Navigator.pop(context);
+    try {
+      await ref.read(apiProvider).changePassword(
+        currentPassword: _currentCtrl.text,
+        newPassword: _newCtrl.text,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(context, 'Password updated successfully');
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      AppSnackBar.show(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(context, 'Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
