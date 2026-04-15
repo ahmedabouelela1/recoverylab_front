@@ -262,14 +262,23 @@ class _ServicesPageState extends ConsumerState<ServicesPage>
               ),
               SizedBox(height: 0.5.h),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.location_on, size: 15, color: Colors.white),
+                  const Icon(
+                    Icons.description_outlined,
+                    size: 15,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 1.w),
-                  Text(
-                    service.description,
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: Colors.white,
+                  Expanded(
+                    child: Text(
+                      service.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
