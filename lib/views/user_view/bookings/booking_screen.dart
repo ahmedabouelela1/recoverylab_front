@@ -7,6 +7,7 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
+import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/views/user_view/bookings/widget/booking_card.dart';
@@ -72,34 +73,38 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
   }
 
   List<ApiBooking> _filteredBookings(String tab) {
-    return _bookings.where((b) {
+    final filtered = _bookings.where((b) {
       if (tab == 'Upcoming') return b.isUpcoming;
       if (tab == 'Completed') return b.isCompleted;
       return b.isCancelled;
     }).toList();
+
+    DateTime keyFor(ApiBooking b) =>
+        b.earliestScheduledStart ?? b.bookingDate;
+
+    if (tab == 'Upcoming') {
+      filtered.sort((a, b) => keyFor(a).compareTo(keyFor(b)));
+    } else {
+      filtered.sort((a, b) => keyFor(b).compareTo(keyFor(a)));
+    }
+    return filtered;
   }
 
   Future<void> _cancelBooking(ApiBooking booking) async {
     Navigator.pop(context);
     setState(() => _isCancelling = true);
     try {
-      final active = booking.appointments.where((a) => a.isActive).toList();
-      final errors = <String>[];
-      for (final apt in active) {
-        try {
-          await ref.read(apiProvider).cancelAppointment(apt.id);
-        } catch (e) {
-          errors.add(e.toString());
-        }
-      }
-      if (errors.isNotEmpty) throw Exception(errors.first);
+      await ref.read(apiProvider).cancelBooking(booking.id);
       await _fetchBookings();
       if (!mounted) return;
       setState(() => _selectedTab = 'Cancelled');
       AppSnackBar.show(context, 'Booking cancelled successfully');
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      AppSnackBar.show(context, 'Failed to cancel. Please try again.');
+      final msg = e is ApiException
+          ? e.message
+          : 'Could not cancel. Check your connection and try again.';
+      AppSnackBar.show(context, msg);
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }

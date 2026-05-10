@@ -799,7 +799,7 @@ void main() {
       expect(find.text('My Packages & Memberships'), findsOneWidget);
       expect(find.text('Edit Health Survey'), findsOneWidget);
       expect(find.text('Change Password'), findsOneWidget);
-      expect(find.text('Coupons'), findsOneWidget);
+      expect(find.text('Vouchers'), findsOneWidget);
     });
 
     testWidgets('Support menu items are present', (t) async {

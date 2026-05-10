@@ -66,19 +66,55 @@ class ApiBooking {
     }
   }
 
-  bool get isUpcoming =>
+  /// Latest `scheduled_end` across all appointments (null if none).
+  DateTime? get latestScheduledEnd {
+    if (appointments.isEmpty) return null;
+    return appointments
+        .map((a) => a.scheduledEnd)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+
+  /// Earliest `scheduled_start` — used for sorting upcoming bookings.
+  DateTime? get earliestScheduledStart {
+    if (appointments.isEmpty) return null;
+    return appointments
+        .map((a) => a.scheduledStart)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+  }
+
+  /// True when every appointment is finished (scheduled_end < now). Bookings
+  /// without appointments fall back to false (we cannot infer time).
+  bool get isPastByTime {
+    final end = latestScheduledEnd;
+    return end != null && end.isBefore(DateTime.now());
+  }
+
+  bool _isActiveStatus() =>
       status == ApiBookingStatus.draft ||
       status == ApiBookingStatus.pending ||
       status == ApiBookingStatus.confirmed ||
       status == ApiBookingStatus.checkedIn;
 
-  bool get isCompleted => status == ApiBookingStatus.completed;
+  /// Upcoming = active status AND session is still in the future.
+  /// This auto-removes "stale" bookings whose status was never closed by reception.
+  bool get isUpcoming => _isActiveStatus() && !isPastByTime;
+
+  /// Completed = explicit COMPLETED status OR an active-status booking whose
+  /// session time has already passed (treated as effectively done client-side).
+  bool get isCompleted =>
+      status == ApiBookingStatus.completed ||
+      (_isActiveStatus() && isPastByTime);
 
   bool get isCancelled =>
       status == ApiBookingStatus.cancelled ||
       status == ApiBookingStatus.noShow;
 
+  /// True when the session time has passed but reception never closed it.
+  /// Use this to badge the booking visually instead of pretending it's COMPLETED.
+  bool get isUnclosedPast => _isActiveStatus() && isPastByTime;
+
   String get statusLabel {
+    if (isUnclosedPast) return 'PAST SESSION';
     switch (status) {
       case ApiBookingStatus.draft:
         return 'DRAFT';

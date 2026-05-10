@@ -20,8 +20,8 @@ import 'package:recoverylab_front/views/user_view/packages/combo_booking_screen.
 import 'package:recoverylab_front/views/user_view/profile/my_wallet_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_page.dart';
-import 'package:recoverylab_front/views/user_view/profile/coupon_redeemed.dart';
-import 'package:recoverylab_front/views/user_view/profile/coupons.dart';
+import 'package:recoverylab_front/views/user_view/profile/voucher_request_page.dart';
+import 'package:recoverylab_front/views/user_view/profile/vouchers_page.dart';
 import 'package:recoverylab_front/views/user_view/profile/edit_health_survey.dart';
 import 'package:recoverylab_front/views/user_view/profile/help.dart';
 import 'package:recoverylab_front/views/user_view/profile/reset_password.dart';
@@ -60,10 +60,10 @@ class Routes {
   static const String helpAndSupport = '/helpAndSupport';
   static const String termsAndPolicies = '/termsAndPolicies';
   static const String resetPassword = '/resetPassword';
-  static const String coupons = '/coupons';
+  static const String vouchers = '/vouchers';
+  static const String voucherRequest = '/voucherRequest';
   static const String editHealthSurvey = '/editHealthSurvey';
   static const String upgradeMembership = '/upgradeMembership';
-  static const String couponRedeemed = '/couponRedeemed';
   static const String bookings = '/bookings';
   static const String bookingSuccessPage = '/bookingSuccessPage';
   static const String bookingDetailsPage = '/bookingDetailsPage';
@@ -183,10 +183,10 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const TermsPoliciesPage());
       case Routes.resetPassword:
         return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
-      case Routes.coupons:
-        return MaterialPageRoute(builder: (_) => const CouponsPage());
-      case Routes.couponRedeemed:
-        return MaterialPageRoute(builder: (_) => const CoupomRedeemPage());
+      case Routes.vouchers:
+        return MaterialPageRoute(builder: (_) => const VouchersPage());
+      case Routes.voucherRequest:
+        return MaterialPageRoute(builder: (_) => const VoucherRequestPage());
       case Routes.editHealthSurvey:
         return MaterialPageRoute(builder: (_) => const EditHealthSurveyPage());
       case Routes.upgradeMembership:

@@ -16,7 +16,7 @@ import 'package:recoverylab_front/models/Offer/user_package.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
-import 'package:recoverylab_front/models/Coupon/user_coupon.dart';
+import 'package:recoverylab_front/models/Voucher/api_voucher.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/models/User/user.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
@@ -341,12 +341,25 @@ class ApiProvider {
     return bookings.where((booking) => booking.userId == currentUserId).toList();
   }
 
+  // TODO(deprecated): Prefer [cancelBooking] for cancelling an entire booking atomically;
+  // keep this for single-appointment status updates where still needed.
   Future<void> cancelAppointment(int appointmentId) async {
     final response = await basePatch(
       '${ApiRoutes.appointments}/$appointmentId/status',
       {'status': 'CANCELLED'},
     );
     _handleResponse(response);
+  }
+
+  /// PATCH /bookings/{id}/cancel — transactional cancel of every non-terminal
+  /// appointment in the booking. Backend rejects (422) if any session is in the past.
+  Future<ApiBooking> cancelBooking(int bookingId) async {
+    final response = await basePatch(
+      '${ApiRoutes.booking}/$bookingId/cancel',
+      {},
+    );
+    final decoded = _handleResponse(response);
+    return ApiBooking.fromJson(decoded['data'] as Map<String, dynamic>);
   }
 
   /// PUT /users — update current user profile. Updates session with returned user.
@@ -511,7 +524,6 @@ class ApiProvider {
     String? notes,
     required String paymentMethod,
     int? usePackageId,
-    int? useCouponId,
   }) async {
     final Map<String, dynamic> body = {
       'branch_id': branchId,
@@ -531,28 +543,53 @@ class ApiProvider {
     if (usePackageId != null) {
       body['use_package_id'] = usePackageId;
     }
-    if (useCouponId != null) {
-      body['use_coupon_id'] = useCouponId;
-    }
 
     final response = await basePost(ApiRoutes.booking, body);
     return _handleResponse(response);
   }
 
-  /// GET /user-coupons — returns ACTIVE coupons for the current user.
-  Future<List<UserCoupon>> getUserCoupons() async {
-    final response = await baseGet(ApiRoutes.userCoupons);
+  /// GET /vouchers — current user's voucher requests.
+  Future<List<ApiVoucher>> getVouchers() async {
+    final response = await baseGet(ApiRoutes.vouchers);
     final decoded = _handleResponse(response);
     final raw = decoded['data'];
     final List<dynamic> list = raw is List ? raw : (raw is Map && raw.containsKey('data') ? raw['data'] as List<dynamic> : []);
-    return list.map((e) => UserCoupon.fromJson(e as Map<String, dynamic>)).toList();
+    return list.map((e) => ApiVoucher.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// POST /coupons/redeem — redeem a coupon code and add it to the user's wallet.
-  Future<UserCoupon> redeemCoupon(String code) async {
-    final response = await basePost(ApiRoutes.redeemCoupon, {'code': code});
+  /// POST /vouchers — submit a voucher request.
+  Future<ApiVoucher> createVoucherRequest({
+    required int branchId,
+    required String name,
+    String? message,
+    required String productType,
+    int? serviceId,
+    int? durationMinutes,
+    int? packageId,
+    String? recipientEmail,
+    String? recipientPhone,
+  }) async {
+    final body = <String, dynamic>{
+      'branch_id': branchId,
+      'name': name,
+      'product_type': productType,
+      if (message != null && message.isNotEmpty) 'message': message,
+      if (serviceId != null) 'service_id': serviceId,
+      if (durationMinutes != null) 'duration_minutes': durationMinutes,
+      if (packageId != null) 'package_id': packageId,
+      if (recipientEmail != null && recipientEmail.isNotEmpty) 'recipient_email': recipientEmail,
+      if (recipientPhone != null && recipientPhone.isNotEmpty) 'recipient_phone': recipientPhone,
+    };
+    final response = await basePost(ApiRoutes.vouchers, body);
     final decoded = _handleResponse(response);
-    return UserCoupon.fromJson(decoded['data'] as Map<String, dynamic>);
+    return ApiVoucher.fromJson(decoded['data'] as Map<String, dynamic>);
+  }
+
+  /// POST /vouchers/{id}/cancel — cancel a pending request.
+  Future<ApiVoucher> cancelVoucher(int id) async {
+    final response = await basePost('${ApiRoutes.vouchers}/$id/cancel', {});
+    final decoded = _handleResponse(response);
+    return ApiVoucher.fromJson(decoded['data'] as Map<String, dynamic>);
   }
 
   /// GET /user-memberships — returns memberships for the current user.

@@ -258,8 +258,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             _SettingItem(
               icon: SolarIconsOutline.ticket,
-              label: 'Coupons',
-              route: Routes.coupons,
+              label: 'Vouchers',
+              route: Routes.vouchers,
             ),
           ], context),
           SizedBox(height: 2.h),

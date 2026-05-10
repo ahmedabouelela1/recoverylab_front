@@ -17,7 +17,6 @@ import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
-import 'package:recoverylab_front/models/Coupon/user_coupon.dart';
 import 'package:recoverylab_front/models/Offer/user_membership.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -55,8 +54,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   List<UserPackage> _myPackages = [];
   UserPackage? _selectedPackage;
   List<OfferPackage> _catalogPackages = [];
-  List<UserCoupon> _myCoupons = [];
-  UserCoupon? _selectedCoupon;
   BranchSchedule? _schedule;
 
   // Loading and error states
@@ -98,7 +95,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
       await Future.wait([_fetchServiceDetails(), _loadSchedule()]);
       _loadMyPackages();
-      _loadMyCoupons();
       setState(() => isLoading = false);
     } catch (e) {
       setState(() {
@@ -232,24 +228,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     }
   }
 
-  Future<void> _loadMyCoupons() async {
-    try {
-      final coupons = await ref.read(apiProvider).getUserCoupons();
-      if (!mounted) return;
-      setState(() => _myCoupons = coupons);
-    } catch (_) {
-      // Non-critical
-    }
-  }
-
-  List<UserCoupon> _eligibleCoupons() {
-    return _myCoupons.where((uc) {
-      final c = uc.coupon;
-      if (c.type != 'GIFT_SESSION') return true;
-      return c.serviceId == widget.service.id && c.durationMinutes == selectedDuration;
-    }).toList();
-  }
-
   bool _isPackageEligibleForBooking(UserPackage pkg) {
     final currentUserId = ref.read(userSessionProvider).user?.id;
     if (currentUserId == null || pkg.userId != currentUserId) return false;
@@ -318,7 +296,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       selectedTime = null;
       selectedStaff = null;
       _selectedPackage = null;
-      _selectedCoupon = null;
       _staffAvailabilityFailed = false;
     });
 
@@ -489,7 +466,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             notes: notes.isEmpty ? null : notes,
             paymentMethod: selectedPaymentMethod ?? 'CASH',
             usePackageId: _selectedPackage?.id,
-            useCouponId: _selectedCoupon?.id,
           );
 
       // Backend returns { success, message, data: { booking, booking_id, ... } }
@@ -677,7 +653,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                             children: [
                               GestureDetector(
                                 onTap: () => updatePackage(null),
-                              child: Container(
+                                child: Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 3.w,
                                   vertical: 1.2.h,
@@ -764,94 +740,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                                 ),
                               );
                             }),
-                            if (_eligibleCoupons().isNotEmpty) ...[
-                              SizedBox(height: 2.h),
-                              Container(height: 0.5, color: AppColors.dividerColor),
-                              SizedBox(height: 2.h),
-                              Text(
-                                'APPLY COUPON',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              SizedBox(height: 1.h),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() => _selectedCoupon = null);
-                                  setInner(() {});
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.2.h),
-                                  margin: EdgeInsets.only(bottom: 1.h),
-                                  decoration: BoxDecoration(
-                                    color: _selectedCoupon == null
-                                        ? AppColors.primary.withOpacity(0.2)
-                                        : AppColors.surfaceLight,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: _selectedCoupon == null
-                                          ? AppColors.primary
-                                          : AppColors.dividerColor,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.close, size: 14.sp,
-                                          color: _selectedCoupon == null ? AppColors.info : AppColors.textTertiary),
-                                      SizedBox(width: 2.w),
-                                      Text('No coupon',
-                                          style: TextStyle(
-                                            color: _selectedCoupon == null ? AppColors.info : AppColors.textSecondary,
-                                            fontSize: 13.sp,
-                                          )),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              ..._eligibleCoupons().map((uc) {
-                                final isCouponSelected = _selectedCoupon?.id == uc.id;
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() => _selectedCoupon = uc);
-                                    setInner(() {});
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.2.h),
-                                    margin: EdgeInsets.only(bottom: 1.h),
-                                    decoration: BoxDecoration(
-                                      color: isCouponSelected
-                                          ? AppColors.success.withOpacity(0.12)
-                                          : AppColors.surfaceLight,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isCouponSelected
-                                            ? AppColors.success
-                                            : AppColors.dividerColor,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(SolarIconsOutline.ticket, size: 14.sp,
-                                            color: isCouponSelected ? AppColors.success : AppColors.textTertiary),
-                                        SizedBox(width: 2.w),
-                                        Expanded(
-                                          child: Text(
-                                            '${uc.coupon.code} · ${uc.coupon.discountLabel}',
-                                            style: TextStyle(
-                                              color: isCouponSelected ? AppColors.success : AppColors.textSecondary,
-                                              fontSize: 13.sp,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ],
                               SizedBox(height: 1.h),
                               Container(height: 0.5, color: AppColors.dividerColor),
                               SizedBox(height: 2.h),
@@ -921,137 +809,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       ),
                     ],
                     if (eligiblePackages.isEmpty) ...[
-                      if (_eligibleCoupons().isNotEmpty) ...[
-                        Container(height: 0.5, color: AppColors.dividerColor),
-                        SizedBox(height: 2.h),
-                        Text(
-                          'APPLY COUPON',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: 1.h),
-                        StatefulBuilder(
-                          builder: (ctx, setInner) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() => _selectedCoupon = null);
-                                    setInner(() {});
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.2.h),
-                                    margin: EdgeInsets.only(bottom: 1.h),
-                                    decoration: BoxDecoration(
-                                      color: _selectedCoupon == null
-                                          ? AppColors.primary.withOpacity(0.2)
-                                          : AppColors.surfaceLight,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: _selectedCoupon == null
-                                            ? AppColors.primary
-                                            : AppColors.dividerColor,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.close, size: 14.sp,
-                                            color: _selectedCoupon == null ? AppColors.info : AppColors.textTertiary),
-                                        SizedBox(width: 2.w),
-                                        Text('No coupon',
-                                            style: TextStyle(
-                                              color: _selectedCoupon == null ? AppColors.info : AppColors.textSecondary,
-                                              fontSize: 13.sp,
-                                            )),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                ..._eligibleCoupons().map((uc) {
-                                  final isCouponSelected = _selectedCoupon?.id == uc.id;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() => _selectedCoupon = uc);
-                                      setInner(() {});
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.2.h),
-                                      margin: EdgeInsets.only(bottom: 1.h),
-                                      decoration: BoxDecoration(
-                                        color: isCouponSelected
-                                            ? AppColors.success.withOpacity(0.12)
-                                            : AppColors.surfaceLight,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: isCouponSelected
-                                              ? AppColors.success
-                                              : AppColors.dividerColor,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(SolarIconsOutline.ticket, size: 14.sp,
-                                              color: isCouponSelected ? AppColors.success : AppColors.textTertiary),
-                                          SizedBox(width: 2.w),
-                                          Expanded(
-                                            child: Text(
-                                              '${uc.coupon.code} · ${uc.coupon.discountLabel}',
-                                              style: TextStyle(
-                                                color: isCouponSelected ? AppColors.success : AppColors.textSecondary,
-                                                fontSize: 13.sp,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }),
-                                SizedBox(height: 1.h),
-                                Container(height: 0.5, color: AppColors.dividerColor),
-                                SizedBox(height: 2.h),
-                                Builder(
-                                  builder: (_) {
-                                    final totalInfo = _getDisplayTotalWithMembershipAndPackage(
-                                      selectedDurationData?.price,
-                                      selectedPeopleCount ?? 1,
-                                    );
-                                    return Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Total Amount', style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp)),
-                                            if (totalInfo.$3 != null)
-                                              Padding(
-                                                padding: EdgeInsets.only(top: 0.3.h),
-                                                child: Text(totalInfo.$3!, style: TextStyle(color: AppColors.success, fontSize: 11.sp, fontWeight: FontWeight.w600)),
-                                              ),
-                                          ],
-                                        ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            if (totalInfo.$2 != null)
-                                              Text(totalInfo.$2!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12.sp, decoration: TextDecoration.lineThrough)),
-                                            Text(totalInfo.$1, style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp, fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ] else ...[
                         Container(height: 0.5, color: AppColors.dividerColor),
                         SizedBox(height: 2.h),
                         Builder(
@@ -1116,7 +873,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         ),
                       ],
                     ],
-                  ],
                 ),
               ),
             ),
@@ -2297,7 +2053,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   /// Best of membership vs selected package (matches backend: no stacking, higher % wins).
   /// Package only applies if user selected one and it has credits.
-  /// Coupon discount applied on top of membership/package result.
   (String display, String? original, String? label)
   _getDisplayTotalWithMembershipAndPackage(
     String? priceStr,
@@ -2347,37 +2102,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
       }
     }
 
-    // Step 2: apply coupon on top (coupon overrides membership/package per backend rules)
-    if (_selectedCoupon != null && !isFreeViaMembership) {
-      final coupon = _selectedCoupon!.coupon;
-      double couponDiscount;
-      String couponLabel;
-
-      if (coupon.type == 'GIFT_SESSION') {
-        couponDiscount = priceAfterMembershipPackage;
-        couponLabel = 'Free gift session';
-      } else if (coupon.type == 'DISCOUNT_PERCENTAGE') {
-        final pct = coupon.percentage ?? 0;
-        couponDiscount = priceAfterMembershipPackage * pct / 100;
-        if (coupon.maxDiscountAmount != null &&
-            couponDiscount > coupon.maxDiscountAmount!) {
-          couponDiscount = coupon.maxDiscountAmount!;
-        }
-        couponLabel = '${pct.toInt()}% off with coupon';
-      } else {
-        couponDiscount = coupon.value.clamp(0, priceAfterMembershipPackage);
-        couponLabel = 'EGP ${coupon.value.toInt()} off with coupon';
-      }
-
-      final finalPrice = priceAfterMembershipPackage - couponDiscount;
-      return (
-        finalPrice <= 0 ? 'Free' : 'EGP ${finalPrice.toStringAsFixed(0)}',
-        baseTotal > 0 ? 'EGP ${baseTotal.toStringAsFixed(0)}' : null,
-        couponLabel,
-      );
-    }
-
-    // No coupon — return membership/package result
     if (isFreeViaMembership) {
       return (
         'Free',

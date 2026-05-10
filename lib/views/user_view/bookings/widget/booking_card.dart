@@ -4,6 +4,7 @@ import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/components/app_button.dart';
 import 'package:recoverylab_front/models/Bookings/api_booking.dart';
+import 'package:recoverylab_front/models/Bookings/api_appointment.dart';
 import 'package:recoverylab_front/views/user_view/bookings/booking_details_page.dart';
 
 class BookingCard extends StatelessWidget {
@@ -14,14 +15,37 @@ class BookingCard extends StatelessWidget {
 
   Color get _statusColor {
     if (booking.isUpcoming) return AppColors.info;
+    if (booking.isUnclosedPast) return AppColors.textSecondary;
     if (booking.isCompleted) return AppColors.success;
     return AppColors.error;
   }
 
   IconData get _statusIcon {
     if (booking.isUpcoming) return SolarIconsOutline.clockCircle;
+    if (booking.isUnclosedPast) return SolarIconsOutline.history;
     if (booking.isCompleted) return SolarIconsOutline.checkCircle;
     return SolarIconsOutline.closeCircle;
+  }
+
+  /// Subtitle when a booking has multiple appointments in different states.
+  static String? mixedAppointmentProgressLine(List<ApiAppointment> appointments) {
+    if (appointments.length <= 1) return null;
+    final total = appointments.length;
+    final cancelled = appointments.where((a) => a.isCancelled).length;
+    final done = appointments.where((a) => a.isDone).length;
+    final allCancelled = cancelled == total;
+    final allDone = done == total;
+    final allStillActive =
+        cancelled == 0 && done == 0 && appointments.every((a) => a.isActive);
+    if (allCancelled || allDone || allStillActive) return null;
+
+    if (cancelled > 0) {
+      return '$cancelled session${cancelled == 1 ? '' : 's'} cancelled';
+    }
+    if (done > 0 && done < total) {
+      return '$done of $total sessions completed';
+    }
+    return null;
   }
 
   Widget _imageFallback() {
@@ -49,6 +73,7 @@ class BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final first = booking.firstAppointment;
+    final progressLine = mixedAppointmentProgressLine(booking.appointments);
     final hasDiscount =
         booking.discountSource != 'NONE' &&
         booking.finalTotal < booking.originalTotal;
@@ -265,6 +290,29 @@ class BookingCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (progressLine != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      border: Border(
+                        top: BorderSide(
+                          color: AppColors.dividerColor,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      progressLine,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11.5.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
                 Container(height: 0.5, color: AppColors.dividerColor),
               ],
 

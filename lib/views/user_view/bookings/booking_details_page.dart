@@ -48,18 +48,23 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
 
   Color get _statusColor {
     if (booking.isUpcoming) return AppColors.info;
+    if (booking.isUnclosedPast) return AppColors.textSecondary;
     if (booking.isCompleted) return AppColors.success;
     return AppColors.error;
   }
 
   IconData get _statusIcon {
     if (booking.isUpcoming) return SolarIconsOutline.clockCircle;
+    if (booking.isUnclosedPast) return SolarIconsOutline.history;
     if (booking.isCompleted) return SolarIconsOutline.checkCircle;
     return SolarIconsOutline.closeCircle;
   }
 
   String get _statusDescription {
     if (booking.isUpcoming) return 'Your session is confirmed and scheduled';
+    if (booking.isUnclosedPast) {
+      return 'This session has already taken place';
+    }
     if (booking.isCompleted) return 'Session completed successfully';
     return 'This booking has been cancelled';
   }
@@ -97,9 +102,16 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.cardBackground,
+            displacement: 20,
+            onRefresh: _refresh,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              slivers: [
               _buildSliverAppBar(),
               SliverToBoxAdapter(
                 child: Padding(
@@ -157,6 +169,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                 ),
               ),
             ],
+            ),
           ),
 
           // Loading overlay
@@ -384,7 +397,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           ),
         ),
         const Spacer(),
-        // Booking date
+        // Session date (earliest appointment), or booking creation date when unknown
         Row(
           children: [
             Icon(
@@ -393,12 +406,15 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               size: 12.sp,
             ),
             SizedBox(width: 1.5.w),
-            Text(
-              _formatDate(booking.bookingDate),
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                _metaRowDateText(),
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.end,
               ),
             ),
           ],
@@ -412,6 +428,14 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   String _formatDate(DateTime dt) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  String _metaRowDateText() {
+    final sessionStart = booking.earliestScheduledStart ?? booking.firstAppointment?.scheduledStart;
+    if (sessionStart != null) {
+      return _formatDate(sessionStart);
+    }
+    return 'Booked on ${_formatDate(booking.bookingDate)}';
   }
 
   Widget _paymentBadge() {
@@ -989,8 +1013,6 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         return 'Promo discount';
       case 'MANUAL':
         return 'Manual discount';
-      case 'COUPON':
-        return 'Coupon discount';
       default:
         return 'Discount';
     }

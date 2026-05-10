@@ -3,6 +3,9 @@ import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 
+// TODO(batch6): When BOOKING_USER_CANCEL_MIN_HOURS_BEFORE is enabled in production,
+// surface that policy here and in the cancel confirmation dialog.
+
 class HelpSupportPage extends StatefulWidget {
   const HelpSupportPage({super.key});
 
@@ -17,7 +20,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     {
       'q': 'How do I cancel or reschedule a booking?',
       'a':
-          'You can cancel or reschedule any upcoming booking from the Bookings tab. Cancellations made at least 24 hours before the session receive a full refund.',
+          'You can cancel or reschedule any upcoming booking from the Bookings tab. Please contact your branch directly to discuss refunds; refund eligibility depends on how close to the session you cancel.',
     },
     {
       'q': 'What payment methods are accepted?',
