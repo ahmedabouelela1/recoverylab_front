@@ -399,6 +399,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         const Spacer(),
         // Session date (earliest appointment), or booking creation date when unknown
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               SolarIconsOutline.calendarDate,
@@ -406,16 +407,14 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               size: 12.sp,
             ),
             SizedBox(width: 1.5.w),
-            Flexible(
-              child: Text(
-                _metaRowDateText(),
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.end,
+            Text(
+              _metaRowDateText(),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.end,
             ),
           ],
         ),
@@ -922,6 +921,15 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               valueColor: AppColors.success,
             ),
           ],
+          if (booking.pointsRedeemed > 0) ...[
+            SizedBox(height: 1.2.h),
+            _priceRow(
+              icon: SolarIconsBold.star,
+              label: '${booking.pointsRedeemed} pts redeemed',
+              value: '− EGP ${booking.pointsDiscountAmount.toStringAsFixed(2)}',
+              valueColor: AppColors.primary,
+            ),
+          ],
           SizedBox(height: 1.5.h),
           Container(height: 0.5, color: AppColors.dividerColor),
           SizedBox(height: 1.5.h),
@@ -983,6 +991,24 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                    ],
+                    if (booking.isCompleted && booking.finalTotal > 0) ...[
+                      SizedBox(height: 0.3.h),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(SolarIconsBold.star, color: AppColors.primary, size: 10.sp),
+                          SizedBox(width: 1.w),
+                          Text(
+                            '+${booking.finalTotal.floor()} pts earned',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],

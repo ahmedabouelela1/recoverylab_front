@@ -23,7 +23,10 @@ class ApiRoutes {
   static const String userAnswers = '/user-answers';
   static const String userAnswersBulk = '/user-answers/bulk';
   static const String changePassword = '/users/password';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String vouchers = '/vouchers';
+  static const String myPoints = '/users/points';
 }
 
 const apiUrl = 'https://recoverylab.thecodehaus.co/api';

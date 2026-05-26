@@ -8,6 +8,7 @@ import 'package:recoverylab_front/models/Branch/services/service_category.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/models/Offer/recommended.dart';
 import 'package:recoverylab_front/models/User/user.dart';
+import 'package:recoverylab_front/models/User/user_points.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
@@ -34,6 +35,7 @@ class _HomePageState extends ConsumerState<HomePage>
   Branch? selectedBranch;
   late User user;
   bool _isLoading = true;
+  UserPoints? _userPoints;
   AnimationController? _shimmerController;
   Animation<double>? _shimmerAnim;
 
@@ -70,6 +72,11 @@ class _HomePageState extends ConsumerState<HomePage>
   Future<void> _loadHome() async {
     final api = ref.read(apiProvider);
     try {
+      try {
+        await ref.read(branchesProvider.notifier).ensureBranchesFetched();
+      } catch (e) {
+        print('[HomePage] Branch fetch failed: $e');
+      }
       final home = await api.gethome();
       if (!mounted) return;
       final branchProvider = ref.read(branchesProvider);
@@ -101,6 +108,10 @@ class _HomePageState extends ConsumerState<HomePage>
       });
       if (!mounted) return;
       _startOffersAutoScroll();
+      // Load points non-critically in background
+      ref.read(apiProvider).getMyPoints().then((points) {
+        if (mounted) setState(() => _userPoints = points);
+      }).catchError((_) {});
     } catch (e, s) {
       print('e: $e, s: $s');
       if (!mounted) return;
@@ -303,37 +314,73 @@ class _HomePageState extends ConsumerState<HomePage>
               ),
 
               SizedBox(height: 0.8.h),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
-                decoration: BoxDecoration(
-                  color: isMember
-                      ? tagBgColor
-                      : AppColors.textTertiary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      SolarIconsOutline.crown,
-                      size: 14,
-                      color: isMember ? AppColors.info : AppColors.textTertiary,
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+                    decoration: BoxDecoration(
+                      color: isMember
+                          ? tagBgColor
+                          : AppColors.textTertiary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    SizedBox(width: 1.5.w),
-                    Text(
-                      membershipAsync.isLoading
-                          ? '...'
-                          : (isMember ? planName! : 'Not a member'),
-                      style: GoogleFonts.inter(
-                        fontSize: 12.sp,
-                        color: isMember
-                            ? AppColors.info
-                            : AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          SolarIconsOutline.crown,
+                          size: 14,
+                          color: isMember ? AppColors.info : AppColors.textTertiary,
+                        ),
+                        SizedBox(width: 1.5.w),
+                        Text(
+                          membershipAsync.isLoading
+                              ? '...'
+                              : (isMember ? planName! : 'Not a member'),
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            color: isMember
+                                ? AppColors.info
+                                : AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_userPoints != null) ...[
+                    SizedBox(width: 2.w),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, Routes.myPoints),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              SolarIconsBold.star,
+                              size: 12,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 1.5.w),
+                            Text(
+                              '${_userPoints!.pointsBalance} pts',
+                              style: GoogleFonts.inter(
+                                fontSize: 12.sp,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ],
           ),

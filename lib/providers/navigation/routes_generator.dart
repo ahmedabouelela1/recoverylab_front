@@ -32,9 +32,14 @@ import 'package:recoverylab_front/views/user_view/profile/upgrade_membership.dar
 import 'package:recoverylab_front/views/user_view/questionnaire/questionnaire.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/questions_step2.dart';
 import 'package:recoverylab_front/views/user_view/questionnaire/style.dart';
+import 'package:recoverylab_front/views/user_view/profile/my_points_page.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_confirmation_screen.dart';
+import 'package:recoverylab_front/views/user_view/bookings/payment_screen.dart';
+import 'package:recoverylab_front/views/user_view/bookings/payment_status_page.dart';
 import 'package:recoverylab_front/views/user_view/registeration/create_account.dart';
 import 'package:recoverylab_front/views/user_view/registeration/otp_signup.dart';
 import 'package:recoverylab_front/views/user_view/registeration/signup_screen.dart';
+import 'package:recoverylab_front/views/user_view/onboarding/login/forgot_password_page.dart';
 
 class Routes {
   static const String root = '/';
@@ -60,6 +65,7 @@ class Routes {
   static const String helpAndSupport = '/helpAndSupport';
   static const String termsAndPolicies = '/termsAndPolicies';
   static const String resetPassword = '/resetPassword';
+  static const String forgotPassword = '/forgotPassword';
   static const String vouchers = '/vouchers';
   static const String voucherRequest = '/voucherRequest';
   static const String editHealthSurvey = '/editHealthSurvey';
@@ -74,6 +80,10 @@ class Routes {
   static const String specialOffersPage = '/specialOffersPage';
   static const String specialOfferDetail = '/specialOfferDetail';
   static const String branches = '/branches';
+  static const String myPoints = '/myPoints';
+  static const String paymentScreen = '/paymentScreen';
+  static const String paymentStatus = '/paymentStatus';
+  static const String bookingConfirmation = '/bookingConfirmation';
 }
 
 class RoutesGenerator {
@@ -106,6 +116,11 @@ class RoutesGenerator {
           ),
         );
       case Routes.bookingSuccessPage:
+        if (args is BookingSuccessArgs) {
+          return MaterialPageRoute(
+            builder: (_) => BookingSuccessPage(args: args),
+          );
+        }
         return MaterialPageRoute(builder: (_) => const BookingSuccessPage());
       case Routes.serviceCats:
         if (args != null && args is Map) {
@@ -183,6 +198,8 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const TermsPoliciesPage());
       case Routes.resetPassword:
         return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
+      case Routes.forgotPassword:
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());
       case Routes.vouchers:
         return MaterialPageRoute(builder: (_) => const VouchersPage());
       case Routes.voucherRequest:
@@ -215,6 +232,66 @@ class RoutesGenerator {
 
       case Routes.myWallet:
         return MaterialPageRoute(builder: (_) => const MyWalletPage());
+
+      case Routes.myPoints:
+        return MaterialPageRoute(builder: (_) => const MyPointsPage());
+
+      case Routes.paymentScreen:
+        if (args is Map<String, dynamic> &&
+            args['checkoutUrl'] is String &&
+            args['bookingId'] is int) {
+          return MaterialPageRoute(
+            builder: (_) => PaymentScreen(
+              checkoutUrl: args['checkoutUrl'] as String,
+              bookingId: args['bookingId'] as int,
+            ),
+          );
+        }
+        if (args is String) {
+          return MaterialPageRoute(
+            builder: (_) => PaymentScreen(checkoutUrl: args, bookingId: 0),
+          );
+        }
+        return _errorRoute();
+
+      case Routes.paymentStatus:
+        if (args is Map<String, dynamic> && args.containsKey('isSuccess')) {
+          return MaterialPageRoute(
+            builder: (_) =>
+                PaymentStatusPage(isSuccess: args['isSuccess'] as bool),
+          );
+        }
+        return _errorRoute();
+
+      case Routes.bookingConfirmation:
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => BookingConfirmationScreen(
+              userId: args['userId'] as int,
+              branchId: args['branchId'] as int,
+              branchName: args['branchName'] as String,
+              serviceId: args['serviceId'] as int,
+              serviceName: args['serviceName'] as String,
+              formattedDateTime: args['formattedDateTime'] as String,
+              durationMinutes: args['durationMinutes'] as int,
+              participantCount: args['participantCount'] as int,
+              staffId: args['staffId'] as int?,
+              staffName: args['staffName'] as String?,
+              notes: args['notes'] as String?,
+              paymentMethod: args['paymentMethod'] as String,
+              usePackageId: args['usePackageId'] as int?,
+              packageName: args['packageName'] as String?,
+              redeemPoints: args['redeemPoints'] as bool? ?? false,
+              offerId: args['offerId'] as int?,
+              displayDate: args['displayDate'] as String,
+              displayTime: args['displayTime'] as String,
+              basePrice: args['basePrice'] as String,
+              finalPrice: args['finalPrice'] as String,
+              discountLabel: args['discountLabel'] as String?,
+            ),
+          );
+        }
+        return _errorRoute();
 
       case Routes.comboBookingScreen:
         if (args is Map<String, dynamic>) {

@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/components/branch_selector.dart';
@@ -9,6 +11,7 @@ import 'package:recoverylab_front/models/Branch/branchService/service_durations.
 import 'package:recoverylab_front/models/Branch/staff/staff.dart';
 import 'package:recoverylab_front/models/Offer/offer_package.dart';
 import 'package:recoverylab_front/models/Offer/user_package.dart';
+import 'package:recoverylab_front/models/User/user_points.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
@@ -16,6 +19,8 @@ import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
+import 'package:recoverylab_front/providers/session/active_offer_provider.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
 import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:recoverylab_front/models/Offer/user_membership.dart';
 import 'package:sizer/sizer.dart';
@@ -54,6 +59,8 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   List<UserPackage> _myPackages = [];
   UserPackage? _selectedPackage;
   List<OfferPackage> _catalogPackages = [];
+  UserPoints? _userPoints;
+  bool _redeemPoints = false;
   BranchSchedule? _schedule;
 
   // Loading and error states
@@ -61,9 +68,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   bool hasError = false;
   String? errorMessage;
 
+  late ActiveOfferNotifier _activeOfferNotifier;
+
   @override
   void initState() {
     super.initState();
+    _activeOfferNotifier = ref.read(activeOfferProvider.notifier);
     _loadDetails();
   }
 
@@ -213,18 +223,24 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
 
   Future<void> _loadMyPackages() async {
     try {
-      final packages = await ref.read(apiProvider).getMyPackages();
+      final results = await Future.wait([
+        ref.read(apiProvider).getMyPackages(),
+        ref.read(apiProvider).getMyPoints(),
+      ]);
       if (!mounted) return;
+      final packages = results[0] as List<UserPackage>;
+      final points = results[1] as UserPoints;
       final eligible = packages.where(_isPackageEligibleForBooking).toList();
       setState(() {
         _myPackages = eligible;
+        _userPoints = points;
         if (_selectedPackage != null &&
             !eligible.any((pkg) => pkg.id == _selectedPackage!.id)) {
           _selectedPackage = null;
         }
       });
     } catch (_) {
-      // Non-critical — user may not have packages
+      // Non-critical
     }
   }
 
@@ -407,6 +423,21 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     return true;
   }
 
+  // Returns how many points the user would use for this booking (capped at booking total value).
+  int _pointsForBooking() {
+    if (_userPoints == null || _userPoints!.redeemableNow <= 0) return 0;
+    final dur = durations.firstWhere(
+      (d) => d?.minutes == selectedDuration,
+      orElse: () => durations.isNotEmpty ? durations[0] : null,
+    );
+    final bookingTotal =
+        (double.tryParse(dur?.price ?? '0') ?? 0) * (selectedPeopleCount ?? 1);
+    if (bookingTotal <= 0) return 0;
+    // User can use all their points, capped at the booking total value in points (100pts = 1 EGP)
+    final maxByBooking = (bookingTotal * 100).floor();
+    return min(_userPoints!.redeemableNow, maxByBooking);
+  }
+
   // Show booking confirmation modal; on confirm, call API directly (no payment method modal).
   void _showBookingConfirmation() {
     if (!_validateBooking()) return;
@@ -437,6 +468,22 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     return msg.trim();
   }
 
+  BookingSuccessArgs _buildSuccessArgs() {
+    String? dateTimeLabel;
+    if (selectedDate != null && selectedTime != null) {
+      final d = selectedDate!;
+      final t = selectedTime!;
+      final hour = t.hour.toString().padLeft(2, '0');
+      final minute = t.minute.toString().padLeft(2, '0');
+      dateTimeLabel = '${d.day}/${d.month}/${d.year} at $hour:$minute';
+    }
+    return BookingSuccessArgs(
+      serviceName: widget.service.name,
+      dateTimeLabel: dateTimeLabel,
+      staffName: selectedStaff?.displayName,
+    );
+  }
+
   void _processPayment() async {
     final formattedDateTime = _formatDateTimeForApi();
     final user = ref.read(userSessionProvider).user;
@@ -453,6 +500,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
     );
 
     try {
+      final activeOffer = ref.read(activeOfferProvider);
       final response = await ref
           .read(apiProvider)
           .storeBooking(
@@ -466,18 +514,74 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             notes: notes.isEmpty ? null : notes,
             paymentMethod: selectedPaymentMethod ?? 'CASH',
             usePackageId: _selectedPackage?.id,
+            redeemPoints: _redeemPoints,
+            offerId: activeOffer?.id,
           );
+      // Offer consumed — clear so it doesn't apply to future bookings.
+      ref.read(activeOfferProvider.notifier).clear();
 
       // Backend returns { success, message, data: { booking, booking_id, ... } }
       final data = response['data'] as Map<String, dynamic>?;
       final bookingId = data?['booking_id'];
       final bookingObj = data?['booking'];
-      _actualBookingId = (bookingId ?? bookingObj?['id'])?.toString();
+      final rawId = (bookingId ?? bookingObj?['id']);
+      _actualBookingId = rawId?.toString();
 
       if (!mounted) return;
-
       Navigator.pop(context); // Close loading dialog
-      _showPaymentSuccessModal();
+
+      final isOnlinePayment = (selectedPaymentMethod ?? 'CASH') == 'ONLINE';
+      if (isOnlinePayment && rawId != null) {
+        // Initiate Paymob payment and navigate to WebView
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _buildPaymentProcessingDialog(),
+        );
+        try {
+          final payResult = await ref
+              .read(apiProvider)
+              .initiatePayment(rawId is int ? rawId : int.parse(rawId.toString()));
+          if (!mounted) return;
+          Navigator.pop(context); // Close second loading dialog
+          final payData = payResult['data'] as Map<String, dynamic>?;
+          final bookingIdInt =
+              rawId is int ? rawId : int.parse(rawId.toString());
+          if (payData?['already_paid'] == true) {
+            Navigator.pushReplacementNamed(
+              context,
+              Routes.paymentStatus,
+              arguments: {'isSuccess': true, 'bookingId': bookingIdInt},
+            );
+            return;
+          }
+          final checkoutUrl = payData?['checkout_url'] as String?;
+          if (checkoutUrl == null || checkoutUrl.isEmpty) {
+            _showPaymentSuccessModal();
+            return;
+          }
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.paymentScreen,
+            arguments: {
+              'checkoutUrl': checkoutUrl,
+              'bookingId': bookingIdInt,
+            },
+          );
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Close loading dialog
+          AppSnackBar.show(context,
+              'Payment initiation failed. Your booking is saved — you can pay at the branch.');
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.bookingSuccessPage,
+            arguments: _buildSuccessArgs(),
+          );
+        }
+      } else {
+        _showPaymentSuccessModal();
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -879,6 +983,248 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
           ),
           SizedBox(height: 2.h),
 
+          // Active promotional offer banner
+          Builder(builder: (ctx) {
+            final activeOffer = ref.watch(activeOfferProvider);
+            if (activeOffer == null) return const SizedBox.shrink();
+            final branchId = selectedBranchIndex != null &&
+                    branches.length > selectedBranchIndex!
+                ? branches[selectedBranchIndex!].id
+                : null;
+            if (!activeOffer.appliesToService(
+              serviceId: widget.service.id,
+              categoryId: widget.service.category.id,
+              branchId: branchId,
+            )) {
+              return const SizedBox.shrink();
+            }
+            final badge = activeOffer.discountBadge;
+            return Container(
+              margin: EdgeInsets.only(bottom: 2.h),
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.success.withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  Icon(SolarIconsBold.tag, size: 18.sp, color: AppColors.success),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          activeOffer.title,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (badge != null)
+                          Text(
+                            badge,
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => ref.read(activeOfferProvider.notifier).clear(),
+                    child: Icon(Icons.close, size: 16.sp, color: AppColors.textTertiary),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Points redemption toggle
+          Builder(builder: (_) {
+            final capped = _pointsForBooking();
+            if (capped <= 0) return const SizedBox.shrink();
+            final cappedEgp = capped / 100.0;
+            return StatefulBuilder(
+              builder: (ctx, setInner) {
+                return Container(
+                  margin: EdgeInsets.only(bottom: 2.h),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+                  decoration: BoxDecoration(
+                    color: _redeemPoints
+                        ? AppColors.primary.withOpacity(0.1)
+                        : AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _redeemPoints
+                          ? AppColors.primary
+                          : AppColors.dividerColor,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        SolarIconsBold.star,
+                        size: 18.sp,
+                        color: _redeemPoints
+                            ? AppColors.primary
+                            : AppColors.textTertiary,
+                      ),
+                      SizedBox(width: 3.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Use $capped points',
+                              style: TextStyle(
+                                color: _redeemPoints
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '= ${cappedEgp.toStringAsFixed(2)} EGP off',
+                              style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _redeemPoints,
+                        onChanged: (v) {
+                          setState(() => _redeemPoints = v);
+                          setInner(() {});
+                        },
+                        activeColor: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }),
+
+          // Payment method selector
+          StatefulBuilder(
+            builder: (ctx, setInner) {
+              final isOnline = (selectedPaymentMethod ?? 'CASH') == 'ONLINE';
+              return Padding(
+                padding: EdgeInsets.only(bottom: 2.h),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => selectedPaymentMethod = 'CASH');
+                          setInner(() {});
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                          decoration: BoxDecoration(
+                            color: !isOnline
+                                ? AppColors.primary
+                                : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: !isOnline
+                                  ? AppColors.primary
+                                  : AppColors.dividerColor,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.store_outlined,
+                                size: 16.sp,
+                                color: !isOnline
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Pay at Branch',
+                                style: TextStyle(
+                                  color: !isOnline
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                  fontSize: 12.sp,
+                                  fontWeight: !isOnline
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => selectedPaymentMethod = 'ONLINE');
+                          setInner(() {});
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? AppColors.primary
+                                : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isOnline
+                                  ? AppColors.primary
+                                  : AppColors.dividerColor,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.credit_card,
+                                size: 16.sp,
+                                color: isOnline
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Pay Online',
+                                style: TextStyle(
+                                  color: isOnline
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                  fontSize: 12.sp,
+                                  fontWeight: isOnline
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
           Row(
             children: [
               Expanded(
@@ -908,8 +1254,52 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
+                    final user = ref.read(userSessionProvider).user;
+                    if (user == null) return;
+                    final selDurationData = durations.firstWhere(
+                      (d) => d?.minutes == selectedDuration,
+                      orElse: () => durations[0],
+                    );
+                    final totalInfo =
+                        _getDisplayTotalWithMembershipAndPackage(
+                      selDurationData?.price,
+                      selectedPeopleCount ?? 1,
+                    );
+                    final baseTotal =
+                        (double.tryParse(selDurationData?.price ?? '0') ??
+                                0) *
+                            (selectedPeopleCount ?? 1);
+                    final activeOffer = ref.read(activeOfferProvider);
                     Navigator.pop(context); // Close confirmation sheet
-                    _processPayment(); // Call API directly (default payment)
+                    Navigator.pushNamed(
+                      context,
+                      Routes.bookingConfirmation,
+                      arguments: {
+                        'userId': user.id,
+                        'branchId': branches[selectedBranchIndex!].id,
+                        'branchName': branches[selectedBranchIndex!].name,
+                        'serviceId': widget.service.id,
+                        'serviceName': widget.service.name,
+                        'formattedDateTime': _formatDateTimeForApi()!,
+                        'durationMinutes': selectedDuration!,
+                        'participantCount': selectedPeopleCount!,
+                        'staffId': selectedStaff?.id,
+                        'staffName': selectedStaff?.displayName,
+                        'notes': notes.isEmpty ? null : notes,
+                        'paymentMethod': selectedPaymentMethod ?? 'CASH',
+                        'usePackageId': _selectedPackage?.id,
+                        'packageName': _selectedPackage?.package?.name,
+                        'redeemPoints': _redeemPoints,
+                        'offerId': activeOffer?.id,
+                        'displayDate':
+                            '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                        'displayTime': _formatHour(selectedTime!.hour),
+                        'basePrice':
+                            'EGP ${baseTotal.toStringAsFixed(0)}',
+                        'finalPrice': totalInfo.$1,
+                        'discountLabel': totalInfo.$3,
+                      },
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -925,7 +1315,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Confirm & Book',
+                        'Review & Pay',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
@@ -1198,6 +1588,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
+                    ref.read(bookingNeedsRefreshProvider.notifier).set(true);
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       Routes.navbar,
@@ -1227,6 +1618,12 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _activeOfferNotifier.clear();
+    super.dispose();
   }
 
   @override
@@ -1557,7 +1954,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                       child: Text(
                         _staffAvailabilityFailed
                             ? 'Staff availability could not be verified for this slot. Continue without selecting a staff member if you want the branch to handle assignment.'
-                            : 'No specific staff are currently available for this slot. If the branch fallback is enabled, booking can still continue without selecting a staff member.',
+                            : 'No staff available for this time slot. Please select a different date or time.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12.sp,
@@ -2116,6 +2513,34 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
         membershipPackageLabel,
       );
     }
+
+    // Promotional offer (best vs membership/package — mirrors backend)
+    final activeOffer = ref.read(activeOfferProvider);
+    final branchId = selectedBranchIndex != null &&
+            branches.length > selectedBranchIndex!
+        ? branches[selectedBranchIndex!].id
+        : null;
+    if (activeOffer != null &&
+        activeOffer.appliesToService(
+          serviceId: widget.service.id,
+          categoryId: widget.service.category.id,
+          branchId: branchId,
+        ) &&
+        participantCount > 0) {
+      final unitPrice = baseTotal / participantCount;
+      final offerPct = activeOffer.discountPercentForUnitPrice(unitPrice);
+      final packageWins = packagePct > membershipPct;
+      final offerWins = !packageWins && offerPct > membershipPct;
+      if (offerWins && offerPct > 0) {
+        final afterOffer = activeOffer.applyDiscountToAmount(baseTotal);
+        return (
+          'EGP ${afterOffer.toStringAsFixed(0)}',
+          'EGP ${baseTotal.toStringAsFixed(0)}',
+          activeOffer.discountBadge,
+        );
+      }
+    }
+
     return ('EGP ${baseTotal.toStringAsFixed(0)}', null, null);
   }
 

@@ -4,6 +4,11 @@ import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Offer/offers.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
+import 'package:recoverylab_front/models/Branch/services/service.dart';
+import 'package:recoverylab_front/models/Branch/services/service_category.dart';
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/providers/session/active_offer_provider.dart';
+import 'package:recoverylab_front/views/user_view/packages/packages_details_page.dart';
 import 'package:sizer/sizer.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -171,101 +176,236 @@ class _SpecialOfferDetailPageState extends ConsumerState<SpecialOfferDetailPage>
     );
   }
 
+  void _navigateCta(Offers o) {
+    final target = o.targetType ?? 'ALL';
+
+    // Carried into service or combo booking; screens validate applicability.
+    ref.read(activeOfferProvider.notifier).set(o);
+
+    switch (target) {
+      case 'SERVICE':
+        if (o.targetId != null) {
+          // Build a minimal Service stub — ServiceDetailsPage re-fetches full data via getBranchService.
+          final stub = Service(
+            id: o.targetId!,
+            category: ServiceCategory(id: 0, name: '', description: '', image: ''),
+            name: o.title,
+            description: '',
+            image: o.image,
+          );
+          Navigator.pushNamed(context, Routes.serviceDetails, arguments: {'service': stub});
+        } else {
+          Navigator.pushNamed(context, Routes.categories);
+        }
+        break;
+      case 'SERVICE_CATEGORY':
+        Navigator.pushNamed(context, Routes.serviceCats);
+        break;
+      case 'PACKAGE':
+        if (o.targetId != null) {
+          _navigateToSpecificCombo(o.targetId!);
+        } else {
+          Navigator.pushNamed(context, Routes.packagesPage);
+        }
+        break;
+      default: // ALL
+        Navigator.pushNamed(context, Routes.categories);
+    }
+  }
+
+  Future<void> _navigateToSpecificCombo(int comboId) async {
+    setState(() => _loading = true);
+    try {
+      final combo = await ref.read(apiProvider).getPackageById(comboId);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PackageDetailsPage(
+            type: PackageType.combo,
+            combo: combo,
+            itemId: combo.id,
+            title: combo.name,
+            description: combo.description ?? '',
+            imagePath: combo.image ?? '',
+            totalDuration: '${combo.totalDurationMinutes} min',
+            price: combo.price.toStringAsFixed(0),
+            inclusions: combo.rules
+                .map((r) => {
+                      'service': r.serviceName ?? r.serviceCategoryName ?? '',
+                      'duration': '${r.durationMinutes ?? 0} min',
+                    })
+                .toList(),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load offer details. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Widget _buildBody(Offers o) {
     final big = o.bigDescription?.trim();
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderImage(o),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.w),
+    final badge = o.discountBadge;
+    final validity = o.validityLabel;
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 2.h),
-                _buildTitleRow(o),
-                SizedBox(height: 2.5.h),
-                Text(
-                  'OVERVIEW',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                SizedBox(height: 1.h),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    o.description.trim().isNotEmpty
-                        ? o.description
-                        : 'No short description for this offer.',
-                    style: TextStyle(
-                      color: o.description.trim().isNotEmpty
-                          ? AppColors.textSecondary
-                          : AppColors.textTertiary,
-                      fontSize: 13.sp,
-                      height: 1.6,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 2.5.h),
-                Text(
-                  'DETAILS',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                SizedBox(height: 1.h),
-                if (big != null && big.isNotEmpty)
-                  _buildBigDescriptionCard(big)
-                else
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.info.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          SolarIconsOutline.infoCircle,
-                          color: AppColors.info,
-                          size: 18.sp,
-                        ),
-                        SizedBox(width: 3.w),
-                        Expanded(
+                _buildHeaderImage(o),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 2.h),
+                      _buildTitleRow(o),
+                      if (badge != null) ...[
+                        SizedBox(height: 1.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                          ),
                           child: Text(
-                            'More information may be added by your branch soon.',
+                            badge,
                             style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12.sp,
-                              height: 1.5,
+                              color: AppColors.success,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ],
-                    ),
+                      if (validity != null) ...[
+                        SizedBox(height: 0.8.h),
+                        Row(
+                          children: [
+                            Icon(SolarIconsOutline.calendar, size: 13.sp, color: AppColors.textTertiary),
+                            SizedBox(width: 1.5.w),
+                            Text(
+                              validity,
+                              style: TextStyle(color: AppColors.textTertiary, fontSize: 11.sp),
+                            ),
+                          ],
+                        ),
+                      ],
+                      SizedBox(height: 2.5.h),
+                      Text(
+                        'OVERVIEW',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          o.description.trim().isNotEmpty
+                              ? o.description
+                              : 'No short description for this offer.',
+                          style: TextStyle(
+                            color: o.description.trim().isNotEmpty
+                                ? AppColors.textSecondary
+                                : AppColors.textTertiary,
+                            fontSize: 13.sp,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 2.5.h),
+                      Text(
+                        'DETAILS',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      if (big != null && big.isNotEmpty)
+                        _buildBigDescriptionCard(big)
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withOpacity(0.07),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                SolarIconsOutline.infoCircle,
+                                color: AppColors.info,
+                                size: 18.sp,
+                              ),
+                              SizedBox(width: 3.w),
+                              Expanded(
+                                child: Text(
+                                  'More information may be added by your branch soon.',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12.sp,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      SizedBox(height: 3.h),
+                    ],
                   ),
-                SizedBox(height: 6.h),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        // CTA button pinned to bottom
+        Padding(
+          padding: EdgeInsets.fromLTRB(4.w, 0, 4.w, 4.h),
+          child: SizedBox(
+            width: double.infinity,
+            height: 6.h,
+            child: ElevatedButton(
+              onPressed: () => _navigateCta(o),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: Text(
+                o.ctaLabel?.isNotEmpty == true ? o.ctaLabel! : 'Book Now',
+                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -283,7 +423,7 @@ class _SpecialOfferDetailPageState extends ConsumerState<SpecialOfferDetailPage>
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (context2, err, stack) => Container(
                 color: AppColors.cardBackground,
                 child: Center(
                   child: Icon(

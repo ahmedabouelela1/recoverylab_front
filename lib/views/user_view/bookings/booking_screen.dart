@@ -236,6 +236,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(bookingNeedsRefreshProvider, (_, needsRefresh) {
+      if (needsRefresh) {
+        ref.read(bookingNeedsRefreshProvider.notifier).set(false);
+        _fetchBookings();
+      }
+    });
+
     final upcomingCount = _bookings.where((b) => b.isUpcoming).length;
 
     return Scaffold(

@@ -261,6 +261,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               label: 'Vouchers',
               route: Routes.vouchers,
             ),
+            _SettingItem(
+              icon: SolarIconsOutline.starFall,
+              label: 'My Points',
+              route: Routes.myPoints,
+            ),
           ], context),
           SizedBox(height: 2.h),
 

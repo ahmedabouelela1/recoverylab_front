@@ -1,26 +1,39 @@
-// lib/pages/booking/booking_success_page.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:sizer/sizer.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 
-class BookingSuccessPage extends StatefulWidget {
-  const BookingSuccessPage({super.key});
+class BookingSuccessArgs {
+  final String serviceName;
+  final String? dateTimeLabel;
+  final String? staffName;
 
-  @override
-  State<BookingSuccessPage> createState() => _BookingSuccessPageState();
+  const BookingSuccessArgs({
+    required this.serviceName,
+    this.dateTimeLabel,
+    this.staffName,
+  });
 }
 
-class _BookingSuccessPageState extends State<BookingSuccessPage> {
+class BookingSuccessPage extends ConsumerStatefulWidget {
+  final BookingSuccessArgs? args;
+
+  const BookingSuccessPage({super.key, this.args});
+
+  @override
+  ConsumerState<BookingSuccessPage> createState() => _BookingSuccessPageState();
+}
+
+class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> {
   @override
   void initState() {
     super.initState();
-    // Start a timer to pop the page after 5 seconds
+    ref.read(bookingNeedsRefreshProvider.notifier).set(true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        // Pop back to the main app screen (or whatever screen is appropriate)
         Navigator.pushNamedAndRemoveUntil(
           context,
           Routes.navbar,
@@ -30,15 +43,37 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
     });
   }
 
+  String _buildMessage(BookingSuccessArgs? args) {
+    if (args == null) {
+      return 'Your appointment has been successfully booked. You will receive a confirmation shortly.';
+    }
+
+    final buffer = StringBuffer('Your appointment for ${args.serviceName}');
+
+    if (args.dateTimeLabel != null && args.dateTimeLabel!.isNotEmpty) {
+      buffer.write(' on ${args.dateTimeLabel}');
+    }
+
+    final staff = args.staffName?.trim();
+    if (staff != null && staff.isNotEmpty) {
+      buffer.write(' with $staff');
+    }
+
+    buffer.write(' has been successfully booked.');
+    return buffer.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final args = widget.args;
+    final message = _buildMessage(args);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Success Icon
             Image.asset(
               'lib/assets/images/blue.png',
               width: 50.w,
@@ -46,9 +81,8 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
             ),
             SizedBox(height: 2.h),
 
-            // Title
             Text(
-              "Booking Confirmed!",
+              'Booking Confirmed!',
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
@@ -57,11 +91,10 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
             ),
             SizedBox(height: 2.h),
 
-            // Message
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.w),
               child: Text(
-                "Your appointment has been successfully booked with Layla Nour. You will receive a confirmation email shortly.",
+                message,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,

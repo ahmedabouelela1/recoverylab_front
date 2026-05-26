@@ -22,6 +22,8 @@ class ApiBooking {
   final double finalTotal;
   final String discountSource;
   final String? notes;
+  final int pointsRedeemed;
+  final double pointsDiscountAmount;
   final List<ApiAppointment> appointments;
   final String? branchName;
   final String? branchAddress;
@@ -39,6 +41,8 @@ class ApiBooking {
     required this.finalTotal,
     required this.discountSource,
     this.notes,
+    this.pointsRedeemed = 0,
+    this.pointsDiscountAmount = 0.0,
     required this.appointments,
     this.branchName,
     this.branchAddress,
@@ -209,6 +213,8 @@ class ApiBooking {
       finalTotal: double.tryParse(json['final_total']?.toString() ?? '0') ?? 0.0,
       discountSource: json['discount_source']?.toString() ?? 'NONE',
       notes: json['notes']?.toString(),
+      pointsRedeemed: int.tryParse(json['points_redeemed']?.toString() ?? '0') ?? 0,
+      pointsDiscountAmount: double.tryParse(json['points_discount_amount']?.toString() ?? '0') ?? 0.0,
       appointments: appts,
       branchName: branch?['name']?.toString(),
       branchAddress: branch?['address']?.toString(),
