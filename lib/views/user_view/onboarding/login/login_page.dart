@@ -118,11 +118,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
       await ref.read(apiProvider).loginWithGoogle(idToken);
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, Routes.navbar);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('GOOGLE_SIGN_IN_ERROR type=${e.runtimeType} error=$e');
+      debugPrint('GOOGLE_SIGN_IN_STACK $st');
       if (mounted) {
         AppSnackBar.show(
           context,
-          e is ApiException ? e.message : 'Google sign-in failed',
+          e is ApiException ? e.message : 'Google sign-in failed: ${e.runtimeType}: $e',
         );
       }
     } finally {

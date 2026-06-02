@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Google Sign-In credentials (replace placeholders before use, do not commit real values)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

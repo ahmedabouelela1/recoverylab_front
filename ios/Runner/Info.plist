@@ -74,5 +74,18 @@
 		<string>comgooglemaps</string>
 		<string>googlechromes</string>
 	</array>
+	<key>GIDClientID</key>
+	<string>825731226614-73mpkqqaubar2pqomqivj3ab9sj6ahkr.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.825731226614-73mpkqqaubar2pqomqivj3ab9sj6ahkr</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
