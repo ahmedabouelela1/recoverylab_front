@@ -18,6 +18,8 @@ class OfferPackage {
   final String? serviceName;
   /// COMBO only: services the user cannot choose for category-based slots.
   final List<int> excludedServiceIds;
+  /// COMBO only: if true, hidden from the public combos catalog — only reachable via a special offer CTA.
+  final bool isOfferOnly;
 
   OfferPackage({
     required this.id,
@@ -35,6 +37,7 @@ class OfferPackage {
     this.durationMinutes,
     this.serviceName,
     this.excludedServiceIds = const [],
+    this.isOfferOnly = false,
   });
 
   bool get isCombo => type == 'COMBO';
@@ -65,5 +68,6 @@ class OfferPackage {
                 ?.map((e) => (e as num).toInt())
                 .toList() ??
             const [],
+        isOfferOnly: json['is_offer_only'] == true || json['is_offer_only'] == 1,
       );
 }

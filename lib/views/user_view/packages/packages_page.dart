@@ -18,6 +18,7 @@ class PackagesPage extends ConsumerStatefulWidget {
 class _PackagesPageState extends ConsumerState<PackagesPage> {
   String selectedTab = 'Combos';
   Branch? _selectedBranch;
+  bool _isFetchingBranches = false;
 
   List<Widget> _tabViews(List<Branch> branches, Branch? selectedBranch) => [
         CombosTab(branchId: selectedBranch?.id),
@@ -30,8 +31,17 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(branchesProvider.notifier).ensureBranchesFetched();
+      _ensureBranches();
     });
+  }
+
+  Future<void> _ensureBranches() async {
+    if (!mounted) return;
+    setState(() => _isFetchingBranches = true);
+    try {
+      await ref.read(branchesProvider.notifier).ensureBranchesFetched();
+    } catch (_) {}
+    if (mounted) setState(() => _isFetchingBranches = false);
   }
 
   Color _tabColor(String tab) {
@@ -54,10 +64,7 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
     }
 
     final tabWidgets = _tabViews(branches, selectedBranch);
-    final currentTabIndex = _tabs.indexOf(selectedTab);
-    final currentChild = currentTabIndex >= 0 && currentTabIndex < tabWidgets.length
-        ? tabWidgets[currentTabIndex]
-        : tabWidgets.first;
+    final currentTabIndex = _tabs.indexOf(selectedTab).clamp(0, tabWidgets.length - 1);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -79,14 +86,44 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 5.w),
-            child: BranchSelector(
-              title: 'BRANCH',
-              branches: branches,
-              selectedBranch: selectedBranch,
-              onSelected: (branch) async {
-                setState(() => _selectedBranch = branch);
-              },
-            ),
+            child: branches.isEmpty && _isFetchingBranches
+                ? SizedBox(
+                    height: 6.h,
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    ),
+                  )
+                : branches.isEmpty
+                    ? SizedBox(
+                        height: 6.h,
+                        child: GestureDetector(
+                          onTap: _ensureBranches,
+                          child: Center(
+                            child: Text(
+                              'Could not load branches. Tap to retry.',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : BranchSelector(
+                        title: 'BRANCH',
+                        branches: branches,
+                        selectedBranch: selectedBranch,
+                        onSelected: (branch) async {
+                          setState(() => _selectedBranch = branch);
+                        },
+                      ),
           ),
           SizedBox(height: 1.5.h),
           Padding(
@@ -95,24 +132,9 @@ class _PackagesPageState extends ConsumerState<PackagesPage> {
           ),
           SizedBox(height: 2.h),
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.03),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-              child: KeyedSubtree(
-                key: ValueKey('$selectedTab-${selectedBranch?.id}'),
-                child: currentChild,
-              ),
+            child: IndexedStack(
+              index: currentTabIndex,
+              children: tabWidgets,
             ),
           ),
         ],

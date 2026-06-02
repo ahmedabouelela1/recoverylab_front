@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recoverylab_front/configurations/colors.dart';
 import 'package:recoverylab_front/models/Voucher/api_voucher.dart';
@@ -38,6 +39,20 @@ class _VouchersPageState extends ConsumerState<VouchersPage> {
       setState(() => _loading = false);
       AppSnackBar.show(context, 'Failed to load vouchers.');
     }
+  }
+
+  String _formatDate(String isoDate) {
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      return '${dt.day} ${_monthName(dt.month)} ${dt.year}';
+    } catch (_) {
+      return isoDate;
+    }
+  }
+
+  String _monthName(int m) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[m - 1];
   }
 
   Future<void> _cancelIfRequested(ApiVoucher v) async {
@@ -133,42 +148,134 @@ class _VouchersPageState extends ConsumerState<VouchersPage> {
                     itemCount: _items.length,
                     itemBuilder: (_, i) {
                       final v = _items[i];
+                      final isApproved = v.status == 'CONFIRMED' || v.status == 'COMPLETED';
                       return Card(
                         color: AppColors.cardBackground,
                         margin: EdgeInsets.only(bottom: 1.2.h),
-                        child: ListTile(
-                          title: Text(v.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                          subtitle: Column(
+                        child: Padding(
+                          padding: EdgeInsets.all(3.w),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: 0.5.h),
-                              Text(v.productSummary, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                              if (v.branchName != null)
-                                Text(v.branchName!, style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                              if (v.price != null)
-                                Text('EGP ${v.price!.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.info, fontSize: 13)),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                v.statusLabel,
-                                style: TextStyle(
-                                  color: v.status == 'CANCELLED' ? AppColors.error : AppColors.success,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12.sp,
-                                ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(v.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                                        SizedBox(height: 0.4.h),
+                                        Text(v.productSummary, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                        if (v.branchName != null)
+                                          Text(v.branchName!, style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                        if (v.price != null)
+                                          Text('EGP ${v.price!.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.info, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        v.statusLabel,
+                                        style: TextStyle(
+                                          color: v.status == 'CANCELLED'
+                                              ? AppColors.error
+                                              : isApproved
+                                                  ? AppColors.success
+                                                  : AppColors.textSecondary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12.sp,
+                                        ),
+                                      ),
+                                      if (v.status == 'REQUESTED')
+                                        TextButton(
+                                          onPressed: () => _cancelIfRequested(v),
+                                          child: const Text('Cancel'),
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              if (v.status == 'REQUESTED')
-                                TextButton(
-                                  onPressed: () => _cancelIfRequested(v),
-                                  child: const Text('Cancel'),
+                              if (isApproved) ...[
+                                SizedBox(height: 1.5.h),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceLight,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.success.withOpacity(0.4)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (v.confirmedAt != null)
+                                        Padding(
+                                          padding: EdgeInsets.only(bottom: 0.8.h),
+                                          child: Text(
+                                            'Confirmed on ${_formatDate(v.confirmedAt!)}',
+                                            style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                                          ),
+                                        ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Clipboard.setData(const ClipboardData(text: 'voucher'));
+                                          AppSnackBar.show(context, 'Copied!');
+                                        },
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                'Show this code at the branch to redeem',
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: 13.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: 0.8.h),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                'VOUCHER-${v.id}',
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                Clipboard.setData(ClipboardData(text: 'VOUCHER-${v.id}'));
+                                                AppSnackBar.show(context, 'Copied!');
+                                              },
+                                              child: const Icon(Icons.copy_outlined, color: AppColors.textSecondary, size: 18),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                              ],
                             ],
                           ),
-                          isThreeLine: true,
                         ),
                       );
                     },

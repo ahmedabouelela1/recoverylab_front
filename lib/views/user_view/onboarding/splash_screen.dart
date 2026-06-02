@@ -32,7 +32,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       _storage.read(key: 'auth_token'),
       _storage.read(key: 'user'),
       SharedPreferences.getInstance(),
-      ref.read(branchesProvider.notifier).fetchBranches().then((_) => null).catchError((_) => null),
+      ref.read(branchesProvider.notifier).fetchBranches().then((_) => null).catchError((e) {
+        print('[SplashScreen] Branch fetch failed: $e');
+        return null;
+      }),
     ]);
 
     final token = results[0] as String?;

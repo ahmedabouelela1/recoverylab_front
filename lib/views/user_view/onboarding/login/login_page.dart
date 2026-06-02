@@ -291,9 +291,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap: () {
-                          // Navigate to forgot password
-                        },
+                        onTap: () => Navigator.pushNamed(context, Routes.forgotPassword),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: 0.5.h,

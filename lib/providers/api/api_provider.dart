@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:recoverylab_front/configurations/constants.dart';
@@ -19,10 +20,22 @@ import 'package:recoverylab_front/models/Branch/staff/staff.dart';
 import 'package:recoverylab_front/models/Voucher/api_voucher.dart';
 import 'package:recoverylab_front/models/User/auth/login_response.dart';
 import 'package:recoverylab_front/models/User/user.dart';
+import 'package:recoverylab_front/models/User/user_points.dart';
+import 'package:recoverylab_front/main.dart';
 import 'package:recoverylab_front/providers/exception/exception_handling.dart';
+import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 
 final apiProvider = Provider<ApiProvider>((ref) => ApiProvider(ref));
+
+class _BookingRefreshNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void set(bool value) => state = value;
+}
+
+final bookingNeedsRefreshProvider =
+    NotifierProvider<_BookingRefreshNotifier, bool>(_BookingRefreshNotifier.new);
 
 class ApiProvider {
   final Ref ref;
@@ -85,6 +98,20 @@ class ApiProvider {
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
+    if (response.statusCode == 401) {
+      ref.read(userSessionProvider.notifier).logout();
+      final nav = navigatorKey.currentState;
+      if (nav != null) {
+        nav.pushNamedAndRemoveUntil(Routes.root, (_) => false);
+        ScaffoldMessenger.of(nav.context).showSnackBar(
+          const SnackBar(
+            content: Text('Session expired. Please log in again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      throw ApiException('Session expired. Please log in again.');
+    }
     final decoded = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(decoded['message'] ?? 'Server error');
@@ -400,6 +427,31 @@ class ApiProvider {
     _handleResponse(response);
   }
 
+  /// POST /forgot-password — sends a 6-digit OTP to the user's email.
+  /// Returns the full response map; caller reads ['code'] for local OTP comparison.
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await basePost(ApiRoutes.forgotPassword, {'email': email});
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (data['success'] != true) {
+      throw ApiException(data['message'] as String? ?? 'Failed to send reset code');
+    }
+    return data;
+  }
+
+  /// POST /reset-password — resets the password without requiring the current password.
+  Future<void> resetPassword(
+      String email, String newPassword, String confirmation) async {
+    final response = await basePost(ApiRoutes.resetPassword, {
+      'email': email,
+      'new_password': newPassword,
+      'new_password_confirmation': confirmation,
+    });
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (data['success'] != true) {
+      throw ApiException(data['message'] as String? ?? 'Failed to reset password');
+    }
+  }
+
   /// DELETE /users — delete current user account. Caller should logout and navigate to login.
   Future<void> deleteAccount() async {
     final response = await baseDelete(ApiRoutes.users);
@@ -439,6 +491,13 @@ class ApiProvider {
         .toList();
   }
 
+  /// GET /packages/{id} — fetch a single package/combo by ID (public endpoint, no auth required).
+  Future<OfferPackage> getPackageById(int id) async {
+    final response = await baseGet('${ApiRoutes.packages}/$id');
+    final decoded = _handleResponse(response);
+    return OfferPackage.fromJson(decoded['data'] as Map<String, dynamic>);
+  }
+
   /// GET /membership-plans — optionally filter by branch_id.
   Future<List<MembershipPlan>> getMembershipPlans({int? branchId}) async {
     final endpoint = branchId != null
@@ -473,6 +532,13 @@ class ApiProvider {
       'purchased_via': 'SELF_SERVICE',
     });
     return _handleResponse(response);
+  }
+
+  /// GET /users/points — authenticated user's points balance and recent transactions.
+  Future<UserPoints> getMyPoints() async {
+    final response = await baseGet(ApiRoutes.myPoints);
+    final decoded = _handleResponse(response);
+    return UserPoints.fromJson(decoded['data'] as Map<String, dynamic>);
   }
 
   /// POST /user-memberships — subscribe to a membership plan.
@@ -524,6 +590,8 @@ class ApiProvider {
     String? notes,
     required String paymentMethod,
     int? usePackageId,
+    bool redeemPoints = false,
+    int? offerId,
   }) async {
     final Map<String, dynamic> body = {
       'branch_id': branchId,
@@ -543,8 +611,20 @@ class ApiProvider {
     if (usePackageId != null) {
       body['use_package_id'] = usePackageId;
     }
+    if (redeemPoints) {
+      body['redeem_points'] = true;
+    }
+    if (offerId != null) {
+      body['offer_id'] = offerId;
+    }
 
     final response = await basePost(ApiRoutes.booking, body);
+    return _handleResponse(response);
+  }
+
+  /// POST /bookings/{id}/initiate-payment — create Paymob intention and get checkout URL.
+  Future<Map<String, dynamic>> initiatePayment(int bookingId) async {
+    final response = await basePost('${ApiRoutes.booking}/$bookingId/initiate-payment', {});
     return _handleResponse(response);
   }
 
@@ -732,14 +812,22 @@ class ApiProvider {
     int participantCount = 1,
     String? notes,
     Map<int, int>? serviceChoices,
+    String paymentMethod = 'CASH',
+    bool redeemPoints = false,
+    int? offerId,
   }) async {
     final payload = <String, dynamic>{
       'combo_id': comboId,
       'branch_id': branchId,
       'scheduled_start': scheduledStart,
       'participant_count': participantCount,
+      'payment_method': paymentMethod,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (offerId != null) 'offer_id': offerId,
     };
+    if (redeemPoints) {
+      payload['redeem_points'] = true;
+    }
     if (serviceChoices != null && serviceChoices.isNotEmpty) {
       payload['service_choices'] = serviceChoices.map((k, v) => MapEntry(k.toString(), v));
     }

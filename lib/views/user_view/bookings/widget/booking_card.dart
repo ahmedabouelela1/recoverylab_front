@@ -14,15 +14,15 @@ class BookingCard extends StatelessWidget {
   const BookingCard({super.key, required this.booking, this.onCancelPressed});
 
   Color get _statusColor {
+    if (booking.isUnclosedPast) return AppColors.warning;
     if (booking.isUpcoming) return AppColors.info;
-    if (booking.isUnclosedPast) return AppColors.textSecondary;
     if (booking.isCompleted) return AppColors.success;
     return AppColors.error;
   }
 
   IconData get _statusIcon {
-    if (booking.isUpcoming) return SolarIconsOutline.clockCircle;
     if (booking.isUnclosedPast) return SolarIconsOutline.history;
+    if (booking.isUpcoming) return SolarIconsOutline.clockCircle;
     if (booking.isCompleted) return SolarIconsOutline.checkCircle;
     return SolarIconsOutline.closeCircle;
   }
@@ -239,6 +239,42 @@ class BookingCard extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // ── Past-session warning banner ─────────────────────────────
+              if (booking.isUnclosedPast)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.12),
+                    border: Border(
+                      top: BorderSide(
+                        color: AppColors.warning.withOpacity(0.3),
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        SolarIconsOutline.history,
+                        color: AppColors.warning,
+                        size: 13.sp,
+                      ),
+                      SizedBox(width: 2.w),
+                      Text(
+                        'Session time passed — contact the branch or cancel',
+                        style: TextStyle(
+                          color: AppColors.warning,
+                          fontSize: 11.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
 
               // ── Date / Time strip ───────────────────────────────────────
               if (first != null) ...[

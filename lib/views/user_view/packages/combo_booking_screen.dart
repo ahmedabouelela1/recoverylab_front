@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:dropdown_flutter/custom_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,9 @@ import 'package:recoverylab_front/models/Offer/package_rule.dart';
 import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/navigation/routes_generator.dart';
+import 'package:recoverylab_front/views/user_view/bookings/booking_success_page.dart';
+import 'package:recoverylab_front/models/User/user_points.dart';
+import 'package:recoverylab_front/providers/session/active_offer_provider.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:sizer/sizer.dart';
@@ -54,6 +59,35 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   /// categoryId -> list of services (loaded once per category).
   final Map<int, List<Service>> _servicesByCategory = {};
   bool _loadingServices = false;
+  String _paymentMethod = 'CASH';
+  bool _redeemPoints = false;
+  UserPoints? _userPoints;
+
+  Future<void> _loadPoints() async {
+    try {
+      final pts = await ref.read(apiProvider).getMyPoints();
+      if (mounted) setState(() => _userPoints = pts);
+    } catch (_) {}
+  }
+
+  double get _comboBasePrice =>
+      double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+
+  double get _comboDisplayTotal {
+    var total = _comboBasePrice;
+    final offer = ref.read(activeOfferProvider);
+    final branchId = _selectedBranch?.id;
+    if (offer != null &&
+        offer.appliesToCombo(comboId: widget.comboId, branchId: branchId)) {
+      total = offer.applyDiscountToAmount(total);
+    }
+    if (_redeemPoints && _userPoints != null && _userPoints!.redeemableNow > 0) {
+      final cappedPoints = min(_userPoints!.redeemableNow, (total * 100).floor());
+      final discount = cappedPoints / 100.0;
+      total = (total - discount).clamp(0, total);
+    }
+    return total;
+  }
 
   /// Parse totalDuration string (e.g. "150 min" or "2h 30min") to total minutes.
   int get _totalDurationMinutes {
@@ -115,6 +149,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   @override
   void initState() {
     super.initState();
+    _loadPoints();
     final branches = ref.read(branchesProvider);
     final user = ref.read(userSessionProvider).user;
     if (branches.isNotEmpty) {
@@ -311,6 +346,21 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
     return '$h:00 $period';
   }
 
+  BookingSuccessArgs _buildSuccessArgs() {
+    String? dateTimeLabel;
+    if (_selectedDate != null && _selectedTime != null) {
+      final d = _selectedDate!;
+      final t = _selectedTime!;
+      final hour = t.hour.toString().padLeft(2, '0');
+      final minute = t.minute.toString().padLeft(2, '0');
+      dateTimeLabel = '${d.day}/${d.month}/${d.year} at $hour:$minute';
+    }
+    return BookingSuccessArgs(
+      serviceName: widget.comboName,
+      dateTimeLabel: dateTimeLabel,
+    );
+  }
+
   Future<void> _book() async {
     if (_selectedDate == null || _selectedTime == null) {
       AppSnackBar.show(context, 'Please select a date and time.');
@@ -342,7 +392,16 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(apiProvider).storeComboBooking(
+      final activeOffer = ref.read(activeOfferProvider);
+      final offerId = (activeOffer != null &&
+              activeOffer.appliesToCombo(
+                comboId: widget.comboId,
+                branchId: _selectedBranch!.id,
+              ))
+          ? activeOffer.id
+          : null;
+
+      final response = await ref.read(apiProvider).storeComboBooking(
             comboId: widget.comboId,
             userId: user.id,
             branchId: _selectedBranch!.id,
@@ -350,12 +409,65 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
             participantCount: _participantCount,
             notes: _notes.isEmpty ? null : _notes,
             serviceChoices: _serviceChoices.isEmpty ? null : _serviceChoices,
+            paymentMethod: _paymentMethod,
+            redeemPoints: _redeemPoints,
+            offerId: offerId,
           );
+      ref.read(activeOfferProvider.notifier).clear();
+
       if (!mounted) return;
+
+      if (_paymentMethod == 'ONLINE') {
+        final data = response['data'] as Map<String, dynamic>?;
+        final rawId = data?['id'] ?? data?['booking_id'];
+        if (rawId != null) {
+          try {
+            final bookingId = rawId is int ? rawId : int.parse(rawId.toString());
+            final payResult = await ref.read(apiProvider).initiatePayment(bookingId);
+            if (!mounted) return;
+            final payData = payResult['data'] as Map<String, dynamic>?;
+            if (payData?['already_paid'] == true) {
+              Navigator.pushReplacementNamed(
+                context,
+                Routes.paymentStatus,
+                arguments: {'isSuccess': true, 'bookingId': bookingId},
+              );
+              return;
+            }
+            final checkoutUrl = payData?['checkout_url'] as String?;
+            if (checkoutUrl == null || checkoutUrl.isEmpty) {
+              Navigator.pushReplacementNamed(
+                context,
+                Routes.bookingSuccessPage,
+                arguments: _buildSuccessArgs(),
+              );
+              return;
+            }
+            Navigator.pushReplacementNamed(
+              context,
+              Routes.paymentScreen,
+              arguments: {
+                'checkoutUrl': checkoutUrl,
+                'bookingId': bookingId,
+              },
+            );
+            return;
+          } catch (_) {
+            if (mounted) {
+              AppSnackBar.show(
+                context,
+                'Payment initiation failed. Your booking is saved — you can pay at the branch.',
+              );
+            }
+          }
+        }
+      }
+
       Navigator.pushNamedAndRemoveUntil(
         context,
         Routes.bookingSuccessPage,
         (route) => route.settings.name == Routes.navbar,
+        arguments: _buildSuccessArgs(),
       );
     } catch (e) {
       if (mounted) AppSnackBar.show(context, e.toString());
@@ -695,21 +807,211 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
           border: Border(
               top: BorderSide(color: AppColors.dividerColor, width: 0.8)),
         ),
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _book,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.info,
-            foregroundColor: AppColors.secondary,
-            padding: EdgeInsets.symmetric(vertical: 2.h),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-          ),
-          child: Text(
-            _isLoading ? 'Booking…' : 'Confirm Booking — EGP ${widget.price}',
-            style:
-                TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Builder(
+              builder: (context) {
+                final offer = ref.watch(activeOfferProvider);
+                if (offer == null ||
+                    !offer.appliesToCombo(
+                      comboId: widget.comboId,
+                      branchId: _selectedBranch?.id,
+                    )) {
+                  return const SizedBox.shrink();
+                }
+                final badge = offer.discountBadge;
+                if (badge == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 1.h),
+                  child: Row(
+                    children: [
+                      Icon(SolarIconsBold.tag, size: 16.sp, color: AppColors.primary),
+                      SizedBox(width: 2.w),
+                      Expanded(
+                        child: Text(
+                          '${offer.title} — $badge',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () =>
+                            ref.read(activeOfferProvider.notifier).clear(),
+                        child: Icon(Icons.close, size: 16.sp),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            Builder(builder: (_) {
+              if (_userPoints == null) return const SizedBox.shrink();
+              final cappedPoints =
+                  min(_userPoints!.redeemableNow, (_comboBasePrice * 100).floor());
+              if (cappedPoints <= 0) return const SizedBox.shrink();
+              final cappedEgp = cappedPoints / 100.0;
+              return Padding(
+                padding: EdgeInsets.only(bottom: 1.h),
+                child: GestureDetector(
+                  onTap: () => setState(() => _redeemPoints = !_redeemPoints),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                    decoration: BoxDecoration(
+                      color: _redeemPoints
+                          ? AppColors.primary.withValues(alpha: 0.15)
+                          : AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _redeemPoints
+                            ? AppColors.primary
+                            : AppColors.dividerColor,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          SolarIconsBold.star,
+                          size: 16.sp,
+                          color: _redeemPoints
+                              ? AppColors.primary
+                              : AppColors.textTertiary,
+                        ),
+                        SizedBox(width: 2.w),
+                        Expanded(
+                          child: Text(
+                            'Use $cappedPoints points '
+                            '(−${cappedEgp.toStringAsFixed(2)} EGP)',
+                            style: TextStyle(fontSize: 11.sp),
+                          ),
+                        ),
+                        Icon(
+                          _redeemPoints
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          color: AppColors.primary,
+                          size: 18.sp,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            // Payment method selector
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _paymentMethod = 'CASH'),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: EdgeInsets.symmetric(vertical: 1.2.h),
+                      decoration: BoxDecoration(
+                        color: _paymentMethod == 'CASH'
+                            ? AppColors.primary
+                            : AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _paymentMethod == 'CASH'
+                              ? AppColors.primary
+                              : AppColors.dividerColor,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.store_outlined,
+                              size: 14.sp,
+                              color: _paymentMethod == 'CASH'
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary),
+                          SizedBox(width: 2.w),
+                          Text(
+                            'Pay at Branch',
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: _paymentMethod == 'CASH'
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: _paymentMethod == 'CASH'
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 3.w),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _paymentMethod = 'ONLINE'),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: EdgeInsets.symmetric(vertical: 1.2.h),
+                      decoration: BoxDecoration(
+                        color: _paymentMethod == 'ONLINE'
+                            ? AppColors.primary
+                            : AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _paymentMethod == 'ONLINE'
+                              ? AppColors.primary
+                              : AppColors.dividerColor,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.credit_card,
+                              size: 14.sp,
+                              color: _paymentMethod == 'ONLINE'
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary),
+                          SizedBox(width: 2.w),
+                          Text(
+                            'Pay Online',
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: _paymentMethod == 'ONLINE'
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: _paymentMethod == 'ONLINE'
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 1.5.h),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _book,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.info,
+                foregroundColor: AppColors.secondary,
+                minimumSize: Size(double.infinity, 6.h),
+                padding: EdgeInsets.symmetric(vertical: 2.h),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(
+                _isLoading
+                    ? 'Booking…'
+                    : 'Confirm Booking — EGP ${_comboDisplayTotal.toStringAsFixed(_comboDisplayTotal % 1 == 0 ? 0 : 2)}',
+                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         ),
       ),
     );
