@@ -8,12 +8,16 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   final String checkoutUrl;
+
+  /// Booking id to poll for confirmation. Pass 0 (default) for non-booking
+  /// payments (memberships, packages, vouchers) where confirmation is detected
+  /// purely from the Paymob redirect URL.
   final int bookingId;
 
   const PaymentScreen({
     super.key,
     required this.checkoutUrl,
-    required this.bookingId,
+    this.bookingId = 0,
   });
 
   @override
@@ -38,7 +42,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       ))
       ..loadRequest(Uri.parse(widget.checkoutUrl));
 
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollBookingStatus());
+    // Only booking payments can be confirmed via polling; other purchases rely
+    // on the Paymob redirect URL.
+    if (widget.bookingId > 0) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollBookingStatus());
+    }
   }
 
   Future<void> _pollBookingStatus() async {

@@ -59,7 +59,7 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
   /// categoryId -> list of services (loaded once per category).
   final Map<int, List<Service>> _servicesByCategory = {};
   bool _loadingServices = false;
-  String _paymentMethod = 'CASH';
+  final String _paymentMethod = 'ONLINE';
   bool _redeemPoints = false;
   UserPoints? _userPoints;
 
@@ -884,7 +884,13 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                           child: Text(
                             'Use $cappedPoints points '
                             '(−${cappedEgp.toStringAsFixed(2)} EGP)',
-                            style: TextStyle(fontSize: 11.sp),
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w600,
+                              color: _redeemPoints
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
                           ),
                         ),
                         Icon(
@@ -900,98 +906,6 @@ class _ComboBookingScreenState extends ConsumerState<ComboBookingScreen> {
                 ),
               );
             }),
-            // Payment method selector
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _paymentMethod = 'CASH'),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                      decoration: BoxDecoration(
-                        color: _paymentMethod == 'CASH'
-                            ? AppColors.primary
-                            : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _paymentMethod == 'CASH'
-                              ? AppColors.primary
-                              : AppColors.dividerColor,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.store_outlined,
-                              size: 14.sp,
-                              color: _paymentMethod == 'CASH'
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary),
-                          SizedBox(width: 2.w),
-                          Text(
-                            'Pay at Branch',
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: _paymentMethod == 'CASH'
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: _paymentMethod == 'CASH'
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _paymentMethod = 'ONLINE'),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                      decoration: BoxDecoration(
-                        color: _paymentMethod == 'ONLINE'
-                            ? AppColors.primary
-                            : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _paymentMethod == 'ONLINE'
-                              ? AppColors.primary
-                              : AppColors.dividerColor,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.credit_card,
-                              size: 14.sp,
-                              color: _paymentMethod == 'ONLINE'
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary),
-                          SizedBox(width: 2.w),
-                          Text(
-                            'Pay Online',
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: _paymentMethod == 'ONLINE'
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: _paymentMethod == 'ONLINE'
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
             SizedBox(height: 1.5.h),
             ElevatedButton(
               onPressed: _isLoading ? null : _book,

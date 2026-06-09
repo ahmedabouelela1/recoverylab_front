@@ -36,8 +36,8 @@ class PaymentStatusPage extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   isSuccess
-                      ? 'Your booking has been confirmed and payment received.'
-                      : 'Something went wrong. Please try again or pay at the branch.',
+                      ? 'Your payment has been received successfully.'
+                      : 'Something went wrong. Please try again.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,

@@ -9,7 +9,9 @@ class Offers {
   final String? bigDescription;
 
   // Structured promotional offer fields
+  final String? startDate;      // YYYY-MM-DD
   final String? endDate;        // YYYY-MM-DD
+  final bool isActive;
   final String? discountType;   // PERCENTAGE | FIXED
   final num? discountValue;
   final String? targetType;     // ALL | SERVICE | SERVICE_CATEGORY | PACKAGE
@@ -24,7 +26,9 @@ class Offers {
     this.discount,
     this.branchId,
     this.bigDescription,
+    this.startDate,
     this.endDate,
+    this.isActive = true,
     this.discountType,
     this.discountValue,
     this.targetType,
@@ -58,7 +62,11 @@ class Offers {
       discount: json['discount'] as String?,
       branchId: parseOpt(json['branch_id']),
       bigDescription: json['big_description'] as String?,
+      startDate: json['start_date'] as String?,
       endDate: json['end_date'] as String?,
+      isActive: json['is_active'] == null
+          ? true
+          : (json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == '1'),
       discountType: json['discount_type'] as String?,
       discountValue: parseNum(json['discount_value']),
       targetType: json['target_type'] as String?,
@@ -76,7 +84,9 @@ class Offers {
       'discount': discount,
       'branch_id': branchId,
       'big_description': bigDescription,
+      'start_date': startDate,
       'end_date': endDate,
+      'is_active': isActive,
       'discount_type': discountType,
       'discount_value': discountValue,
       'target_type': targetType,
@@ -103,12 +113,37 @@ class Offers {
     return this.branchId == branchId;
   }
 
+  /// Whether the offer is active and today falls within its start/end window.
+  /// Mirrors the backend gating in `resolveActiveOffer()` so the app never
+  /// shows or applies an expired, not-yet-started, or inactive offer.
+  bool get isCurrentlyValid {
+    if (!isActive) return false;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final start = startDate != null ? DateTime.tryParse(startDate!) : null;
+    if (start != null) {
+      final s = DateTime(start.year, start.month, start.day);
+      if (today.isBefore(s)) return false;
+    }
+
+    final end = endDate != null ? DateTime.tryParse(endDate!) : null;
+    if (end != null) {
+      final e = DateTime(end.year, end.month, end.day);
+      if (today.isAfter(e)) return false;
+    }
+
+    return true;
+  }
+
   /// Whether this offer applies to a single-service booking.
   bool appliesToService({
     required int serviceId,
     required int categoryId,
     int? branchId,
   }) {
+    if (!isCurrentlyValid) return false;
     if (!matchesBranch(branchId)) return false;
     final target = targetType ?? 'ALL';
     switch (target) {
@@ -125,6 +160,7 @@ class Offers {
 
   /// Whether this offer applies to a combo (PACKAGE) booking.
   bool appliesToCombo({required int comboId, int? branchId}) {
+    if (!isCurrentlyValid) return false;
     if (!matchesBranch(branchId)) return false;
     final target = targetType ?? 'ALL';
     switch (target) {

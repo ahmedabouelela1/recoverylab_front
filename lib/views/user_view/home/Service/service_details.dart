@@ -46,7 +46,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
   String notes = '';
   Staff? selectedStaff;
   String selectedType = 'single';
-  String? selectedPaymentMethod;
+  String? selectedPaymentMethod = 'ONLINE';
   String? _actualBookingId;
   List<Branch> branches = [];
   List<ServiceDuration?> durations = [];
@@ -1114,117 +1114,6 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
             );
           }),
 
-          // Payment method selector
-          StatefulBuilder(
-            builder: (ctx, setInner) {
-              final isOnline = (selectedPaymentMethod ?? 'CASH') == 'ONLINE';
-              return Padding(
-                padding: EdgeInsets.only(bottom: 2.h),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => selectedPaymentMethod = 'CASH');
-                          setInner(() {});
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                          decoration: BoxDecoration(
-                            color: !isOnline
-                                ? AppColors.primary
-                                : AppColors.surfaceLight,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: !isOnline
-                                  ? AppColors.primary
-                                  : AppColors.dividerColor,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.store_outlined,
-                                size: 16.sp,
-                                color: !isOnline
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
-                              ),
-                              SizedBox(width: 2.w),
-                              Text(
-                                'Pay at Branch',
-                                style: TextStyle(
-                                  color: !isOnline
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
-                                  fontSize: 12.sp,
-                                  fontWeight: !isOnline
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => selectedPaymentMethod = 'ONLINE');
-                          setInner(() {});
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                          decoration: BoxDecoration(
-                            color: isOnline
-                                ? AppColors.primary
-                                : AppColors.surfaceLight,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isOnline
-                                  ? AppColors.primary
-                                  : AppColors.dividerColor,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.credit_card,
-                                size: 16.sp,
-                                color: isOnline
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
-                              ),
-                              SizedBox(width: 2.w),
-                              Text(
-                                'Pay Online',
-                                style: TextStyle(
-                                  color: isOnline
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
-                                  fontSize: 12.sp,
-                                  fontWeight: isOnline
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
           Row(
             children: [
               Expanded(
@@ -1286,7 +1175,7 @@ class _ServiceDetailsPageState extends ConsumerState<ServiceDetailsPage> {
                         'staffId': selectedStaff?.id,
                         'staffName': selectedStaff?.displayName,
                         'notes': notes.isEmpty ? null : notes,
-                        'paymentMethod': selectedPaymentMethod ?? 'CASH',
+                        'paymentMethod': 'ONLINE',
                         'usePackageId': _selectedPackage?.id,
                         'packageName': _selectedPackage?.package?.name,
                         'redeemPoints': _redeemPoints,

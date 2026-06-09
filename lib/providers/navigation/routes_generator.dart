@@ -11,6 +11,7 @@ import 'package:recoverylab_front/views/user_view/home/Service/service_details.d
 import 'package:recoverylab_front/views/user_view/home/special_offer_detail_page.dart';
 import 'package:recoverylab_front/views/user_view/home/special_offers_page.dart';
 import 'package:recoverylab_front/views/user_view/navbar/navbar.dart';
+import 'package:recoverylab_front/views/user_view/notifications/notifications_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/login/login_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/login/otp_verified_page.dart';
 import 'package:recoverylab_front/views/user_view/onboarding/login/verification_page.dart';
@@ -84,6 +85,7 @@ class Routes {
   static const String paymentScreen = '/paymentScreen';
   static const String paymentStatus = '/paymentStatus';
   static const String bookingConfirmation = '/bookingConfirmation';
+  static const String notifications = '/notifications';
 }
 
 class RoutesGenerator {
@@ -212,6 +214,9 @@ class RoutesGenerator {
         return MaterialPageRoute(builder: (_) => const BookingScreen());
       case Routes.navbar:
         return MaterialPageRoute(builder: (_) => const Navbar());
+
+      case Routes.notifications:
+        return MaterialPageRoute(builder: (_) => const NotificationsPage());
 
       case Routes.categories:
         if (args != null && args is Map) {

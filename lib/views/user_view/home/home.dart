@@ -109,9 +109,13 @@ class _HomePageState extends ConsumerState<HomePage>
       if (!mounted) return;
       _startOffersAutoScroll();
       // Load points non-critically in background
-      ref.read(apiProvider).getMyPoints().then((points) {
-        if (mounted) setState(() => _userPoints = points);
-      }).catchError((_) {});
+      ref
+          .read(apiProvider)
+          .getMyPoints()
+          .then((points) {
+            if (mounted) setState(() => _userPoints = points);
+          })
+          .catchError((_) {});
     } catch (e, s) {
       print('e: $e, s: $s');
       if (!mounted) return;
@@ -292,14 +296,67 @@ class _HomePageState extends ConsumerState<HomePage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Welcome back,',
-                style: GoogleFonts.inter(
-                  fontSize: 12.sp,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                  height: 1.2,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Welcome back,',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 2.w),
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.pushNamed(context, Routes.upgradeMembership),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 2.5.w,
+                        vertical: 0.5.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.success.withOpacity(0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              SolarIconsOutline.crown,
+                              size: 12,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          SizedBox(width: 1.5.w),
+                          Text(
+                            membershipAsync.isLoading
+                                ? '...'
+                                : (isMember ? planName! : 'Not a member'),
+                            style: GoogleFonts.inter(
+                              fontSize: 11.sp,
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               SizedBox(height: 0.2.h),
               Text(
@@ -312,83 +369,48 @@ class _HomePageState extends ConsumerState<HomePage>
                   letterSpacing: -0.3,
                 ),
               ),
-
-              SizedBox(height: 0.8.h),
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+              if (_userPoints != null) ...[
+                SizedBox(height: 0.8.h),
+                GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, Routes.myPoints),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 3.w,
+                      vertical: 0.8.h,
+                    ),
                     decoration: BoxDecoration(
-                      color: isMember
-                          ? tagBgColor
-                          : AppColors.textTertiary.withOpacity(0.15),
+                      color: AppColors.info.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          SolarIconsOutline.crown,
-                          size: 14,
-                          color: isMember ? AppColors.info : AppColors.textTertiary,
+                          SolarIconsBold.star,
+                          size: 12,
+                          color: AppColors.info,
                         ),
                         SizedBox(width: 1.5.w),
                         Text(
-                          membershipAsync.isLoading
-                              ? '...'
-                              : (isMember ? planName! : 'Not a member'),
+                          '${_userPoints!.pointsBalance} pts',
                           style: GoogleFonts.inter(
                             fontSize: 12.sp,
-                            color: isMember
-                                ? AppColors.info
-                                : AppColors.textSecondary,
+                            color: AppColors.info,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (_userPoints != null) ...[
-                    SizedBox(width: 2.w),
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, Routes.myPoints),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              SolarIconsBold.star,
-                              size: 12,
-                              color: AppColors.primary,
-                            ),
-                            SizedBox(width: 1.5.w),
-                            Text(
-                              '${_userPoints!.pointsBalance} pts',
-                              style: GoogleFonts.inter(
-                                fontSize: 12.sp,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ],
           ),
         ),
 
         // Notification Button
         GestureDetector(
-          onTap: () => Navigator.pushNamed(context, Routes.questionnaire),
+          onTap: () => Navigator.pushNamed(context, Routes.notifications),
           child: Container(
             width: 24.sp,
             height: 24.sp,
@@ -454,10 +476,8 @@ class _HomePageState extends ConsumerState<HomePage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  Routes.specialOffersPage,
-                ),
+                onTap: () =>
+                    Navigator.pushNamed(context, Routes.specialOffersPage),
                 behavior: HitTestBehavior.opaque,
                 child: Text(
                   "Special Offers",
@@ -470,10 +490,8 @@ class _HomePageState extends ConsumerState<HomePage>
                 ),
               ),
               GestureDetector(
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  Routes.specialOffersPage,
-                ),
+                onTap: () =>
+                    Navigator.pushNamed(context, Routes.specialOffersPage),
                 child: Container(
                   width: 24.w,
                   padding: EdgeInsets.symmetric(
@@ -603,136 +621,136 @@ class _HomePageState extends ConsumerState<HomePage>
             borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
-            // Background Image
-            Positioned.fill(
-              child: Image.network(offer.image, fit: BoxFit.cover),
-            ),
+                // Background Image
+                Positioned.fill(
+                  child: Image.network(offer.image, fit: BoxFit.cover),
+                ),
 
-            // Gradient Overlay
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.3),
-                      Colors.black.withOpacity(0.7),
+                // Gradient Overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(3.5.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              offer.title,
+                              style: GoogleFonts.inter(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.1,
+                                letterSpacing: -0.3,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          (offer.discount == null || offer.discount!.isEmpty)
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 3.w,
+                                    vertical: 1.2.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        primaryGradientStart,
+                                        primaryGradientEnd,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryGradientStart.withOpacity(
+                                          0.4,
+                                        ),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    offer.discount!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                        ],
+                      ),
+                      Text(
+                        offer.description,
+                        style: GoogleFonts.inter(
+                          fontSize: 12.sp,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      // Align(
+                      //   alignment: Alignment.bottomRight,
+                      //   child: Container(
+                      //     padding: EdgeInsets.symmetric(
+                      //       horizontal: 3.5.w,
+                      //       vertical: 1.2.h,
+                      //     ),
+                      //     width: 30.w,
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.white,
+                      //       borderRadius: BorderRadius.circular(14),
+                      //     ),
+                      //     child: Row(
+                      //       mainAxisAlignment: MainAxisAlignment.center,
+                      //       children: [
+                      //         Text(
+                      //           'Book Now',
+                      //           style: GoogleFonts.inter(
+                      //             fontSize: 13.sp,
+                      //             fontWeight: FontWeight.w700,
+                      //             color: primaryGradientStart,
+                      //           ),
+                      //         ),
+                      //         SizedBox(width: 1.5.w),
+                      //         Icon(
+                      //           SolarIconsOutline.arrowRight,
+                      //           size: 16,
+                      //           color: primaryGradientStart,
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
-              ),
-            ),
-
-            // Content
-            Padding(
-              padding: EdgeInsets.all(3.5.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          offer.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            height: 1.1,
-                            letterSpacing: -0.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      (offer.discount == null || offer.discount!.isEmpty)
-                          ? const SizedBox.shrink()
-                          : Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 3.w,
-                                vertical: 1.2.h,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    primaryGradientStart,
-                                    primaryGradientEnd,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryGradientStart.withOpacity(
-                                      0.4,
-                                    ),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                offer.discount!,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                    ],
-                  ),
-                  Text(
-                    offer.description,
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  // Align(
-                  //   alignment: Alignment.bottomRight,
-                  //   child: Container(
-                  //     padding: EdgeInsets.symmetric(
-                  //       horizontal: 3.5.w,
-                  //       vertical: 1.2.h,
-                  //     ),
-                  //     width: 30.w,
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.white,
-                  //       borderRadius: BorderRadius.circular(14),
-                  //     ),
-                  //     child: Row(
-                  //       mainAxisAlignment: MainAxisAlignment.center,
-                  //       children: [
-                  //         Text(
-                  //           'Book Now',
-                  //           style: GoogleFonts.inter(
-                  //             fontSize: 13.sp,
-                  //             fontWeight: FontWeight.w700,
-                  //             color: primaryGradientStart,
-                  //           ),
-                  //         ),
-                  //         SizedBox(width: 1.5.w),
-                  //         Icon(
-                  //           SolarIconsOutline.arrowRight,
-                  //           size: 16,
-                  //           color: primaryGradientStart,
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  // ),
-                ],
-              ),
-            ),
-          ],
+              ],
             ),
           ),
         ),

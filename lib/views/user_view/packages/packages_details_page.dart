@@ -12,6 +12,7 @@ import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
 import 'package:recoverylab_front/providers/session/active_membership_provider.dart';
 import 'package:recoverylab_front/views/user_view/packages/combo_booking_screen.dart';
+import 'package:recoverylab_front/views/user_view/bookings/payment_screen.dart';
 
 enum PackageType { combo, membership, package }
 
@@ -84,13 +85,15 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
       case PackageType.package:
         setState(() => _actionLoading = true);
         try {
-          await ref.read(apiProvider).purchasePackage(
+          final result = await ref.read(apiProvider).purchasePackage(
                 userId: userId,
                 packageId: id,
               );
           if (mounted) {
-            AppSnackBar.show(context, 'Package purchased successfully!');
-            Navigator.pop(context);
+            await _handlePurchaseResult(
+              result,
+              successMessage: 'Package purchased successfully!',
+            );
           }
         } catch (e) {
           if (mounted) AppSnackBar.show(context, e.toString());
@@ -105,15 +108,17 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
           final now = DateTime.now();
           final today =
               '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-          await ref.read(apiProvider).purchaseMembership(
+          final result = await ref.read(apiProvider).purchaseMembership(
                 userId: userId,
                 membershipPlanId: id,
                 startDate: today,
               );
           if (mounted) {
             ref.invalidate(activeMembershipProvider);
-            AppSnackBar.show(context, 'Membership activated!');
-            Navigator.pop(context);
+            await _handlePurchaseResult(
+              result,
+              successMessage: 'Membership activated!',
+            );
           }
         } catch (e) {
           if (mounted) AppSnackBar.show(context, e.toString());
@@ -122,6 +127,27 @@ class _PackageDetailsPageState extends ConsumerState<PackageDetailsPage> {
         }
         break;
     }
+  }
+
+  /// Opens the Paymob checkout when the purchase requires online payment,
+  /// otherwise shows the success message (free / staff-created items).
+  Future<void> _handlePurchaseResult(
+    Map<String, dynamic> result, {
+    required String successMessage,
+  }) async {
+    final checkoutUrl = result['checkout_url'];
+    if (checkoutUrl is String && checkoutUrl.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(checkoutUrl: checkoutUrl),
+        ),
+      );
+      return;
+    }
+
+    AppSnackBar.show(context, successMessage);
+    Navigator.pop(context);
   }
 
   // ── Type-driven values ───────────────────────────────────────────────────

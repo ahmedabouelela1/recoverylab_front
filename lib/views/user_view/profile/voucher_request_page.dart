@@ -10,6 +10,7 @@ import 'package:recoverylab_front/providers/api/api_provider.dart';
 import 'package:recoverylab_front/providers/exception/snack_bar.dart';
 import 'package:recoverylab_front/providers/session/branch_provider.dart';
 import 'package:recoverylab_front/providers/session/user_session_provider.dart';
+import 'package:recoverylab_front/views/user_view/bookings/payment_screen.dart';
 import 'package:sizer/sizer.dart';
 
 class VoucherRequestPage extends ConsumerStatefulWidget {
@@ -36,6 +37,7 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
   int? _serviceId;
   List<int> _durations = [];
   int? _durationMinutes;
+  final Map<int, double> _durationPrices = {};
 
   List<OfferPackage> _comboPackages = [];
   List<OfferPackage> _creditPackages = [];
@@ -92,6 +94,20 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
 
   int get _branchId => _branches.isEmpty ? 0 : _branches[_branchIndex].id;
 
+  /// The amount the user will pay for the currently selected voucher product.
+  double? get _currentPrice {
+    if (_productType == 'SERVICE') {
+      if (_durationMinutes == null) return null;
+      return _durationPrices[_durationMinutes];
+    }
+    if (_selectedPackageId == null) return null;
+    final list = _productType == 'COMBO' ? _comboPackages : _creditPackages;
+    for (final p in list) {
+      if (p.id == _selectedPackageId) return p.price.toDouble();
+    }
+    return null;
+  }
+
   Future<void> _reloadCatalogForBranch() async {
     if (_branches.isEmpty) return;
     try {
@@ -146,9 +162,13 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
       final List<ServiceDuration?> pricing =
           (bs != null && bs.data.isNotEmpty) ? bs.data.first.branchPricing : <ServiceDuration?>[];
       final durs = <int>[];
+      _durationPrices.clear();
       for (final d in pricing) {
         final m = d?.minutes;
-        if (m != null) durs.add(m);
+        if (m != null) {
+          durs.add(m);
+          _durationPrices[m] = double.tryParse(d?.price ?? '0') ?? 0;
+        }
       }
       setState(() {
         _durations = durs.toSet().toList()..sort();
@@ -184,7 +204,7 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
 
     setState(() => _submitting = true);
     try {
-      await ref.read(apiProvider).createVoucherRequest(
+      final result = await ref.read(apiProvider).createVoucherRequest(
             branchId: _branchId,
             name: name,
             message: _message.text.trim().isEmpty ? null : _message.text.trim(),
@@ -196,8 +216,20 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
             recipientPhone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           );
       if (!mounted) return;
-      AppSnackBar.show(context, 'Request submitted. Our team will contact you soon.');
-      Navigator.pop(context);
+
+      final checkoutUrl = result['checkout_url'];
+      if (checkoutUrl is String && checkoutUrl.isNotEmpty) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentScreen(checkoutUrl: checkoutUrl),
+          ),
+        );
+        if (mounted) Navigator.pop(context);
+      } else {
+        AppSnackBar.show(context, 'Request submitted. Our team will contact you soon.');
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (!mounted) return;
       AppSnackBar.show(context, e.toString());
@@ -231,7 +263,7 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
                       border: Border.all(color: AppColors.primary.withOpacity(0.25)),
                     ),
                     child: Text(
-                      'After you submit this form, a staff member will reach out to you by email or phone to confirm your voucher, amount, and payment. Nothing is charged in the app until staff confirms with you.',
+                      'Choose what the voucher is for and pay the total securely online. Once payment is received, our team will email the voucher to your recipient.',
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 12.sp, height: 1.4),
                     ),
                   ),
@@ -353,7 +385,38 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
                       onChanged: (v) => setState(() => _selectedPackageId = v),
                     ),
                   ],
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 2.5.h),
+                  if (_currentPrice != null)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.6.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.dividerColor),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total to pay',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'EGP ${_currentPrice!.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: 2.h),
                   FilledButton(
                     onPressed: _submitting ? null : _submit,
                     style: FilledButton.styleFrom(
@@ -366,7 +429,11 @@ class _VoucherRequestPageState extends ConsumerState<VoucherRequestPage> {
                             width: 22,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Submit request'),
+                        : Text(
+                            _currentPrice != null
+                                ? 'Pay EGP ${_currentPrice!.toStringAsFixed(0)} & Request'
+                                : 'Pay & Request',
+                          ),
                   ),
                   SizedBox(height: 4.h),
                 ],

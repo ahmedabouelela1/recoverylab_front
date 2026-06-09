@@ -638,7 +638,9 @@ class ApiProvider {
   }
 
   /// POST /vouchers — submit a voucher request.
-  Future<ApiVoucher> createVoucherRequest({
+  /// Returns the full decoded response, including `checkout_url` when the
+  /// voucher must be paid online via Paymob before it is confirmed.
+  Future<Map<String, dynamic>> createVoucherRequest({
     required int branchId,
     required String name,
     String? message,
@@ -661,8 +663,7 @@ class ApiProvider {
       if (recipientPhone != null && recipientPhone.isNotEmpty) 'recipient_phone': recipientPhone,
     };
     final response = await basePost(ApiRoutes.vouchers, body);
-    final decoded = _handleResponse(response);
-    return ApiVoucher.fromJson(decoded['data'] as Map<String, dynamic>);
+    return _handleResponse(response);
   }
 
   /// POST /vouchers/{id}/cancel — cancel a pending request.
@@ -812,7 +813,7 @@ class ApiProvider {
     int participantCount = 1,
     String? notes,
     Map<int, int>? serviceChoices,
-    String paymentMethod = 'CASH',
+    String paymentMethod = 'ONLINE',
     bool redeemPoints = false,
     int? offerId,
   }) async {
