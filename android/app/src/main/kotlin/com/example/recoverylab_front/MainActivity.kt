@@ -1,4 +1,4 @@
-package com.example.recoverylab_front
+package com.recoverylab.app
 
 import io.flutter.embedding.android.FlutterActivity
 

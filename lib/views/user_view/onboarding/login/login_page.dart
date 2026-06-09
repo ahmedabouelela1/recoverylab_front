@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -118,11 +120,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
       await ref.read(apiProvider).loginWithGoogle(idToken);
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, Routes.navbar);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('GOOGLE_SIGN_IN_ERROR type=${e.runtimeType} error=$e');
+      debugPrint('GOOGLE_SIGN_IN_STACK $st');
       if (mounted) {
         AppSnackBar.show(
           context,
-          e is ApiException ? e.message : 'Google sign-in failed',
+          e is ApiException ? e.message : 'Google sign-in failed: ${e.runtimeType}: $e',
         );
       }
     } finally {
@@ -131,10 +135,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   Future<void> _signInWithApple() async {
-    if (appleClientId.isEmpty) {
-      AppSnackBar.show(context, 'Apple sign-in is not configured.');
-      return;
-    }
     setState(() => _isSocialLoading = true);
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
@@ -408,7 +408,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
                     SizedBox(height: 3.5.h),
 
-                    // Social buttons — Google & Apple
+                    // Social buttons — Google (all platforms) + Apple (iOS only)
                     Row(
                       children: [
                         Expanded(
@@ -418,14 +418,16 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             onPressed: _isSocialLoading ? null : _signInWithGoogle,
                           ),
                         ),
-                        SizedBox(width: 3.w),
-                        Expanded(
-                          child: _buildSocialButton(
-                            icon: FontAwesomeIcons.apple,
-                            label: "Apple",
-                            onPressed: _isSocialLoading ? null : _signInWithApple,
+                        if (Platform.isIOS) ...[
+                          SizedBox(width: 3.w),
+                          Expanded(
+                            child: _buildSocialButton(
+                              icon: FontAwesomeIcons.apple,
+                              label: "Apple",
+                              onPressed: _isSocialLoading ? null : _signInWithApple,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
 
